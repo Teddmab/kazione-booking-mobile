@@ -1,48 +1,75 @@
+import '../global.css';
+
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
+import * as Sentry from '@sentry/react-native';
 
+import { AuthGate } from '@/components/AuthGate';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useColorScheme } from '@/components/useColorScheme';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { TenantProvider } from '@/contexts/TenantContext';
+import { initI18n } from '@/i18n';
+import { initSentry } from '@/lib/sentry';
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+initSentry();
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+const queryClient = new QueryClient();
+
+function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
+  const [i18nReady, setI18nReady] = useState(false);
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    void initI18n().then(() => setI18nReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (loaded && i18nReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, i18nReady]);
 
-  if (!loaded) {
+  if (!loaded || !i18nReady) {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TenantProvider>
+            <Suspense fallback={<LoadingSpinner />}>
+              <AuthGate>
+                <RootLayoutNav />
+              </AuthGate>
+            </Suspense>
+          </TenantProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
+  );
 }
 
 function RootLayoutNav() {
@@ -50,10 +77,21 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(app)" />
+        <Stack.Screen name="salon/[slug]" options={{ headerShown: true, title: 'Salon' }} />
+        <Stack.Screen name="booking" />
+        <Stack.Screen name="payment/processing" />
+        <Stack.Screen name="payment/success" />
+        <Stack.Screen name="payment/failure" />
+        <Stack.Screen name="notifications/index" options={{ title: 'Notifications' }} />
       </Stack>
     </ThemeProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

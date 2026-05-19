@@ -1,0 +1,116 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  type ReactNode,
+} from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { Session, User } from '@supabase/supabase-js';
+
+import {
+  fetchUserRole,
+  signOut as authSignOut,
+} from '@/lib/auth';
+import { getSupabase } from '@/lib/supabase';
+import { useAuthStore, type UserRole } from '@/store/authStore';
+
+interface AuthContextValue {
+  user: User | null;
+  session: Session | null;
+  role: UserRole;
+  isLoading: boolean;
+  /** @deprecated Use isLoading */
+  loading: boolean;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+async function syncRoleForUser(userId: string) {
+  const role = await fetchUserRole(userId);
+  useAuthStore.getState().setRole(role);
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const session = useAuthStore((s) => s.session);
+  const user = useAuthStore((s) => s.user);
+  const role = useAuthStore((s) => s.role);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const setSession = useAuthStore((s) => s.setSession);
+  const clearSession = useAuthStore((s) => s.clearSession);
+  const setLoading = useAuthStore((s) => s.setLoading);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      setLoading(true);
+      const { data } = await getSupabase().auth.getSession();
+      if (!mounted) return;
+
+      setSession(data.session);
+      if (data.session?.user) {
+        await syncRoleForUser(data.session.user.id);
+      }
+      setLoading(false);
+    };
+
+    void init();
+
+    const {
+      data: { subscription },
+    } = getSupabase().auth.onAuthStateChange(async (event, nextSession) => {
+      if (!mounted) return;
+
+      if (event === 'SIGNED_OUT') {
+        clearSession();
+        queryClient.clear();
+        return;
+      }
+
+      setSession(nextSession);
+
+      if (event === 'SIGNED_IN' && nextSession?.user) {
+        await syncRoleForUser(nextSession.user.id);
+      }
+
+      if (event === 'TOKEN_REFRESHED' && nextSession) {
+        setSession(nextSession);
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [clearSession, queryClient, setLoading, setSession]);
+
+  const signOut = useCallback(async () => {
+    setLoading(true);
+    await authSignOut();
+    clearSession();
+    queryClient.clear();
+    setLoading(false);
+  }, [clearSession, queryClient, setLoading]);
+
+  return (
+    <AuthContext.Provider
+      value={{ user, session, role, isLoading, loading: isLoading, signOut }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
+
+/** @deprecated Use useAuth */
+export const useAuthContext = useAuth;

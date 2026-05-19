@@ -1,0 +1,72 @@
+{
+  "auth": {
+    "login": "Connexion",
+    "signup": "Créer un compte",
+    "logout": "Déconnexion",
+    "forgotPassword": "Mot de passe oublié ?",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "name": "Nom complet",
+    "signIn": "Se connecter",
+    "createAccount": "Créer un compte",
+    "googleSignIn": "Se connecter avec Google"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "save": "Enregistrer",
+    "next": "Suivant",
+    "done": "Terminé"
+  },
+  "marketplace": {
+    "title": "Découvrir les salons",
+    "search": "Rechercher",
+    "categories": "Catégories",
+    "noResults": "Aucun salon trouvé",
+    "bookNow": "Réserver"
+  },
+  "booking": {
+    "selectStaff": "Choisir un collaborateur",
+    "selectDate": "Choisir la date et l'heure",
+    "yourDetails": "Vos informations",
+    "summary": "Récapitulatif",
+    "confirm": "Confirmer la réservation",
+    "noPreference": "Sans préférence",
+    "gdprConsent": "J'accepte le traitement de mes données personnelles"
+  },
+  "payment": {
+    "title": "Paiement",
+    "fullPayment": "Payer en totalité",
+    "deposit": "Payer un acompte",
+    "payAtSalon": "Payer au salon",
+    "processing": "Paiement en cours…",
+    "success": "Paiement réussi",
+    "failure": "Échec du paiement",
+    "retry": "Réessayer"
+  },
+  "bookings": {
+    "title": "Mes réservations",
+    "upcoming": "À venir",
+    "past": "Passées",
+    "pending": "En attente",
+    "cancel": "Annuler",
+    "cancelReason": "Motif d'annulation",
+    "noBookings": "Aucune réservation"
+  },
+  "profile": {
+    "title": "Profil",
+    "editProfile": "Modifier le profil",
+    "notifications": "Notifications",
+    "language": "Langue",
+    "signOut": "Se déconnecter"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": "Aucune notification"
+  }
+}

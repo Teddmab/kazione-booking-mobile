@@ -1,0 +1,72 @@
+{
+  "auth": {
+    "login": "Logi sisse",
+    "signup": "Loo konto",
+    "logout": "Logi välja",
+    "forgotPassword": "Unustasid parooli?",
+    "email": "E-post",
+    "password": "Parool",
+    "name": "Täisnimi",
+    "signIn": "Logi sisse",
+    "createAccount": "Loo konto",
+    "googleSignIn": "Logi sisse Google'iga"
+  },
+  "common": {
+    "loading": "Laadimine…",
+    "error": "Midagi läks valesti",
+    "retry": "Proovi uuesti",
+    "cancel": "Tühista",
+    "confirm": "Kinnita",
+    "back": "Tagasi",
+    "save": "Salvesta",
+    "next": "Edasi",
+    "done": "Valmis"
+  },
+  "marketplace": {
+    "title": "Avasta salonge",
+    "search": "Otsi",
+    "categories": "Kategooriad",
+    "noResults": "Salonge ei leitud",
+    "bookNow": "Broneeri"
+  },
+  "booking": {
+    "selectStaff": "Vali töötaja",
+    "selectDate": "Vali kuupäev ja kellaaeg",
+    "yourDetails": "Sinu andmed",
+    "summary": "Kokkuvõte",
+    "confirm": "Kinnita broneering",
+    "noPreference": "Eelistus puudub",
+    "gdprConsent": "Nõustun oma isikuandmete töötlemisega"
+  },
+  "payment": {
+    "title": "Makse",
+    "fullPayment": "Maksa täies mahus",
+    "deposit": "Maksa ettemaks",
+    "payAtSalon": "Maksa salongis",
+    "processing": "Makse töötlemine…",
+    "success": "Makse õnnestus",
+    "failure": "Makse ebaõnnestus",
+    "retry": "Proovi uuesti"
+  },
+  "bookings": {
+    "title": "Minu broneeringud",
+    "upcoming": "Tulevased",
+    "past": "Möödunud",
+    "pending": "Ootel",
+    "cancel": "Tühista",
+    "cancelReason": "Tühistamise põhjus",
+    "noBookings": "Broneeringuid pole"
+  },
+  "profile": {
+    "title": "Profiil",
+    "editProfile": "Muuda profiili",
+    "notifications": "Teavitused",
+    "language": "Keel",
+    "signOut": "Logi välja"
+  },
+  "notifications": {
+    "title": "Teavitused",
+    "markAllRead": "Märgi kõik loetuks",
+    "empty": "Teavitusi pole"
+  }
+}

@@ -1,0 +1,154 @@
+export type AppointmentStatus =
+  | "pending"
+  | "confirmed"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "no_show";
+
+export interface AppointmentFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  status?: AppointmentStatus[];
+  staffId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedAppointments {
+  appointments: AppointmentWithRelations[];
+  total: number;
+}
+
+export interface AppointmentWithRelations {
+  id: string;
+  business_id: string;
+  client_id: string;
+  staff_profile_id: string | null;
+  service_id: string;
+  status: string;
+  starts_at: string;
+  ends_at: string;
+  duration_minutes: number;
+  price: number;
+  deposit_amount: number;
+  booking_reference: string;
+  client: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string | null;
+    phone: string | null;
+  };
+  service: {
+    id: string;
+    name: string;
+    duration_minutes: number;
+    price: number;
+  };
+  staff: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  payment: {
+    status: string;
+    amount: number;
+    method: string;
+    paid_at: string | null;
+  } | null;
+}
+
+export interface UpcomingAppointment {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  booking_reference: string;
+  client_name: string;
+  service_name: string;
+  staff_name: string;
+  price: number;
+}
+
+export interface PeriodStats {
+  total: number;
+  completed: number;
+  cancelled: number;
+  revenue: number;
+}
+
+export interface DashboardKPIs {
+  today: PeriodStats & { remaining: number; walk_ins: number };
+  this_week: PeriodStats;
+  this_month: Omit<PeriodStats, "cancelled">;
+  active_clients_total: number;
+  avg_rating: number;
+  completion_rate_30d: number;
+  upcoming_today: UpcomingAppointment[];
+  staff_on_today: { staff_profile_id: string; display_name: string }[];
+}
+
+export interface ClientDetail {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface ClientWithStats extends ClientDetail {
+  appointment_count: number;
+  last_visit: string | null;
+  total_spent: number;
+}
+
+export interface ClientFilters {
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedClients {
+  clients: ClientWithStats[];
+  total: number;
+}
+
+export interface OwnerServiceRow {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price: number;
+  currency_code: string;
+  is_active: boolean;
+  category_name: string | null;
+}
+
+export interface StaffMember {
+  id: string;
+  display_name: string;
+  email: string | null;
+  role: string;
+  is_active: boolean;
+  avatar_url: string | null;
+}
+
+export interface StorefrontRow {
+  id: string;
+  business_id: string;
+  slug: string;
+  title: string;
+  tagline: string | null;
+  is_published: boolean;
+  logo_url: string | null;
+  cover_image_url: string | null;
+}
+
+export interface BusinessRow {
+  id: string;
+  name: string;
+  business_type: string | null;
+  country: string | null;
+}

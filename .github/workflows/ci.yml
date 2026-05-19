@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  lint-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --coverage --coverageThreshold='{"global":{"lines":50}}'
+
+  architecture-scan:
+    name: Architecture Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block direct Supabase calls outside lib/
+        run: |
+          VIOLATIONS=$(grep -rn "supabase\.from\|supabase\.rpc\|supabase\.storage" \
+            --include="*.ts" --include="*.tsx" \
+            app/ components/ hooks/ store/ \
+            | grep -v "lib/supabase.ts" | grep -v "lib/auth.ts" | grep -v ".test." || true)
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ Direct Supabase calls found outside lib/:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ No architecture violations found"
