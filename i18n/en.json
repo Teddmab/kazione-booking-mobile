@@ -1,0 +1,72 @@
+{
+  "auth": {
+    "login": "Sign in",
+    "signup": "Sign up",
+    "logout": "Sign out",
+    "forgotPassword": "Forgot password?",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full name",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "googleSignIn": "Sign in with Google"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "save": "Save",
+    "next": "Next",
+    "done": "Done"
+  },
+  "marketplace": {
+    "title": "Discover salons",
+    "search": "Search",
+    "categories": "Categories",
+    "noResults": "No salons found",
+    "bookNow": "Book now"
+  },
+  "booking": {
+    "selectStaff": "Select staff",
+    "selectDate": "Select date & time",
+    "yourDetails": "Your details",
+    "summary": "Summary",
+    "confirm": "Confirm booking",
+    "noPreference": "No preference",
+    "gdprConsent": "I agree to the processing of my personal data"
+  },
+  "payment": {
+    "title": "Payment",
+    "fullPayment": "Pay in full",
+    "deposit": "Pay deposit",
+    "payAtSalon": "Pay at salon",
+    "processing": "Processing payment…",
+    "success": "Payment successful",
+    "failure": "Payment failed",
+    "retry": "Try again"
+  },
+  "bookings": {
+    "title": "My bookings",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "pending": "Pending",
+    "cancel": "Cancel",
+    "cancelReason": "Reason for cancellation",
+    "noBookings": "No bookings yet"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit profile",
+    "notifications": "Notifications",
+    "language": "Language",
+    "signOut": "Sign out"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications"
+  }
+}
