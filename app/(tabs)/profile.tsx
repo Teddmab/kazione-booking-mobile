@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { View, Text, StyleSheet } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { COLORS, SPACING, TYPOGRAPHY } from '@/constants/tokens';

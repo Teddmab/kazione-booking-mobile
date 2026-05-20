@@ -1,7 +1,7 @@
 import { Pressable, Text, View, StyleSheet } from "react-native";
 
-import { useTenantContext } from "@/contexts/TenantContext";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useTenantContext } from "@/contexts/TenantContext";
 
 export function OwnerBusinessHeader() {
   const { tenant, businesses, setActiveBusiness } = useTenantContext();

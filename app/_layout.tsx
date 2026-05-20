@@ -2,6 +2,7 @@ import '../global.css';
 
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -9,7 +10,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { Suspense, useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
-import * as Sentry from '@sentry/react-native';
 
 import { AuthGate } from '@/components/AuthGate';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
