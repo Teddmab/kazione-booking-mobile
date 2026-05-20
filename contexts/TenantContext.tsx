@@ -1,3 +1,5 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
   useCallback,
@@ -7,11 +9,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useQuery } from "@tanstack/react-query";
 
-import { api } from "@/lib/api";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 
 export type MemberRole = "owner" | "manager" | "staff" | "receptionist";
 

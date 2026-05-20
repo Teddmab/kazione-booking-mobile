@@ -13,8 +13,8 @@ import {
   Platform,
 } from "react-native";
 
-import { StripePaymentSheet } from "@/components/booking/StripePaymentSheet";
 import { SafeImage } from "@/components/SafeImage";
+import { StripePaymentSheet } from "@/components/booking/StripePaymentSheet";
 import { MOBILE_OPERATOR_OPTIONS, type MobileOperatorCode } from "@/constants/pawapayOperators";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useAvailability } from "@/hooks/useAvailability";
@@ -28,13 +28,13 @@ import {
   toLocalDateString,
 } from "@/lib/dateUtils";
 import { extractStripeKeyHint } from "@/lib/stripe";
-import type { PaymentMethod } from "@/types/booking";
-import type { StorefrontDetail } from "@/types/marketplace";
 import {
   appointmentStatusFromPoll,
   createPawapayPayment,
   fetchAppointmentById,
 } from "@/services/payments";
+import type { PaymentMethod } from "@/types/booking";
+import type { StorefrontDetail } from "@/types/marketplace";
 
 type Step =
   | "service"
