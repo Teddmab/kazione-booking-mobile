@@ -1,8 +1,8 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 
-import { signOut } from '@/lib/auth';
 import { ownerColors } from '@/constants/ownerTheme';
+import { signOut } from '@/lib/auth';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -16,11 +16,19 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Account not linked</Text>
       <Text style={styles.body}>
-        This app is for salon owners, managers, staff, and reception.{'\n\n'}
-        Your account isn't linked to any salon. Contact your salon owner to be added to the team.
+        Your account isn't linked to a salon yet.{'\n\n'}
+        Create your salon to get started, or ask your salon owner to add you as a team member.
       </Text>
-      <Pressable style={styles.btn} onPress={() => void handleSignOut()}>
-        <Text style={styles.btnText}>Sign out</Text>
+
+      <Pressable
+        style={styles.primaryBtn}
+        onPress={() => router.push('/(auth)/create-business' as Href)}
+      >
+        <Text style={styles.primaryBtnText}>Create my salon</Text>
+      </Pressable>
+
+      <Pressable style={styles.outlineBtn} onPress={() => void handleSignOut()}>
+        <Text style={styles.outlineBtnText}>Sign out</Text>
       </Pressable>
     </View>
   );
@@ -32,7 +40,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
     backgroundColor: ownerColors.bg,
-    gap: 20,
+    gap: 16,
   },
   title: {
     fontSize: 24,
@@ -43,18 +51,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: ownerColors.textMuted,
     lineHeight: 22,
+    marginBottom: 8,
   },
-  btn: {
+  primaryBtn: {
+    backgroundColor: ownerColors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  outlineBtn: {
     borderWidth: 1,
     borderColor: ownerColors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
   },
-  btnText: {
-    color: ownerColors.primary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  outlineBtnText: { color: ownerColors.primary, fontSize: 15, fontWeight: '600' },
 });
