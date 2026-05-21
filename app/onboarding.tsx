@@ -14,9 +14,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ONBOARDING_STORAGE_KEY } from "@/constants/onboarding";
 
+const DASHBOARD = require("../assets/images/onboarding/hero-dashboard.jpg");
 const MARKETPLACE = require("../assets/images/onboarding/marketplace-hero.jpg");
 const SALON_COVER = require("../assets/images/onboarding/salon-afrotouch-cover.jpg");
-const DASHBOARD = require("../assets/images/onboarding/hero-dashboard.jpg");
 
 const slides = [
   {

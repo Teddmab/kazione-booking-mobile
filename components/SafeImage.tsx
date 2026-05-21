@@ -1,5 +1,5 @@
-import type { ImageStyle, StyleProp, ViewStyle } from "react-native";
 import { useState } from "react";
+import type { ImageStyle, StyleProp, ViewStyle } from "react-native";
 import { Image, View, Text, StyleSheet } from "react-native";
 
 type Props = {

@@ -1,7 +1,7 @@
+import { i18n, initI18n } from '@/i18n';
 import en from '@/i18n/en.json';
 import et from '@/i18n/et.json';
 import fr from '@/i18n/fr.json';
-import { i18n, initI18n } from '@/i18n';
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ''): string[] {
   return Object.entries(obj).flatMap(([key, value]) => {
