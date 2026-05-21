@@ -48,7 +48,7 @@ describe('AuthGate', () => {
       </AuthGate>,
     );
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(tabs)');
+      expect(mockReplace).toHaveBeenCalledWith('/');
     });
   });
 });
