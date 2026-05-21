@@ -57,7 +57,7 @@ export default function Index() {
   }
 
   if (!tenant) {
-    return <Redirect href={'/(tabs)' as Href} />;
+    return <Redirect href={'/(auth)/welcome' as Href} />;
   }
 
   return <Redirect href={dashboardPathForTenant(tenant.role) as Href} />;

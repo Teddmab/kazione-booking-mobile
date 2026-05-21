@@ -81,13 +81,7 @@ function RootLayoutNav() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(app)" />
-        <Stack.Screen name="salon/[slug]" options={{ headerShown: true, title: 'Salon' }} />
-        <Stack.Screen name="booking" />
-        <Stack.Screen name="payment/processing" />
-        <Stack.Screen name="payment/success" />
-        <Stack.Screen name="payment/failure" />
         <Stack.Screen name="notifications/index" options={{ title: 'Notifications' }} />
       </Stack>
     </ThemeProvider>

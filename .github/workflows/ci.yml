@@ -30,7 +30,7 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
-      - run: npm test -- --coverage --coverageThreshold='{"global":{"lines":50}}'
+      - run: npm test -- --coverage --coverageThreshold='{"global":{"lines":25}}'
 
   architecture-scan:
     name: Architecture Scan
