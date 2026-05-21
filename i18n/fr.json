@@ -68,5 +68,33 @@
     "title": "Notifications",
     "markAllRead": "Tout marquer comme lu",
     "empty": "Aucune notification"
+  },
+  "owner": {
+    "dashboard": "Tableau de bord",
+    "appointmentsToday": "RDV aujourd'hui",
+    "weekRevenue": "CA semaine",
+    "monthRevenue": "CA mois",
+    "activeClients": "Clients actifs",
+    "todaysAppointments": "Rendez-vous du jour",
+    "noAppointmentsToday": "Aucun rendez-vous prévu aujourd'hui.",
+    "management": "Gestion",
+    "clients": "Clients",
+    "staff": "Équipe",
+    "services": "Services",
+    "storefront": "Vitrine",
+    "settings": "Paramètres",
+    "finance": "Revenus",
+    "reports": "Rapports",
+    "more": "Plus",
+    "signOut": "Se déconnecter",
+    "appointments": "Rendez-vous",
+    "confirm": "Confirmer",
+    "complete": "Terminer",
+    "cancel": "Annuler",
+    "noShow": "Absent",
+    "remaining": "restants",
+    "completed": "terminés",
+    "bookings": "réservations",
+    "noRatingYet": "Pas encore d'avis"
   }
 }

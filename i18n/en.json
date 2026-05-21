@@ -68,5 +68,33 @@
     "title": "Notifications",
     "markAllRead": "Mark all as read",
     "empty": "No notifications"
+  },
+  "owner": {
+    "dashboard": "Dashboard",
+    "appointmentsToday": "Appointments today",
+    "weekRevenue": "Week revenue",
+    "monthRevenue": "Month revenue",
+    "activeClients": "Active clients",
+    "todaysAppointments": "Today's appointments",
+    "noAppointmentsToday": "No appointments scheduled for today.",
+    "management": "Management",
+    "clients": "Clients",
+    "staff": "Team",
+    "services": "Services",
+    "storefront": "Storefront",
+    "settings": "Settings",
+    "finance": "Revenue",
+    "reports": "Reports",
+    "more": "More",
+    "signOut": "Sign out",
+    "appointments": "Appointments",
+    "confirm": "Confirm",
+    "complete": "Complete",
+    "cancel": "Cancel",
+    "noShow": "No show",
+    "remaining": "remaining",
+    "completed": "completed",
+    "bookings": "bookings",
+    "noRatingYet": "No reviews yet"
   }
 }

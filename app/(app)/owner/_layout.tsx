@@ -1,7 +1,9 @@
-import { Redirect, Stack } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, Tabs } from 'expo-router';
 
-import { LoadingScreen } from "@/components/LoadingScreen";
-import { useTenantContext } from "@/contexts/TenantContext";
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { ownerColors } from '@/constants/ownerTheme';
+import { useTenantContext } from '@/contexts/TenantContext';
 
 export default function OwnerLayout() {
   const { tenant, loading, error } = useTenantContext();
@@ -10,35 +12,73 @@ export default function OwnerLayout() {
     return <LoadingScreen />;
   }
 
-  if (error) {
+  if (error || !tenant) {
     return <Redirect href="/" />;
   }
 
-  if (!tenant) {
-    return <Redirect href="/(app)/client" />;
-  }
-
-  const role = tenant.role;
-  if (role !== "owner" && role !== "manager") {
+  if (tenant.role !== 'owner' && tenant.role !== 'manager') {
     return <Redirect href="/" />;
   }
 
   return (
-    <Stack
+    <Tabs
       screenOptions={{
-        headerBackTitle: "Retour",
-        headerTintColor: "#6b5344",
-        headerStyle: { backgroundColor: "#faf8f5" },
-        contentStyle: { backgroundColor: "#faf8f5" },
-      }}>
-      <Stack.Screen name="index" options={{ title: "Tableau de bord" }} />
-      <Stack.Screen name="appointments" options={{ title: "Rendez-vous" }} />
-      <Stack.Screen name="clients" options={{ title: "Clients" }} />
-      <Stack.Screen name="staff" options={{ title: "Équipe" }} />
-      <Stack.Screen name="services" options={{ title: "Services" }} />
-      <Stack.Screen name="storefront" options={{ title: "Vitrine" }} />
-      <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
-      <Stack.Screen name="more" options={{ title: "Plus" }} />
-    </Stack>
+        headerShown: true,
+        headerStyle: { backgroundColor: ownerColors.bg },
+        headerTintColor: ownerColors.primary,
+        headerTitleStyle: { fontWeight: '600', color: ownerColors.text },
+        tabBarStyle: {
+          backgroundColor: ownerColors.bg,
+          borderTopColor: ownerColors.border,
+          borderTopWidth: 1,
+        },
+        tabBarActiveTintColor: ownerColors.primary,
+        tabBarInactiveTintColor: ownerColors.textDim,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="appointments"
+        options={{
+          title: 'Appointments',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="staff"
+        options={{
+          title: 'Team',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="ellipsis-horizontal" size={size} color={color} />
+          ),
+        }}
+      />
+      {/* Non-tab screens — hidden from tab bar */}
+      <Tabs.Screen name="clients" options={{ href: null, title: 'Clients' }} />
+      <Tabs.Screen name="services" options={{ href: null, title: 'Services' }} />
+      <Tabs.Screen name="storefront" options={{ href: null, title: 'Storefront' }} />
+      <Tabs.Screen name="settings" options={{ href: null, title: 'Settings' }} />
+      <Tabs.Screen name="finance" options={{ href: null, title: 'Revenue' }} />
+      <Tabs.Screen name="reports" options={{ href: null, title: 'Reports' }} />
+    </Tabs>
   );
 }

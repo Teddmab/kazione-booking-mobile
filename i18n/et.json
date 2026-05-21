@@ -68,5 +68,33 @@
     "title": "Teavitused",
     "markAllRead": "Märgi kõik loetuks",
     "empty": "Teavitusi pole"
+  },
+  "owner": {
+    "dashboard": "Armatuurlaud",
+    "appointmentsToday": "Kohtumised täna",
+    "weekRevenue": "Nädala käive",
+    "monthRevenue": "Kuu käive",
+    "activeClients": "Aktiivsed kliendid",
+    "todaysAppointments": "Tänased kohtumised",
+    "noAppointmentsToday": "Täna pole kohtumisi planeeritud.",
+    "management": "Haldus",
+    "clients": "Kliendid",
+    "staff": "Meeskond",
+    "services": "Teenused",
+    "storefront": "Vitriini",
+    "settings": "Seaded",
+    "finance": "Tulud",
+    "reports": "Aruanded",
+    "more": "Rohkem",
+    "signOut": "Logi välja",
+    "appointments": "Kohtumised",
+    "confirm": "Kinnita",
+    "complete": "Lõpeta",
+    "cancel": "Tühista",
+    "noShow": "Ei ilmunud",
+    "remaining": "jäänud",
+    "completed": "lõpetatud",
+    "bookings": "broneeringut",
+    "noRatingYet": "Hindeid pole veel"
   }
 }
