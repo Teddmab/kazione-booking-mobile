@@ -17,6 +17,7 @@ export function SalonCardSkeleton() {
 
 const styles = StyleSheet.create({
   card: {
+    width: '100%',
     height: SALON_CARD_HEIGHT,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,

@@ -48,7 +48,7 @@ const TenantContext = createContext<TenantState | undefined>(undefined);
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
 
-  const { data, error, isPending, isFetching } = useQuery<TenantBootstrap>({
+  const { data, error, isPending } = useQuery<TenantBootstrap>({
     queryKey: ["tenant", user?.id],
     queryFn: async () => {
       const result = await api.get<MeApiResponse>("/me");
@@ -104,7 +104,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         tenant,
         businesses,
         setActiveBusiness,
-        loading: !!(user?.id && !data && (isPending || isFetching)),
+        loading: !!(user?.id && isPending),
         error: error as Error | null,
       }}
     >

@@ -12,8 +12,10 @@ import {
   View,
 } from 'react-native';
 import { useDebounce } from 'use-debounce';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Logo } from '@/components/brand/Logo';
+import { useAuth } from '@/contexts/AuthContext';
 import { CategoryFilter } from '@/components/marketplace/CategoryFilter';
 import { SearchBar } from '@/components/marketplace/SearchBar';
 import { SalonCard, SALON_CARD_HEIGHT } from '@/components/salon/SalonCard';
@@ -26,9 +28,15 @@ import { useLanguage } from '@/hooks/useLanguage';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { toSalonListItem, type SalonListItem } from '@/types/marketplace';
 
+const SKELETON_ROWS = Array.from({ length: 6 }, (_, i) => ({ id: `skeleton-${i}` }));
+
 export default function MarketplaceHomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { session, role } = useAuth();
+  const hasOwnerBanner =
+    !!session && (role === 'owner' || role === 'manager');
   const { language, setLanguage } = useLanguage();
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [query, setQuery] = useState('');
@@ -71,7 +79,11 @@ export default function MarketplaceHomeScreen() {
   );
 
   const listHeader = (
-    <View style={styles.headerBlock}>
+    <View
+      style={[
+        styles.headerBlock,
+        { paddingTop: hasOwnerBanner ? SPACING.sm : insets.top + SPACING.md },
+      ]}>
       <View style={styles.topRow}>
         <View style={styles.brandRow}>
           <Logo size="sm" variant="icon-only" />
@@ -104,16 +116,21 @@ export default function MarketplaceHomeScreen() {
   if (isLoading) {
     return (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.screen}>
-          {listHeader}
-          <View style={styles.skeletonGrid}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <View key={i} style={styles.cardCell}>
-                <SalonCardSkeleton />
-              </View>
-            ))}
-          </View>
-        </View>
+        <FlatList
+          style={styles.screen}
+          contentContainerStyle={styles.listContent}
+          data={SKELETON_ROWS}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrap}
+          ListHeaderComponent={listHeader}
+          renderItem={() => (
+            <View style={styles.cardCell}>
+              <SalonCardSkeleton />
+            </View>
+          )}
+          scrollEnabled={false}
+        />
       </TouchableWithoutFeedback>
     );
   }
@@ -186,7 +203,6 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     gap: SPACING.md,
-    paddingTop: SPACING.md,
     paddingBottom: SPACING.sm,
   },
   topRow: {
@@ -242,13 +258,8 @@ const styles = StyleSheet.create({
   },
   cardCell: {
     flex: 1,
-    maxWidth: '50%',
-  },
-  skeletonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
+    minWidth: 0,
+    marginBottom: SPACING.sm,
   },
   endText: {
     ...TYPOGRAPHY.caption,

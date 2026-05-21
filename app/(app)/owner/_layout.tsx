@@ -31,7 +31,7 @@ export default function OwnerLayout() {
         headerStyle: { backgroundColor: "#faf8f5" },
         contentStyle: { backgroundColor: "#faf8f5" },
       }}>
-      <Stack.Screen name="index" options={{ title: "Tableau de bord" }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="appointments" options={{ title: "Rendez-vous" }} />
       <Stack.Screen name="clients" options={{ title: "Clients" }} />
       <Stack.Screen name="staff" options={{ title: "Équipe" }} />

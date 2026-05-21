@@ -29,7 +29,7 @@ export default function Index() {
   }, []);
 
   if (authLoading || onboardingDone === null) {
-    return <LoadingScreen />;
+    return <LoadingScreen message="Chargement…" />;
   }
 
   if (!onboardingDone) {
@@ -41,7 +41,7 @@ export default function Index() {
   }
 
   if (tenantLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen message="Espace de travail…" />;
   }
 
   if (tenantError) {

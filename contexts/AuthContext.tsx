@@ -28,8 +28,26 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function syncRoleForUser(userId: string) {
-  const role = await fetchUserRole(userId);
-  useAuthStore.getState().setRole(role);
+  try {
+    const role = await fetchUserRole(userId);
+    useAuthStore.getState().setRole(role);
+  } catch {
+    useAuthStore.getState().setRole('client');
+  }
+}
+
+const SESSION_INIT_TIMEOUT_MS = 12_000;
+
+type SessionResult = Awaited<ReturnType<ReturnType<typeof getSupabase>['auth']['getSession']>>;
+
+async function getSessionSafe(): Promise<SessionResult> {
+  const timeout = new Promise<SessionResult>((resolve) => {
+    setTimeout(
+      () => resolve({ data: { session: null }, error: null }),
+      SESSION_INIT_TIMEOUT_MS,
+    );
+  });
+  return Promise.race([getSupabase().auth.getSession(), timeout]);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -47,40 +65,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       setLoading(true);
-      const { data } = await getSupabase().auth.getSession();
-      if (!mounted) return;
+      try {
+        const { data } = await getSessionSafe();
+        if (!mounted) return;
 
-      setSession(data.session);
-      if (data.session?.user) {
-        await syncRoleForUser(data.session.user.id);
+        setSession(data.session);
+        if (data.session?.user) {
+          void syncRoleForUser(data.session.user.id);
+        }
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
     };
 
     void init();
 
     const {
       data: { subscription },
-    } = getSupabase().auth.onAuthStateChange(async (event, nextSession) => {
+    } = getSupabase().auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
 
       if (event === 'SIGNED_OUT') {
         clearSession();
         queryClient.clear();
+        setLoading(false);
         return;
       }
 
       setSession(nextSession);
+      setLoading(false);
 
       if (event === 'SIGNED_IN' && nextSession?.user) {
-        await syncRoleForUser(nextSession.user.id);
+        void syncRoleForUser(nextSession.user.id);
       }
 
       if (event === 'TOKEN_REFRESHED' && nextSession) {
         setSession(nextSession);
       }
-
-      setLoading(false);
     });
 
     return () => {
