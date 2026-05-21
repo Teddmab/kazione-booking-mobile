@@ -9,9 +9,9 @@ import {
   Text,
 } from 'react-native';
 
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { COLORS, SPACING, TYPOGRAPHY } from '@/constants/tokens';
+import { ownerColors } from '@/constants/ownerTheme';
 import { signInWithEmail } from '@/lib/auth';
 
 export default function LoginScreen() {
@@ -59,7 +59,13 @@ export default function LoginScreen() {
           secureTextEntry
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button label="Sign In" onPress={() => void submit()} loading={loading} size="lg" />
+        <Pressable
+          style={[styles.signInBtn, loading && styles.signInBtnDisabled]}
+          onPress={() => void submit()}
+          disabled={loading}
+        >
+          <Text style={styles.signInBtnText}>{loading ? 'Signing in…' : 'Sign In'}</Text>
+        </Pressable>
         <Link href={'/(auth)/forgot-password' as Href} asChild>
           <Pressable>
             <Text style={styles.link}>Forgot password?</Text>
@@ -96,5 +102,19 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.gold,
     textAlign: 'center',
+  },
+  signInBtn: {
+    backgroundColor: ownerColors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  signInBtnDisabled: {
+    opacity: 0.6,
+  },
+  signInBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
