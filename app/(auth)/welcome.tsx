@@ -1,30 +1,27 @@
-import { Link } from "expo-router";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+
+import { signOut } from '@/lib/auth';
+import { ownerColors } from '@/constants/ownerTheme';
 
 export default function WelcomeScreen() {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/(auth)/login');
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>Kazione</Text>
-      <Text style={styles.tagline}>Booking on the go</Text>
-      <Text style={styles.hint}>Use the same account as on the web.</Text>
-
-      <Link href="/(auth)/login-client" asChild>
-        <Pressable style={styles.primary}>
-          <Text style={styles.primaryText}>I am a client</Text>
-        </Pressable>
-      </Link>
-
-      <Link href="/(auth)/login-team" asChild>
-        <Pressable style={styles.secondary}>
-          <Text style={styles.secondaryText}>Salon staff / owner</Text>
-        </Pressable>
-      </Link>
-
-      <Link href="/(auth)/signup" asChild>
-        <Pressable style={styles.linkWrap}>
-          <Text style={styles.link}>Create an account</Text>
-        </Pressable>
-      </Link>
+      <Text style={styles.title}>Account not linked</Text>
+      <Text style={styles.body}>
+        This app is for salon owners, managers, staff, and reception.{'\n\n'}
+        Your account isn't linked to any salon. Contact your salon owner to be added to the team.
+      </Text>
+      <Pressable style={styles.btn} onPress={() => void handleSignOut()}>
+        <Text style={styles.btnText}>Sign out</Text>
+      </Pressable>
     </View>
   );
 }
@@ -32,34 +29,32 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#faf8f5",
-    gap: 12,
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: ownerColors.bg,
+    gap: 20,
   },
-  logo: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: 4,
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: ownerColors.text,
   },
-  tagline: { fontSize: 17, color: "#555" },
-  hint: { fontSize: 14, color: "#888", marginBottom: 24 },
-  primary: {
-    backgroundColor: "#6b5344",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
+  body: {
+    fontSize: 15,
+    color: ownerColors.textMuted,
+    lineHeight: 22,
   },
-  primaryText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  secondary: {
+  btn: {
     borderWidth: 1,
-    borderColor: "#6b5344",
-    paddingVertical: 16,
+    borderColor: ownerColors.primary,
+    paddingVertical: 14,
     borderRadius: 12,
-    alignItems: "center",
+    alignItems: 'center',
+    marginTop: 8,
   },
-  secondaryText: { color: "#6b5344", fontSize: 16, fontWeight: "600" },
-  linkWrap: { paddingVertical: 12, alignItems: "center" },
-  link: { color: "#6b5344", fontSize: 15, fontWeight: "500" },
+  btnText: {
+    color: ownerColors.primary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
