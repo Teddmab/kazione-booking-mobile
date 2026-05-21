@@ -88,6 +88,7 @@ function RootLayoutNav() {
         <Stack.Screen name="payment/processing" />
         <Stack.Screen name="payment/success" />
         <Stack.Screen name="payment/failure" />
+        <Stack.Screen name="payment/[callback]" options={{ headerShown: false }} />
         <Stack.Screen name="notifications/index" options={{ title: 'Notifications' }} />
       </Stack>
     </ThemeProvider>

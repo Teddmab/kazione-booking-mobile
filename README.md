@@ -53,3 +53,21 @@ GitHub Actions runs on push/PR to `main` and `dev`: typecheck, lint, unit tests,
 - API calls: `lib/api.ts` → Edge Functions only
 - Supabase Auth / role: `lib/auth.ts`, `lib/supabase.ts`
 - No direct `supabase.from()` in `app/`, `components/`, `hooks/`, or `store/` (except `lib/auth.ts` for role lookup)
+
+## Deep links (scheme `kazione`)
+
+| Deep link | Screen |
+| --------- | ------ |
+| `kazione://salon/{slug}` | Salon storefront (`app/salon/[slug].tsx`) |
+| `kazione://booking/staff?salonSlug={slug}` | Booking flow step 1 |
+| `kazione://payment/pawapay?status=success&payment_id={id}` | Payment callback → success/failure |
+
+**iOS simulator:** `xcrun simctl openurl booted "kazione://salon/afrotouch"`  
+**Android emulator:** `adb shell am start -W -a android.intent.action.VIEW -d "kazione://salon/afrotouch"`
+
+## Marketplace API (Sprint M2)
+
+- List: `GET /marketplace-storefronts` — query `search`, `categories`, `page`, `limit` → `{ storefronts, total }`
+- Detail: `GET /get-storefront?slug=` → full storefront JSON (camelCase)
+
+Sprint docs: `kazione-docs/team/MOBILE/`

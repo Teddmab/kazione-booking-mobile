@@ -25,9 +25,26 @@
   "marketplace": {
     "title": "Discover salons",
     "search": "Search",
+    "searchPlaceholder": "Search salons, services…",
     "categories": "Categories",
     "noResults": "No salons found",
-    "bookNow": "Book now"
+    "tryDifferentFilters": "Try different search terms or filters",
+    "loadError": "Failed to load salons",
+    "salonNotFound": "Salon not found",
+    "bookNow": "Book now",
+    "heroTitle": "Find Your Perfect Salon",
+    "topSalons": "Top Salons",
+    "allLoaded": "All salons loaded",
+    "about": "About",
+    "readMore": "Read more",
+    "readLess": "Read less",
+    "services": "Services",
+    "noServices": "No services listed",
+    "ourTeam": "Our Team",
+    "gallery": "Gallery",
+    "promotions": "Promotions",
+    "validUntil": "Valid until",
+    "featured": "Featured"
   },
   "booking": {
     "selectStaff": "Select staff",

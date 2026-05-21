@@ -25,9 +25,26 @@
   "marketplace": {
     "title": "Découvrir les salons",
     "search": "Rechercher",
+    "searchPlaceholder": "Rechercher salons, services…",
     "categories": "Catégories",
     "noResults": "Aucun salon trouvé",
-    "bookNow": "Réserver"
+    "tryDifferentFilters": "Essayez d'autres termes ou filtres",
+    "loadError": "Impossible de charger les salons",
+    "salonNotFound": "Salon introuvable",
+    "bookNow": "Réserver",
+    "heroTitle": "Trouvez votre salon idéal",
+    "topSalons": "Meilleurs salons",
+    "allLoaded": "Tous les salons chargés",
+    "about": "À propos",
+    "readMore": "Lire la suite",
+    "readLess": "Réduire",
+    "services": "Services",
+    "noServices": "Aucun service",
+    "ourTeam": "Notre équipe",
+    "gallery": "Galerie",
+    "promotions": "Promotions",
+    "validUntil": "Valable jusqu'au",
+    "featured": "En vedette"
   },
   "booking": {
     "selectStaff": "Choisir un collaborateur",

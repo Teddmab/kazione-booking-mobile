@@ -25,9 +25,26 @@
   "marketplace": {
     "title": "Avasta salonge",
     "search": "Otsi",
+    "searchPlaceholder": "Otsi salonge, teenuseid…",
     "categories": "Kategooriad",
     "noResults": "Salonge ei leitud",
-    "bookNow": "Broneeri"
+    "tryDifferentFilters": "Proovi teisi otsinguid või filtreid",
+    "loadError": "Salonge ei õnnestunud laadida",
+    "salonNotFound": "Salongi ei leitud",
+    "bookNow": "Broneeri",
+    "heroTitle": "Leia oma ideaalne salong",
+    "topSalons": "Parimad salongid",
+    "allLoaded": "Kõik salongid laaditud",
+    "about": "Teave",
+    "readMore": "Loe edasi",
+    "readLess": "Näita vähem",
+    "services": "Teenused",
+    "noServices": "Teenuseid pole",
+    "ourTeam": "Meeskond",
+    "gallery": "Galerii",
+    "promotions": "Pakkumised",
+    "validUntil": "Kehtib kuni",
+    "featured": "Esiletõstetud"
   },
   "booking": {
     "selectStaff": "Vali töötaja",
