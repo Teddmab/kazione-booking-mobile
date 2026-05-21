@@ -50,7 +50,7 @@ const config: ExpoConfig = {
       origin: false,
     },
     eas: {
-      projectId: process.env.EAS_PROJECT_ID ?? '',
+      projectId: '68b7dcc4-7c49-4726-b0a4-00d820b24980',
     },
   },
 };
