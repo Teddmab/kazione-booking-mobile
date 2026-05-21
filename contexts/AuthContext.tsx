@@ -46,15 +46,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const init = async () => {
-      setLoading(true);
-      const { data } = await getSupabase().auth.getSession();
-      if (!mounted) return;
-
-      setSession(data.session);
-      if (data.session?.user) {
-        await syncRoleForUser(data.session.user.id);
+      try {
+        setLoading(true);
+        const { data } = await getSupabase().auth.getSession();
+        if (!mounted) return;
+        setSession(data.session);
+        if (data.session?.user) {
+          await syncRoleForUser(data.session.user.id);
+        }
+      } catch {
+        // ignore — onAuthStateChange will drive state once the client is ready
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
     };
 
     void init();
@@ -63,24 +67,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = getSupabase().auth.onAuthStateChange(async (event, nextSession) => {
       if (!mounted) return;
+      try {
+        if (event === 'SIGNED_OUT') {
+          clearSession();
+          queryClient.clear();
+          return;
+        }
 
-      if (event === 'SIGNED_OUT') {
-        clearSession();
-        queryClient.clear();
-        return;
-      }
-
-      setSession(nextSession);
-
-      if (event === 'SIGNED_IN' && nextSession?.user) {
-        await syncRoleForUser(nextSession.user.id);
-      }
-
-      if (event === 'TOKEN_REFRESHED' && nextSession) {
         setSession(nextSession);
-      }
 
-      setLoading(false);
+        if (event === 'SIGNED_IN' && nextSession?.user) {
+          await syncRoleForUser(nextSession.user.id);
+        }
+
+        if (event === 'TOKEN_REFRESHED' && nextSession) {
+          setSession(nextSession);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
     });
 
     return () => {
