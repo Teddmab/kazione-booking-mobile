@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  cancelAppointment,
   getAppointments,
   getDashboardKPIs,
+  rescheduleAppointment,
   updateAppointmentStatus,
 } from "@/services/owner/appointments";
 import type { AppointmentFilters, AppointmentStatus, DashboardKPIs } from "@/types/owner";
@@ -24,6 +26,14 @@ export function useOwnerAppointments(businessId: string, filters: AppointmentFil
   });
 }
 
+function invalidateOwnerAppointmentQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  businessId: string,
+) {
+  queryClient.invalidateQueries({ queryKey: ["owner-appointments", businessId] });
+  queryClient.invalidateQueries({ queryKey: ["owner-dashboard-kpis", businessId] });
+}
+
 export function useUpdateOwnerAppointmentStatus(businessId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -36,9 +46,28 @@ export function useUpdateOwnerAppointmentStatus(businessId: string) {
       status: AppointmentStatus;
       reason?: string;
     }) => updateAppointmentStatus(id, status, reason),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["owner-appointments", businessId] });
-      queryClient.invalidateQueries({ queryKey: ["owner-dashboard-kpis", businessId] });
-    },
+    onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
+  });
+}
+
+export function useCancelOwnerAppointment(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      cancelAppointment(id, reason),
+    onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
+  });
+}
+
+export function useRescheduleOwnerAppointment(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      appointment_id: string;
+      new_date: string;
+      new_time: string;
+      staff_profile_id?: string | null;
+    }) => rescheduleAppointment(params),
+    onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
   });
 }

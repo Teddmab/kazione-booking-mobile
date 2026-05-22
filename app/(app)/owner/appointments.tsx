@@ -1,133 +1,142 @@
-import { useMemo, useState } from "react";
+import { useRouter, type Href } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   Pressable,
   Alert,
-  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 
+import { AppointmentDetailSheet } from "@/components/owner/AppointmentDetailSheet";
+import { AppointmentListView } from "@/components/owner/AppointmentListView";
 import { QueryState } from "@/components/owner/QueryState";
-import { StatusBadge } from "@/components/owner/StatusBadge";
+import { RescheduleSheet } from "@/components/owner/RescheduleSheet";
+import { WeekCalendarView } from "@/components/owner/WeekCalendarView";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useOwnerCalendar } from "@/hooks/useOwnerCalendar";
 import {
-  useOwnerAppointments,
+  useCancelOwnerAppointment,
+  useRescheduleOwnerAppointment,
   useUpdateOwnerAppointmentStatus,
 } from "@/hooks/useOwnerAppointments";
-import {
-  clientDisplayName,
-  formatCurrency,
-  formatDate,
-  formatTime,
-  toIsoDate,
-} from "@/lib/format";
+import { formatWeekRangeLabel } from "@/lib/ownerCalendar";
 import type { AppointmentStatus, AppointmentWithRelations } from "@/types/owner";
 
-const STATUS_ACTIONS: { status: AppointmentStatus; label: string }[] = [
-  { status: "confirmed", label: "Confirmer" },
-  { status: "completed", label: "Terminer" },
-  { status: "cancelled", label: "Annuler" },
-  { status: "no_show", label: "Absent" },
-];
-
-function AppointmentRow({
-  item,
-  onStatus,
-}: {
-  item: AppointmentWithRelations;
-  onStatus: (id: string, status: AppointmentStatus) => void;
-}) {
-  const name = clientDisplayName(item.client.first_name, item.client.last_name);
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.rowTop}>
-        <Text style={styles.time}>{formatTime(item.starts_at)}</Text>
-        <StatusBadge status={item.status} />
-      </View>
-      <Text style={styles.date}>{formatDate(item.starts_at)}</Text>
-      <Text style={styles.name}>{name}</Text>
-      <Text style={styles.meta}>
-        {item.service.name} · {item.staff?.display_name ?? "Sans préférence"}
-      </Text>
-      <Text style={styles.ref}>
-        {item.booking_reference} · {formatCurrency(item.price)}
-      </Text>
-      <View style={styles.actions}>
-        {STATUS_ACTIONS.filter((a) => a.status !== item.status).map((a) => (
-          <Pressable
-            key={a.status}
-            style={styles.actionBtn}
-            onPress={() => onStatus(item.id, a.status)}>
-            <Text style={styles.actionText}>{a.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
+type ViewMode = "week" | "list";
 
 export default function OwnerAppointmentsScreen() {
+  const router = useRouter();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
-  const today = toIsoDate(new Date());
-  const weekEnd = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return toIsoDate(d);
-  }, []);
 
-  const [range, setRange] = useState<"today" | "week">("today");
-  const filters = useMemo(
-    () => ({
-      dateFrom: today,
-      dateTo: range === "today" ? today : weekEnd,
-      limit: 50,
-    }),
-    [today, weekEnd, range],
+  const {
+    weekStart,
+    byDay,
+    appointments,
+    goPrevWeek,
+    goNextWeek,
+    goToday,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useOwnerCalendar(businessId);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [selected, setSelected] = useState<AppointmentWithRelations | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<AppointmentWithRelations | null>(
+    null,
   );
 
-  const { data, isLoading, isError, error, refetch, isRefetching } =
-    useOwnerAppointments(businessId, filters);
   const updateStatus = useUpdateOwnerAppointmentStatus(businessId);
+  const cancelAppt = useCancelOwnerAppointment(businessId);
+  const rescheduleAppt = useRescheduleOwnerAppointment(businessId);
 
-  const appointments = data?.appointments ?? [];
+  const busy =
+    updateStatus.isPending || cancelAppt.isPending || rescheduleAppt.isPending;
+
+  const openDetail = useCallback((appt: AppointmentWithRelations) => {
+    setSelected(appt);
+    setSheetOpen(true);
+  }, []);
 
   const onStatus = (id: string, status: AppointmentStatus) => {
-    Alert.alert("Changer le statut", `Passer ce rendez-vous en « ${status} » ?`, [
-      { text: "Annuler", style: "cancel" },
+    updateStatus.mutate(
+      { id, status },
       {
-        text: "OK",
-        onPress: () => {
-          updateStatus.mutate(
-            { id, status },
-            {
-              onError: (e) => Alert.alert("Erreur", e.message),
-            },
-          );
+        onSuccess: () => {
+          setSheetOpen(false);
+          void refetch();
         },
+        onError: (e) => Alert.alert("Erreur", e.message),
       },
-    ]);
+    );
+  };
+
+  const onCancel = (id: string, reason: string) => {
+    cancelAppt.mutate(
+      { id, reason },
+      {
+        onSuccess: () => {
+          setSheetOpen(false);
+          Alert.alert("Annulé", "Le rendez-vous a été annulé.");
+          void refetch();
+        },
+        onError: (e) => Alert.alert("Erreur", e.message),
+      },
+    );
+  };
+
+  const onRescheduleConfirm = (params: {
+    appointment_id: string;
+    new_date: string;
+    new_time: string;
+    staff_profile_id: string | null;
+  }) => {
+    rescheduleAppt.mutate(params, {
+      onSuccess: () => {
+        setRescheduleTarget(null);
+        setSheetOpen(false);
+        Alert.alert("Reprogrammé", "Le rendez-vous a été déplacé.");
+        void refetch();
+      },
+      onError: (e) => Alert.alert("Erreur", e.message),
+    });
   };
 
   return (
     <View style={styles.flex}>
-      <View style={styles.tabs}>
+      <View style={styles.weekNav}>
+        <Pressable onPress={goPrevWeek} style={styles.navBtn}>
+          <Text style={styles.navBtnText}>←</Text>
+        </Pressable>
+        <Pressable onPress={goToday} style={styles.rangeCenter}>
+          <Text style={styles.rangeText}>{formatWeekRangeLabel(weekStart)}</Text>
+          <Text style={styles.todayHint}>Aujourd&apos;hui</Text>
+        </Pressable>
+        <Pressable onPress={goNextWeek} style={styles.navBtn}>
+          <Text style={styles.navBtnText}>→</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.toggle}>
         <Pressable
-          style={[styles.tab, range === "today" && styles.tabActive]}
-          onPress={() => setRange("today")}>
-          <Text style={[styles.tabText, range === "today" && styles.tabTextActive]}>
-            Aujourd'hui
+          style={[styles.toggleBtn, viewMode === "week" && styles.toggleActive]}
+          onPress={() => setViewMode("week")}>
+          <Text style={[styles.toggleText, viewMode === "week" && styles.toggleTextActive]}>
+            Semaine
           </Text>
         </Pressable>
         <Pressable
-          style={[styles.tab, range === "week" && styles.tabActive]}
-          onPress={() => setRange("week")}>
-          <Text style={[styles.tabText, range === "week" && styles.tabTextActive]}>
-            7 jours
+          style={[styles.toggleBtn, viewMode === "list" && styles.toggleActive]}
+          onPress={() => setViewMode("list")}>
+          <Text style={[styles.toggleText, viewMode === "list" && styles.toggleTextActive]}>
+            Liste
           </Text>
         </Pressable>
       </View>
@@ -136,32 +145,87 @@ export default function OwnerAppointmentsScreen() {
         loading={isLoading}
         error={isError ? (error as Error) : null}
         empty={!isLoading && appointments.length === 0}
-        emptyMessage="Aucun rendez-vous sur cette période."
+        emptyMessage="Aucun rendez-vous cette semaine."
         onRetry={() => void refetch()}>
-        <FlatList
-          data={appointments}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-          }
-          renderItem={({ item }) => (
-            <AppointmentRow item={item} onStatus={onStatus} />
-          )}
-        />
+        {viewMode === "week" ? (
+          <WeekCalendarView weekStart={weekStart} byDay={byDay} onSelect={openDetail} />
+        ) : (
+          <AppointmentListView
+            appointments={appointments}
+            isRefetching={isRefetching}
+            onRefresh={() => void refetch()}
+            onSelect={openDetail}
+          />
+        )}
       </QueryState>
+
+      {busy ? (
+        <View style={styles.busyOverlay}>
+          <ActivityIndicator color={ownerColors.primary} />
+        </View>
+      ) : null}
+
+      <Pressable
+        style={styles.fab}
+        onPress={() => router.push("/(app)/owner/walk-in" as Href)}>
+        <Text style={styles.fabText}>+</Text>
+      </Pressable>
+
+      <AppointmentDetailSheet
+        appointment={selected}
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onConfirmStatus={onStatus}
+        onCancel={onCancel}
+        onReschedule={(appt) => {
+          setRescheduleTarget(appt);
+          setSheetOpen(false);
+        }}
+        busy={busy}
+      />
+
+      <RescheduleSheet
+        appointment={rescheduleTarget}
+        businessId={businessId}
+        visible={!!rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onConfirm={onRescheduleConfirm}
+        busy={rescheduleAppt.isPending}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
-  tabs: {
+  weekNav: {
     flexDirection: "row",
-    padding: 16,
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 8,
     gap: 8,
   },
-  tab: {
+  navBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: ownerColors.card,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navBtnText: { fontSize: 18, color: ownerColors.primary, fontWeight: "600" },
+  rangeCenter: { flex: 1, alignItems: "center" },
+  rangeText: { fontSize: 14, fontWeight: "600", color: ownerColors.text },
+  todayHint: { fontSize: 11, color: ownerColors.primary, marginTop: 2 },
+  toggle: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginVertical: 10,
+    gap: 8,
+  },
+  toggleBtn: {
     flex: 1,
     paddingVertical: 10,
     borderRadius: 10,
@@ -170,38 +234,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: ownerColors.border,
   },
-  tabActive: {
+  toggleActive: {
     backgroundColor: ownerColors.primaryMuted,
     borderColor: ownerColors.primary,
   },
-  tabText: { fontSize: 14, fontWeight: "500", color: ownerColors.textMuted },
-  tabTextActive: { color: ownerColors.primary, fontWeight: "600" },
-  list: { paddingHorizontal: 16, paddingBottom: 24 },
-  card: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    padding: 14,
-    marginBottom: 12,
-  },
-  rowTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  toggleText: { fontSize: 14, fontWeight: "500", color: ownerColors.textMuted },
+  toggleTextActive: { color: ownerColors.primary, fontWeight: "600" },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: ownerColors.primary,
     alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  time: { fontSize: 16, fontWeight: "700", color: ownerColors.primary },
-  date: { fontSize: 12, color: ownerColors.textDim, marginTop: 2, marginBottom: 8 },
-  name: { fontSize: 16, fontWeight: "600", color: ownerColors.text },
-  meta: { fontSize: 14, color: ownerColors.textMuted, marginTop: 4 },
-  ref: { fontSize: 12, color: ownerColors.textDim, marginTop: 6 },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
-  actionBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
+  fabText: { color: "#fff", fontSize: 28, fontWeight: "300", marginTop: -2 },
+  busyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  actionText: { fontSize: 12, fontWeight: "600", color: ownerColors.primary },
 });

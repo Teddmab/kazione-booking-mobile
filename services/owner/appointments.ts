@@ -41,3 +41,26 @@ export async function updateAppointmentStatus(
     reason,
   });
 }
+
+export async function cancelAppointment(
+  appointmentId: string,
+  reason: string,
+): Promise<{ cancelled: boolean; booking_reference: string }> {
+  return api.post("/cancel-booking", {
+    appointment_id: appointmentId,
+    reason,
+  });
+}
+
+export async function rescheduleAppointment(params: {
+  appointment_id: string;
+  new_date: string;
+  new_time: string;
+  staff_profile_id?: string | null;
+}): Promise<{
+  rescheduled: boolean;
+  booking_reference: string;
+  new_starts_at: string;
+}> {
+  return api.post("/reschedule-booking", params);
+}

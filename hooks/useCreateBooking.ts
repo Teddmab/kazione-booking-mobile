@@ -14,6 +14,8 @@ export function useCreateBooking() {
       setAlternatives([]);
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["availability"] });
+      queryClient.invalidateQueries({ queryKey: ["owner-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["owner-dashboard-kpis"] });
     },
     onError: (error) => {
       if (error instanceof SlotTakenError) {
