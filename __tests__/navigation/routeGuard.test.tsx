@@ -4,7 +4,7 @@ import { Text } from 'react-native';
 import { AuthGate } from '@/components/AuthGate';
 
 const mockReplace = jest.fn();
-const mockSegments = jest.fn<string[]>(() => ['(tabs)']);
+const mockSegments = jest.fn<string[]>(() => ['(app)']);
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
@@ -20,7 +20,7 @@ const { useAuth } = jest.requireMock('@/contexts/AuthContext');
 describe('AuthGate', () => {
   beforeEach(() => {
     mockReplace.mockClear();
-    mockSegments.mockReturnValue(['(tabs)']);
+    mockSegments.mockReturnValue(['(app)']);
   });
 
   it('redirects unauthenticated user to login', async () => {

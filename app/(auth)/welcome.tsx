@@ -1,30 +1,35 @@
-import { Link } from "expo-router";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { useRouter, type Href } from 'expo-router';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+
+import { ownerColors } from '@/constants/ownerTheme';
+import { signOut } from '@/lib/auth';
 
 export default function WelcomeScreen() {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.replace('/(auth)/login');
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>Kazione</Text>
-      <Text style={styles.tagline}>Booking on the go</Text>
-      <Text style={styles.hint}>Use the same account as on the web.</Text>
+      <Text style={styles.title}>Account not linked</Text>
+      <Text style={styles.body}>
+        Your account isn't linked to a salon yet.{'\n\n'}
+        Create your salon to get started, or ask your salon owner to add you as a team member.
+      </Text>
 
-      <Link href="/(auth)/login-client" asChild>
-        <Pressable style={styles.primary}>
-          <Text style={styles.primaryText}>I am a client</Text>
-        </Pressable>
-      </Link>
+      <Pressable
+        style={styles.primaryBtn}
+        onPress={() => router.push('/(auth)/create-business' as Href)}
+      >
+        <Text style={styles.primaryBtnText}>Create my salon</Text>
+      </Pressable>
 
-      <Link href="/(auth)/login-team" asChild>
-        <Pressable style={styles.secondary}>
-          <Text style={styles.secondaryText}>Salon staff / owner</Text>
-        </Pressable>
-      </Link>
-
-      <Link href="/(auth)/signup" asChild>
-        <Pressable style={styles.linkWrap}>
-          <Text style={styles.link}>Create an account</Text>
-        </Pressable>
-      </Link>
+      <Pressable style={styles.outlineBtn} onPress={() => void handleSignOut()}>
+        <Text style={styles.outlineBtnText}>Sign out</Text>
+      </Pressable>
     </View>
   );
 }
@@ -32,34 +37,35 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#faf8f5",
-    gap: 12,
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: ownerColors.bg,
+    gap: 16,
   },
-  logo: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: 4,
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: ownerColors.text,
   },
-  tagline: { fontSize: 17, color: "#555" },
-  hint: { fontSize: 14, color: "#888", marginBottom: 24 },
-  primary: {
-    backgroundColor: "#6b5344",
+  body: {
+    fontSize: 15,
+    color: ownerColors.textMuted,
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  primaryBtn: {
+    backgroundColor: ownerColors.primary,
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: "center",
+    alignItems: 'center',
   },
-  primaryText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  secondary: {
+  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  outlineBtn: {
     borderWidth: 1,
-    borderColor: "#6b5344",
-    paddingVertical: 16,
+    borderColor: ownerColors.primary,
+    paddingVertical: 14,
     borderRadius: 12,
-    alignItems: "center",
+    alignItems: 'center',
   },
-  secondaryText: { color: "#6b5344", fontSize: 16, fontWeight: "600" },
-  linkWrap: { paddingVertical: 12, alignItems: "center" },
-  link: { color: "#6b5344", fontSize: 15, fontWeight: "500" },
+  outlineBtnText: { color: ownerColors.primary, fontSize: 15, fontWeight: '600' },
 });

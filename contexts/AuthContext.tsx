@@ -68,11 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await getSessionSafe();
         if (!mounted) return;
-
         setSession(data.session);
         if (data.session?.user) {
           void syncRoleForUser(data.session.user.id);
         }
+      } catch {
+        // ignore — onAuthStateChange will drive state once the client is ready
       } finally {
         if (mounted) setLoading(false);
       }
@@ -84,23 +85,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = getSupabase().auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
+      try {
+        if (event === 'SIGNED_OUT') {
+          clearSession();
+          queryClient.clear();
+          return;
+        }
 
-      if (event === 'SIGNED_OUT') {
-        clearSession();
-        queryClient.clear();
-        setLoading(false);
-        return;
-      }
-
-      setSession(nextSession);
-      setLoading(false);
-
-      if (event === 'SIGNED_IN' && nextSession?.user) {
-        void syncRoleForUser(nextSession.user.id);
-      }
-
-      if (event === 'TOKEN_REFRESHED' && nextSession) {
         setSession(nextSession);
+
+        if (event === 'SIGNED_IN' && nextSession?.user) {
+          await syncRoleForUser(nextSession.user.id);
+        }
+
+        if (event === 'TOKEN_REFRESHED' && nextSession) {
+          setSession(nextSession);
+        }
+      } finally {
+        if (mounted) setLoading(false);
       }
     });
 

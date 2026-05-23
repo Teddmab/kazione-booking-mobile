@@ -1,4 +1,4 @@
-import { Link, useRouter, type Href } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -7,16 +7,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
 } from 'react-native';
 
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { COLORS, SPACING, TYPOGRAPHY } from '@/constants/tokens';
-import { signInWithEmail, signInWithGoogle } from '@/lib/auth';
+import { ownerColors } from '@/constants/ownerTheme';
+import { signInWithEmail } from '@/lib/auth';
 
 export default function LoginScreen() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -29,18 +27,13 @@ export default function LoginScreen() {
       const { error: signErr } = await signInWithEmail(email.trim(), password);
       if (signErr) {
         setError(signErr.message);
-        return;
       }
-      router.replace('/(tabs)' as Href);
+      // AuthGate + app/index.tsx handle navigation after session is set
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error — check your connection');
     } finally {
       setLoading(false);
     }
-  };
-
-  const googleSignIn = async () => {
-    setError(null);
-    const { error: oauthErr } = await signInWithGoogle();
-    if (oauthErr) setError(oauthErr.message);
   };
 
   return (
@@ -49,10 +42,11 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.heading}>Sign in</Text>
+        <Text style={styles.heading}>Sign in to KaziOne</Text>
+        <Text style={styles.subheading}>For owners, managers, staff, and reception</Text>
         <Input
-          label="Email"
-          placeholder="you@example.com"
+          label="Work email"
+          placeholder="owner@yoursalon.com"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -65,21 +59,18 @@ export default function LoginScreen() {
           secureTextEntry
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button label="Sign In" onPress={() => void submit()} loading={loading} />
-        <Button variant="secondary" label="Sign in with Google" onPress={() => void googleSignIn()} />
+        <Pressable
+          style={[styles.signInBtn, loading && styles.signInBtnDisabled]}
+          onPress={() => void submit()}
+          disabled={loading}
+        >
+          <Text style={styles.signInBtnText}>{loading ? 'Signing in…' : 'Sign In'}</Text>
+        </Pressable>
         <Link href={'/(auth)/forgot-password' as Href} asChild>
           <Pressable>
             <Text style={styles.link}>Forgot password?</Text>
           </Pressable>
         </Link>
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don&apos;t have an account? </Text>
-          <Link href="/(auth)/signup" asChild>
-            <Pressable>
-              <Text style={styles.link}>Sign Up</Text>
-            </Pressable>
-          </Link>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -96,6 +87,11 @@ const styles = StyleSheet.create({
   heading: {
     ...TYPOGRAPHY.h1,
     color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  subheading: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.textSecondary,
     marginBottom: SPACING.sm,
   },
   error: {
@@ -107,13 +103,18 @@ const styles = StyleSheet.create({
     color: COLORS.gold,
     textAlign: 'center',
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: SPACING.md,
+  signInBtn: {
+    backgroundColor: ownerColors.primary,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  footerText: {
-    ...TYPOGRAPHY.body,
-    color: COLORS.textSecondary,
+  signInBtnDisabled: {
+    opacity: 0.6,
+  },
+  signInBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

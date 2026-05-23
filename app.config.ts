@@ -49,6 +49,9 @@ const config: ExpoConfig = {
     router: {
       origin: false,
     },
+    eas: {
+      projectId: '68b7dcc4-7c49-4726-b0a4-00d820b24980',
+    },
   },
 };
 

@@ -1,14 +1,11 @@
 import { useSegments, useRouter, type Href } from 'expo-router';
 import { useEffect } from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { COLORS, SPACING, TYPOGRAPHY } from '@/constants/tokens';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, isLoading, role } = useAuth();
+  const { session, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -24,6 +21,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     if (session && inAuthGroup) {
+      // Let app/index.tsx handle role-based routing
       router.replace('/' as Href);
     }
   }, [session, isLoading, inAuthGroup, router]);
@@ -32,34 +30,5 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return <LoadingSpinner message="Loading…" />;
   }
 
-  const showOwnerNotice =
-    session && (role === 'owner' || role === 'manager') && rootSegment === '(tabs)';
-
-  return (
-    <>
-      {showOwnerNotice ? (
-        <SafeAreaView edges={['top']} style={styles.ownerBanner}>
-          <Text style={styles.ownerText}>
-            Dashboard available on web at kazione.app — mobile is optimised for client bookings.
-          </Text>
-        </SafeAreaView>
-      ) : null}
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
-
-const styles = StyleSheet.create({
-  ownerBanner: {
-    backgroundColor: COLORS.elevated,
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  ownerText: {
-    ...TYPOGRAPHY.caption,
-    color: COLORS.goldLight,
-    textAlign: 'center',
-  },
-});
