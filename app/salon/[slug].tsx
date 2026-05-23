@@ -11,8 +11,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
 
 import { ServiceCard } from '@/components/salon/ServiceCard';
 import { StorefrontSkeleton } from '@/components/storefront/StorefrontSkeleton';
