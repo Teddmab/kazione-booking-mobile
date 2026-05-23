@@ -1,7 +1,9 @@
 import { Redirect, Stack } from "expo-router";
+import { View, StyleSheet } from "react-native";
 
+import { OwnerDrawer } from "@/components/owner/OwnerDrawer";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { NotificationBell } from "@/components/owner/NotificationBell";
+import { OwnerShellProvider } from "@/contexts/OwnerShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 
 export default function OwnerLayout() {
@@ -25,26 +27,30 @@ export default function OwnerLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerBackTitle: "Retour",
-        headerTintColor: "#6b5344",
-        headerStyle: { backgroundColor: "#faf8f5" },
-        contentStyle: { backgroundColor: "#faf8f5" },
-      }}>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="appointments"
-        options={{ title: "Rendez-vous", headerRight: () => <NotificationBell /> }}
-      />
-      <Stack.Screen name="walk-in" options={{ title: "Passage rapide" }} />
-      <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
-      <Stack.Screen name="clients" options={{ title: "Clients" }} />
-      <Stack.Screen name="staff" options={{ title: "Équipe" }} />
-      <Stack.Screen name="services" options={{ title: "Services" }} />
-      <Stack.Screen name="storefront" options={{ title: "Vitrine" }} />
-      <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
-      <Stack.Screen name="more" options={{ title: "Plus" }} />
-    </Stack>
+    <OwnerShellProvider>
+      <View style={styles.flex}>
+        <Stack
+          screenOptions={{
+            headerBackTitle: "Retour",
+            headerTintColor: "#6b5344",
+            headerStyle: { backgroundColor: "#f9f8f3" },
+            contentStyle: { backgroundColor: "#f9f8f3" },
+          }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="walk-in" options={{ title: "Passage rapide" }} />
+          <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
+          <Stack.Screen name="staff" options={{ title: "Équipe" }} />
+          <Stack.Screen name="services" options={{ title: "Services" }} />
+          <Stack.Screen name="storefront" options={{ title: "Vitrine" }} />
+          <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
+          <Stack.Screen name="more" options={{ title: "Finance & rapports" }} />
+        </Stack>
+        <OwnerDrawer />
+      </View>
+    </OwnerShellProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+});

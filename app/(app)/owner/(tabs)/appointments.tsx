@@ -1,5 +1,6 @@
 import { useRouter, type Href } from "expo-router";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   View,
   Text,
@@ -11,6 +12,8 @@ import {
 
 import { AppointmentDetailSheet } from "@/components/owner/AppointmentDetailSheet";
 import { AppointmentListView } from "@/components/owner/AppointmentListView";
+import { OwnerAddHeaderButton } from "@/components/owner/OwnerAddHeaderButton";
+import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
 import { RescheduleSheet } from "@/components/owner/RescheduleSheet";
 import { WeekCalendarView } from "@/components/owner/WeekCalendarView";
@@ -28,6 +31,7 @@ import type { AppointmentStatus, AppointmentWithRelations } from "@/types/owner"
 type ViewMode = "week" | "list";
 
 export default function OwnerAppointmentsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
@@ -111,6 +115,15 @@ export default function OwnerAppointmentsScreen() {
 
   return (
     <View style={styles.flex}>
+      <OwnerAppBar
+        title={t("owner.appointments")}
+        rightSlot={
+          <OwnerAddHeaderButton
+            compact
+            onPress={() => router.push("/(app)/owner/walk-in" as Href)}
+          />
+        }
+      />
       <View style={styles.weekNav}>
         <Pressable onPress={goPrevWeek} style={styles.navBtn}>
           <Text style={styles.navBtnText}>←</Text>
@@ -164,12 +177,6 @@ export default function OwnerAppointmentsScreen() {
           <ActivityIndicator color={ownerColors.primary} />
         </View>
       ) : null}
-
-      <Pressable
-        style={styles.fab}
-        onPress={() => router.push("/(app)/owner/walk-in" as Href)}>
-        <Text style={styles.fabText}>+</Text>
-      </Pressable>
 
       <AppointmentDetailSheet
         appointment={selected}
@@ -240,23 +247,6 @@ const styles = StyleSheet.create({
   },
   toggleText: { fontSize: 14, fontWeight: "500", color: ownerColors.textMuted },
   toggleTextActive: { color: ownerColors.primary, fontWeight: "600" },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: ownerColors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  fabText: { color: "#fff", fontSize: 28, fontWeight: "300", marginTop: -2 },
   busyOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.5)",

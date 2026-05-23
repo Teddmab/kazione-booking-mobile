@@ -38,7 +38,7 @@ export default function OwnerNotificationsScreen() {
     if (!n.is_read) markRead.mutate(n.id);
     const apptId = n.metadata?.appointment_id;
     if (apptId) {
-      router.push("/(app)/owner/appointments" as Href);
+      router.push("/(app)/owner/(tabs)/appointments" as Href);
     }
   };
 

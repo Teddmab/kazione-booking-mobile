@@ -32,7 +32,7 @@ async function syncRoleForUser(userId: string) {
     const role = await fetchUserRole(userId);
     useAuthStore.getState().setRole(role);
   } catch {
-    useAuthStore.getState().setRole('client');
+    useAuthStore.getState().setRole(null);
   }
 }
 

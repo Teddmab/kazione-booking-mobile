@@ -11,7 +11,9 @@ import {
   Platform,
 } from "react-native";
 
+import { fetchTenantBootstrap, tenantQueryKey } from "@/contexts/TenantContext";
 import { authClient } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 
 export default function LoginTeamScreen() {
   const router = useRouter();
@@ -30,7 +32,26 @@ export default function LoginTeamScreen() {
         setError(signErr.message);
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: ["tenant"] });
+      const { data: sessionData } = await authClient.getSession();
+      const userId = sessionData.session?.user?.id;
+      if (userId) {
+        try {
+          await queryClient.fetchQuery({
+            queryKey: tenantQueryKey(userId),
+            queryFn: fetchTenantBootstrap,
+            staleTime: 0,
+          });
+        } catch (err) {
+          const msg =
+            err instanceof ApiError && err.code === "NETWORK_ERROR"
+              ? "Impossible de joindre l’API. Vérifiez Supabase local et l’IP dans .env."
+              : err instanceof Error
+                ? err.message
+                : "Connexion échouée";
+          setError(msg);
+          return;
+        }
+      }
       router.replace("/");
     } finally {
       setLoading(false);

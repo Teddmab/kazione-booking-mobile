@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   View,
   Text,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 
 import { ClientDetailSheet } from "@/components/owner/ClientDetailSheet";
+import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
@@ -42,6 +44,7 @@ function ClientRow({
 }
 
 export default function OwnerClientsScreen() {
+  const { t } = useTranslation();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
   const [search, setSearch] = useState("");
@@ -63,6 +66,7 @@ export default function OwnerClientsScreen() {
 
   return (
     <View style={styles.flex}>
+      <OwnerAppBar title={t("owner.clients")} />
       <View style={styles.searchWrap}>
         <TextInput
           style={[ownerStyles.searchInput, styles.searchInput]}

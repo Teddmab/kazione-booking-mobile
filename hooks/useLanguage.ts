@@ -11,10 +11,13 @@ export function useLanguage() {
   const [language, setLanguageState] = useState(i18n.language || 'en');
 
   useEffect(() => {
-    AsyncStorage.getItem(LANGUAGE_KEY).then((stored) => {
-      if (stored) setLanguageState(stored);
-    });
-  }, []);
+    setLanguageState(i18n.language || "en");
+    const onChange = (lng: string) => setLanguageState(lng);
+    i18n.on("languageChanged", onChange);
+    return () => {
+      i18n.off("languageChanged", onChange);
+    };
+  }, [i18n]);
 
   const setLanguage = useCallback(async (lang: string) => {
     await setStoredLanguage(lang);

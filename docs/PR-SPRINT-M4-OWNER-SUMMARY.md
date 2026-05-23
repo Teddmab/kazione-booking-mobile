@@ -35,6 +35,18 @@ Sprint **M4 — Services & Staff Management**: full CRUD for services and staff 
 - Recherche debounce **300 ms** + bouton ✕ effacer
 - Tap client → `ClientDetailSheet` (stats RDV, dépenses, dernière visite)
 
+### Shell owner — parité web (`DashboardHeader`)
+
+Référence web : `kazione-booking-frontends/src/components/dashboard/DashboardHeader.tsx`
+
+- **Langue** : dropdown (🇬🇧 / 🇫🇷 / 🇪🇪) via `LanguageFlagPicker` — remplace les 3 drapeaux inline
+- **Avatar** : menu déroulant au tap (`OwnerAvatarMenu`) :
+  - En-tête : nom affiché (profil / e-mail)
+  - **Profil** → `/(app)/owner/settings`
+  - **Paramètres** → `/(app)/owner/settings`
+  - **Déconnexion** → `signOut()` puis retour `/(auth)/welcome`
+- Navigation owner en **bottom tabs** (`app/(app)/owner/(tabs)/`) + drawer sombre aligné web
+
 ---
 
 ## Unit tests performed (automated)
@@ -68,14 +80,22 @@ UI sheets (service form, invite, staff detail) → **QA manuelle** (pas de tests
 - [ ] **Équipe** → + inviter (email test) → message succès → membre dans la liste
 - [ ] Tap membre → changer rôle / désactiver → sauvegardé
 - [ ] **Clients** → recherche filtre la liste ; tap → fiche détail stats
+- [ ] **Langue** (header) → dropdown EN/FR/ET, libellés traduits, langue persistée
+- [ ] **Avatar** (header) → Profil et Paramètres → écran Paramètres ; Déconnexion → écran welcome
+- [ ] Drawer owner : sections OVERVIEW / BUSINESS, déconnexion footer
 - [ ] `npm run typecheck` && `npm test` green
 
 ---
 
 ## Files changed (high level)
 
+- `app/(app)/owner/(tabs)/` — dashboard, appointments, clients, more (bottom tabs)
 - `app/(app)/owner/services.tsx`, `staff.tsx`, `clients.tsx`
 - `components/owner/ServiceFormSheet.tsx`, `CategoryPicker.tsx`, `InviteStaffSheet.tsx`, `StaffDetailSheet.tsx`, `ClientDetailSheet.tsx`, `OwnerAddHeaderButton.tsx`
+- `components/owner/OwnerAppBar.tsx`, `OwnerDrawer.tsx`, `OwnerTabBar.tsx`, `LanguageFlagPicker.tsx`, `OwnerAvatarMenu.tsx`
+- `constants/ownerTabNav.ts`, `ownerDrawerNav.ts`, `ownerTheme.ts`
+- `hooks/useLanguage.ts`, `lib/format.ts`
+- `i18n/en.json`, `fr.json`, `et.json` — namespace `owner.*`
 - `services/owner/services.ts`, `staff.ts`
 - `hooks/useOwnerServices.ts`, `useOwnerStaff.ts`
 - `lib/groupServicesByCategory.ts`
