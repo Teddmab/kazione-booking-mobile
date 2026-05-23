@@ -1,24 +1,49 @@
-import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
+import { useNavigation } from "expo-router";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  RefreshControl,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
+import { OwnerAddHeaderButton } from "@/components/owner/OwnerAddHeaderButton";
 import { QueryState } from "@/components/owner/QueryState";
+import {
+  ServiceFormSheet,
+  type ServiceFormValues,
+} from "@/components/owner/ServiceFormSheet";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
-import { useOwnerServices } from "@/hooks/useOwnerServices";
+import {
+  useDeactivateOwnerService,
+  useOwnerServices,
+  useSaveOwnerService,
+} from "@/hooks/useOwnerServices";
+import { extractCategoryNames, groupServicesByCategory } from "@/lib/groupServicesByCategory";
 import { formatCurrency } from "@/lib/format";
 import type { OwnerServiceRow } from "@/types/owner";
 
-function ServiceRow({ item }: { item: OwnerServiceRow }) {
+function ServiceRow({
+  item,
+  onPress,
+  onLongPress,
+}: {
+  item: OwnerServiceRow;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={onPress} onLongPress={onLongPress}>
       <View style={styles.row}>
         <Text style={styles.name}>{item.name}</Text>
         <View style={[styles.badge, !item.is_active && styles.badgeOff]}>
           <Text style={styles.badgeText}>{item.is_active ? "Actif" : "Inactif"}</Text>
         </View>
       </View>
-      {item.category_name ? (
-        <Text style={styles.category}>{item.category_name}</Text>
-      ) : null}
       <Text style={styles.meta}>
         {item.duration_minutes} min · {formatCurrency(item.price, item.currency_code)}
       </Text>
@@ -27,17 +52,78 @@ function ServiceRow({ item }: { item: OwnerServiceRow }) {
           {item.description}
         </Text>
       ) : null}
-    </View>
+      <Text style={styles.hintLongPress}>Appui long → désactiver</Text>
+    </Pressable>
   );
 }
 
 export default function OwnerServicesScreen() {
+  const navigation = useNavigation();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
+
   const { data, isLoading, isError, error, refetch, isRefetching } =
     useOwnerServices(businessId);
+  const saveService = useSaveOwnerService(businessId);
+  const deactivate = useDeactivateOwnerService(businessId);
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editing, setEditing] = useState<OwnerServiceRow | null>(null);
+
+  const openAdd = useCallback(() => {
+    setEditing(null);
+    setSheetOpen(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => <OwnerAddHeaderButton onPress={openAdd} />,
+    });
+  }, [navigation, openAdd]);
 
   const services = data ?? [];
+  const sections = useMemo(() => groupServicesByCategory(services), [services]);
+  const categories = useMemo(() => extractCategoryNames(services), [services]);
+
+  const onSubmit = (values: ServiceFormValues, serviceId: string | null) => {
+    saveService.mutate(
+      { values, serviceId },
+      {
+        onSuccess: () => {
+          setSheetOpen(false);
+          setEditing(null);
+          Alert.alert("Enregistré", serviceId ? "Service mis à jour." : "Service créé.");
+        },
+        onError: (e) => Alert.alert("Erreur", e.message),
+      },
+    );
+  };
+
+  const onDeactivate = (id: string) => {
+    deactivate.mutate(id, {
+      onSuccess: () => {
+        setSheetOpen(false);
+        setEditing(null);
+        Alert.alert("Désactivé", "Le service n'est plus actif.");
+      },
+      onError: (e) => Alert.alert("Erreur", e.message),
+    });
+  };
+
+  const confirmDeactivate = (item: OwnerServiceRow) => {
+    Alert.alert(
+      "Désactiver",
+      `Désactiver « ${item.name} » ?`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Désactiver",
+          style: "destructive",
+          onPress: () => onDeactivate(item.id),
+        },
+      ],
+    );
+  };
 
   return (
     <View style={styles.flex}>
@@ -45,35 +131,61 @@ export default function OwnerServicesScreen() {
         loading={isLoading}
         error={isError ? (error as Error) : null}
         empty={!isLoading && services.length === 0}
-        emptyMessage="Aucun service configuré."
+        emptyMessage="Aucun service. Appuyez sur + pour en ajouter."
         onRetry={() => void refetch()}>
-        <FlatList
-          data={services}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
           }
-          renderItem={({ item }) => <ServiceRow item={item} />}
-          ListHeaderComponent={
-            <Text style={styles.hint}>
-              Création et édition avancées des services : version web pour l'instant.
-            </Text>
-          }
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title}</Text>
+          )}
+          renderItem={({ item }) => (
+            <ServiceRow
+              item={item}
+              onPress={() => {
+                setEditing(item);
+                setSheetOpen(true);
+              }}
+              onLongPress={() => confirmDeactivate(item)}
+            />
+          )}
         />
       </QueryState>
+
+      <ServiceFormSheet
+        visible={sheetOpen}
+        service={editing}
+        categorySuggestions={categories}
+        defaultCurrency={services[0]?.currency_code ?? "EUR"}
+        onClose={() => {
+          setSheetOpen(false);
+          setEditing(null);
+        }}
+        onSubmit={onSubmit}
+        onDeactivate={editing ? onDeactivate : undefined}
+        busy={saveService.isPending || deactivate.isPending}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
-  list: { padding: 16 },
-  hint: {
+  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  sectionHeader: {
     fontSize: 13,
-    color: ownerColors.textMuted,
-    marginBottom: 16,
-    lineHeight: 20,
+    fontWeight: "700",
+    color: ownerColors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: ownerColors.bg,
   },
   card: {
     backgroundColor: ownerColors.card,
@@ -85,9 +197,9 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   name: { fontSize: 16, fontWeight: "600", color: ownerColors.text, flex: 1 },
-  category: { fontSize: 13, color: ownerColors.primary, marginTop: 4 },
   meta: { fontSize: 14, color: ownerColors.textMuted, marginTop: 6 },
   desc: { fontSize: 13, color: ownerColors.textDim, marginTop: 8, lineHeight: 18 },
+  hintLongPress: { fontSize: 11, color: ownerColors.textDim, marginTop: 8 },
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
