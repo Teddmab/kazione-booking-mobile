@@ -59,7 +59,7 @@ export const OWNER_DRAWER_SECTIONS: OwnerDrawerSection[] = [
       {
         key: "finance",
         labelKey: "owner.finance",
-        href: "/(app)/owner/more" as Href,
+        href: "/(app)/owner/finance" as Href,
         icon: "card-outline",
       },
       {
@@ -83,7 +83,7 @@ export const OWNER_DRAWER_SECTIONS: OwnerDrawerSection[] = [
       {
         key: "reports",
         labelKey: "owner.reports",
-        href: "/(app)/owner/more" as Href,
+        href: "/(app)/owner/reports" as Href,
         icon: "bar-chart-outline",
       },
       {
