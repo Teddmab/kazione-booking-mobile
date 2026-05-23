@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(nextSession);
 
         if (event === 'SIGNED_IN' && nextSession?.user) {
-          await syncRoleForUser(nextSession.user.id);
+          void syncRoleForUser(nextSession.user.id);
         }
 
         if (event === 'TOKEN_REFRESHED' && nextSession) {

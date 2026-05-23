@@ -18,7 +18,7 @@ export default function OwnerLayout() {
   }
 
   if (!tenant) {
-    return <Redirect href="/(app)/client" />;
+    return <Redirect href="/" />;
   }
 
   const role = tenant.role;
