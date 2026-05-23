@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   View,
   Text,
@@ -6,8 +7,11 @@ import {
   TextInput,
   StyleSheet,
   RefreshControl,
+  Pressable,
 } from "react-native";
 
+import { ClientDetailSheet } from "@/components/owner/ClientDetailSheet";
+import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
@@ -15,10 +19,16 @@ import { useOwnerClients } from "@/hooks/useOwnerClients";
 import { clientDisplayName, formatCurrency, formatDate } from "@/lib/format";
 import type { ClientWithStats } from "@/types/owner";
 
-function ClientRow({ item }: { item: ClientWithStats }) {
+function ClientRow({
+  item,
+  onPress,
+}: {
+  item: ClientWithStats;
+  onPress: () => void;
+}) {
   const name = clientDisplayName(item.first_name, item.last_name);
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={onPress}>
       <Text style={styles.name}>{name}</Text>
       {item.email ? <Text style={styles.meta}>{item.email}</Text> : null}
       {item.phone ? <Text style={styles.meta}>{item.phone}</Text> : null}
@@ -29,18 +39,21 @@ function ClientRow({ item }: { item: ClientWithStats }) {
           <Text style={styles.stat}>Dernière visite {formatDate(item.last_visit)}</Text>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function OwnerClientsScreen() {
+  const { t } = useTranslation();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [selected, setSelected] = useState<ClientWithStats | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(search.trim()), 400);
+    const t = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -53,22 +66,30 @@ export default function OwnerClientsScreen() {
 
   return (
     <View style={styles.flex}>
+      <OwnerAppBar title={t("owner.clients")} />
       <View style={styles.searchWrap}>
         <TextInput
-          style={ownerStyles.searchInput}
-          placeholder="Rechercher un client…"
+          style={[ownerStyles.searchInput, styles.searchInput]}
+          placeholder="Rechercher nom, email ou téléphone…"
           value={search}
           onChangeText={setSearch}
-          onSubmitEditing={() => setDebounced(search.trim())}
           returnKeyType="search"
           autoCapitalize="none"
         />
+        {search.length > 0 ? (
+          <Pressable
+            style={styles.clearBtn}
+            onPress={() => setSearch("")}
+            accessibilityLabel="Effacer la recherche">
+            <Text style={styles.clearText}>✕</Text>
+          </Pressable>
+        ) : null}
       </View>
       <QueryState
         loading={isLoading}
         error={isError ? (error as Error) : null}
         empty={!isLoading && clients.length === 0}
-        emptyMessage="Aucun client trouvé."
+        emptyMessage={debounced ? "Aucun client pour cette recherche." : "Aucun client."}
         onRetry={() => void refetch()}>
         <FlatList
           data={clients}
@@ -77,16 +98,41 @@ export default function OwnerClientsScreen() {
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
           }
-          renderItem={({ item }) => <ClientRow item={item} />}
+          renderItem={({ item }) => (
+            <ClientRow
+              item={item}
+              onPress={() => {
+                setSelected(item);
+                setSheetOpen(true);
+              }}
+            />
+          )}
         />
       </QueryState>
+
+      <ClientDetailSheet
+        client={selected}
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 12, position: "relative" },
+  searchInput: { paddingRight: 40 },
+  clearBtn: {
+    position: "absolute",
+    right: 24,
+    top: 24,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearText: { fontSize: 16, color: ownerColors.textMuted },
   list: { padding: 16, paddingTop: 0 },
   card: {
     backgroundColor: ownerColors.card,

@@ -21,8 +21,19 @@ export function formatDate(iso: string): string {
   });
 }
 
-export function formatDateLong(d: Date): string {
-  return d.toLocaleDateString("fr-FR", {
+const LOCALE_MAP: Record<string, string> = {
+  en: "en-GB",
+  fr: "fr-FR",
+  et: "et-EE",
+};
+
+export function localeForLanguage(lang: string): string {
+  const code = lang.split("-")[0];
+  return LOCALE_MAP[code] ?? "en-GB";
+}
+
+export function formatDateLong(d: Date, language = "en"): string {
+  return d.toLocaleDateString(localeForLanguage(language), {
     weekday: "long",
     day: "numeric",
     month: "long",

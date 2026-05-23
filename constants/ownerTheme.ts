@@ -1,17 +1,41 @@
 import { StyleSheet } from "react-native";
 
 export const ownerColors = {
-  bg: "#faf8f5",
+  bg: "#f9f8f3",
   card: "#ffffff",
   border: "#e8e0d8",
   primary: "#6b5344",
   primaryMuted: "rgba(107, 83, 68, 0.12)",
+  accentPeach: "#f3e8df",
+  accentPeachIcon: "#e8d5c8",
   text: "#1a1a1a",
   textMuted: "#555",
   textDim: "#888",
   danger: "#b00020",
   success: "#2e7d32",
+  successMuted: "#e8f5e9",
   warning: "#b45309",
+  warningMuted: "#fff3e0",
+  avatar: "#e85d3a",
+  tabBar: "#ffffff",
+};
+
+/** Dark sidebar (web owner shell) */
+export const ownerDrawerColors = {
+  bg: "#1a1a1c",
+  bgActive: "#2a2a2d",
+  border: "#333336",
+  text: "#ffffff",
+  textMuted: "#9a9aa0",
+  icon: "#b0b0b5",
+  sectionLabel: "#6e6e73",
+  accent: "#e85d3a",
+  gold: "#d4a853",
+  logoBg: "#2a2620",
+};
+
+export const ownerFonts = {
+  serif: "Georgia",
 };
 
 export const ownerStyles = StyleSheet.create({
