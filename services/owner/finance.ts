@@ -8,6 +8,11 @@ import type {
   StaffPerformanceRow,
   TransactionFilters,
   TransactionStatusFilter,
+  PaginatedExpenses,
+  ExpenseRow,
+  CreateExpenseData,
+  ExpenseBreakdown,
+  SupplierSpendRow,
 } from "@/types/finance";
 
 export async function getRevenueSummary(
@@ -84,4 +89,57 @@ export async function getTransactions(
     appointments,
     total: appointments.length,
   };
+}
+
+export async function getExpenses(
+  businessId: string,
+  dateRange: DateRange,
+  page = 1,
+  limit = 50,
+): Promise<PaginatedExpenses> {
+  const params = new URLSearchParams({
+    action: "expenses",
+    business_id: businessId,
+    date_from: dateRange.from,
+    date_to: dateRange.to,
+    page: String(page),
+    limit: String(limit),
+  });
+  return api.get<PaginatedExpenses>(`/finance?${params}`);
+}
+
+export async function createExpense(
+  businessId: string,
+  data: CreateExpenseData,
+): Promise<ExpenseRow> {
+  return api.post<ExpenseRow>("/finance?action=expense", {
+    business_id: businessId,
+    ...data,
+  });
+}
+
+export async function getExpenseBreakdown(
+  businessId: string,
+  dateRange: DateRange,
+): Promise<ExpenseBreakdown[]> {
+  const params = new URLSearchParams({
+    action: "expense-breakdown",
+    business_id: businessId,
+    from: dateRange.from,
+    to: dateRange.to,
+  });
+  return api.get<ExpenseBreakdown[]>(`/finance?${params}`);
+}
+
+export async function getSupplierSpend(
+  businessId: string,
+  dateRange: DateRange,
+): Promise<SupplierSpendRow[]> {
+  const params = new URLSearchParams({
+    action: "supplier-spend",
+    business_id: businessId,
+    from: dateRange.from,
+    to: dateRange.to,
+  });
+  return api.get<SupplierSpendRow[]>(`/finance?${params}`);
 }
