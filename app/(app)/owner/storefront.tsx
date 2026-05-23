@@ -56,6 +56,7 @@ function EditorForm({
   const uploadCover = useUploadCoverImage(businessId);
   const gallery = useGalleryImages(businessId);
   const promotions = useStorefrontPromotions(businessId);
+  const promotionsList = Array.isArray(promotions.data) ? promotions.data : [];
   const uploadGallery = useUploadGalleryImage(businessId);
   const deleteGallery = useDeleteGalleryImage(businessId);
   const addPromo = useAddPromotion(businessId);
@@ -187,10 +188,10 @@ function EditorForm({
 
       <Text style={styles.section}>{t("owner.storefrontPromotions")}</Text>
       <View style={styles.card}>
-        {(promotions.data ?? []).length === 0 ? (
+        {promotionsList.length === 0 ? (
           <Text style={styles.muted}>{t("owner.promoEmpty")}</Text>
         ) : (
-          (promotions.data ?? []).map((p) => (
+          promotionsList.map((p) => (
             <Pressable key={p.id} style={styles.promoRow} onLongPress={() => removePromotionRow(p.id)}>
               <Text style={styles.promoTitle}>{p.title}</Text>
               {p.description ? <Text style={styles.muted}>{p.description}</Text> : null}
