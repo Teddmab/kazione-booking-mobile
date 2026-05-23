@@ -6,7 +6,8 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": ["jest"]
   },
   "include": [
     "**/*.ts",
@@ -15,5 +16,5 @@
     "expo-env.d.ts",
     "nativewind-env.d.ts"
   ],
-  "exclude": ["__tests__", "node_modules"]
+  "exclude": ["node_modules"]
 }

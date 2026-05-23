@@ -43,23 +43,30 @@ interface TenantState {
 
 const STORAGE_KEY = "kazione_active_business_id";
 
+/** Shared with login-team prefetch and TanStack Query. */
+export async function fetchTenantBootstrap(): Promise<TenantBootstrap> {
+  const result = await api.get<MeApiResponse>("/me");
+  const rawBusinesses = result.businesses?.length ? result.businesses : null;
+  const single = result.tenant ?? null;
+  const businesses = rawBusinesses ?? (single ? [single] : []);
+  return {
+    tenant: single,
+    businesses,
+  };
+}
+
+export function tenantQueryKey(userId: string | undefined) {
+  return ["tenant", userId] as const;
+}
+
 const TenantContext = createContext<TenantState | undefined>(undefined);
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthContext();
 
-  const { data, error, isPending, isFetching } = useQuery<TenantBootstrap>({
-    queryKey: ["tenant", user?.id],
-    queryFn: async () => {
-      const result = await api.get<MeApiResponse>("/me");
-      const rawBusinesses = result.businesses?.length ? result.businesses : null;
-      const single = result.tenant ?? null;
-      const businesses = rawBusinesses ?? (single ? [single] : []);
-      return {
-        tenant: single,
-        businesses,
-      };
-    },
+  const { data, error, isPending } = useQuery<TenantBootstrap>({
+    queryKey: tenantQueryKey(user?.id),
+    queryFn: fetchTenantBootstrap,
     enabled: !!user?.id,
     staleTime: 300_000,
     retry: 2,
@@ -104,7 +111,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         tenant,
         businesses,
         setActiveBusiness,
-        loading: !!(user?.id && !data && (isPending || isFetching)),
+        loading: !!(user?.id && isPending),
         error: error as Error | null,
       }}
     >

@@ -1,15 +1,17 @@
 import { Pressable, Text, View, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
 
 export function OwnerBusinessHeader() {
+  const insets = useSafeAreaInsets();
   const { tenant, businesses, setActiveBusiness } = useTenantContext();
 
   if (!tenant) return null;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
       <Text style={styles.name} numberOfLines={1}>
         {tenant.businessName}
       </Text>
@@ -45,7 +47,6 @@ export function OwnerBusinessHeader() {
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 20,
-    paddingTop: 8,
     paddingBottom: 12,
     backgroundColor: ownerColors.bg,
     borderBottomWidth: 1,

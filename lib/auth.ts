@@ -1,7 +1,12 @@
 import * as Linking from 'expo-linking';
 
+import { api } from '@/lib/api';
 import { getSupabase } from '@/lib/supabase';
 import type { UserRole } from '@/store/authStore';
+
+interface MeRoleResponse {
+  tenant?: { role?: string } | null;
+}
 
 const redirectUrl = Linking.createURL('/');
 
@@ -40,24 +45,18 @@ export async function resetPassword(email: string) {
   return getSupabase().auth.resetPasswordForEmail(email, { redirectTo: redirectUrl });
 }
 
-export async function fetchUserRole(userId: string): Promise<UserRole> {
-  const { data, error } = await getSupabase()
-    .from('business_members')
-    .select('role')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data?.role) {
+/** Resolves app role via GET /me (Edge Function), not direct Supabase DB access. */
+export async function fetchUserRole(_userId: string): Promise<UserRole> {
+  try {
+    const me = await api.get<MeRoleResponse>('/me');
+    const role = me.tenant?.role;
+    if (role === 'owner' || role === 'manager' || role === 'staff') {
+      return role;
+    }
+    return 'client';
+  } catch {
     return 'client';
   }
-
-  const role = data.role as string;
-  if (role === 'owner' || role === 'manager' || role === 'staff') {
-    return role;
-  }
-  return 'client';
 }
 
 /** @deprecated Prefer named exports; kept for existing screens. */

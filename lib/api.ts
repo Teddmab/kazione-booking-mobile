@@ -4,6 +4,7 @@ import { getSupabase } from "@/lib/supabase";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const REQUEST_TIMEOUT_MS = 15_000;
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,20 +75,31 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   const requestUrl = `${BASE_URL}${path}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   let response: Response;
   try {
     response = await fetch(requestUrl, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
   } catch (networkErr) {
+    const timedOut =
+      networkErr instanceof Error &&
+      (networkErr.name === "AbortError" || networkErr.message.includes("aborted"));
     throw new ApiError(
       "NETWORK_ERROR",
-      "Unable to reach the server. Check your connection.",
+      timedOut
+        ? "Request timed out. Check that Supabase and Edge Functions are running."
+        : "Unable to reach the server. Check your connection.",
       0,
       networkErr,
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (response.status === 401) {

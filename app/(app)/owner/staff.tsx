@@ -1,14 +1,27 @@
-import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
+import { useNavigation } from "expo-router";
+import { useCallback, useLayoutEffect, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
+import { InviteStaffSheet, type InviteStaffValues } from "@/components/owner/InviteStaffSheet";
+import { OwnerAddHeaderButton } from "@/components/owner/OwnerAddHeaderButton";
 import { QueryState } from "@/components/owner/QueryState";
+import { StaffDetailSheet, type StaffUpdateValues } from "@/components/owner/StaffDetailSheet";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
-import { useOwnerStaff } from "@/hooks/useOwnerStaff";
+import { useInviteStaff, useOwnerStaff, useUpdateStaffMember } from "@/hooks/useOwnerStaff";
 import type { StaffMember } from "@/types/owner";
 
-function StaffRow({ item }: { item: StaffMember }) {
+function StaffRow({ item, onPress }: { item: StaffMember; onPress: () => void }) {
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={onPress}>
       <View style={styles.row}>
         <Text style={styles.name}>{item.display_name}</Text>
         <View style={[styles.badge, !item.is_active && styles.badgeOff]}>
@@ -17,17 +30,56 @@ function StaffRow({ item }: { item: StaffMember }) {
       </View>
       <Text style={styles.role}>{item.role}</Text>
       {item.email ? <Text style={styles.meta}>{item.email}</Text> : null}
-    </View>
+    </Pressable>
   );
 }
 
 export default function OwnerStaffScreen() {
+  const navigation = useNavigation();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
-  const { data, isLoading, isError, error, refetch, isRefetching } =
-    useOwnerStaff(businessId);
+
+  const { data, isLoading, isError, error, refetch, isRefetching } = useOwnerStaff(businessId);
+  const invite = useInviteStaff(businessId);
+  const updateMember = useUpdateStaffMember(businessId);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selected, setSelected] = useState<StaffMember | null>(null);
+
+  const openInvite = useCallback(() => setInviteOpen(true), []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => <OwnerAddHeaderButton onPress={openInvite} />,
+    });
+  }, [navigation, openInvite]);
 
   const staff = data ?? [];
+
+  const onInvite = (values: InviteStaffValues) => {
+    invite.mutate(values, {
+      onSuccess: (res) => {
+        setInviteOpen(false);
+        Alert.alert("Invitation envoyée", `Un email a été envoyé à ${res.email}.`);
+        void refetch();
+      },
+      onError: (e) => Alert.alert("Erreur", e.message),
+    });
+  };
+
+  const onSaveStaff = (id: string, values: StaffUpdateValues) => {
+    updateMember.mutate(
+      { id, values },
+      {
+        onSuccess: () => {
+          setDetailOpen(false);
+          Alert.alert("Enregistré", "Membre mis à jour.");
+        },
+        onError: (e) => Alert.alert("Erreur", e.message),
+      },
+    );
+  };
 
   return (
     <View style={styles.flex}>
@@ -35,7 +87,7 @@ export default function OwnerStaffScreen() {
         loading={isLoading}
         error={isError ? (error as Error) : null}
         empty={!isLoading && staff.length === 0}
-        emptyMessage="Aucun membre d'équipe."
+        emptyMessage="Aucun membre. Appuyez sur + pour inviter."
         onRetry={() => void refetch()}>
         <FlatList
           data={staff}
@@ -44,14 +96,32 @@ export default function OwnerStaffScreen() {
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
           }
-          renderItem={({ item }) => <StaffRow item={item} />}
-          ListHeaderComponent={
-            <Text style={styles.hint}>
-              Invitations et plannings détaillés : utilisez la version web pour l'instant.
-            </Text>
-          }
+          renderItem={({ item }) => (
+            <StaffRow
+              item={item}
+              onPress={() => {
+                setSelected(item);
+                setDetailOpen(true);
+              }}
+            />
+          )}
         />
       </QueryState>
+
+      <InviteStaffSheet
+        visible={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onSubmit={onInvite}
+        busy={invite.isPending}
+      />
+
+      <StaffDetailSheet
+        member={selected}
+        visible={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        onSave={onSaveStaff}
+        busy={updateMember.isPending}
+      />
     </View>
   );
 }
@@ -59,12 +129,6 @@ export default function OwnerStaffScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
   list: { padding: 16 },
-  hint: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
   card: {
     backgroundColor: ownerColors.card,
     borderRadius: 14,

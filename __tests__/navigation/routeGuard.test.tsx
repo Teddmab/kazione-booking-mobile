@@ -4,7 +4,7 @@ import { Text } from 'react-native';
 import { AuthGate } from '@/components/AuthGate';
 
 const mockReplace = jest.fn();
-const mockSegments = jest.fn<string[]>(() => ['(app)']);
+const mockSegments = jest.fn<string[], []>(() => ['(app)']);
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),

@@ -1,9 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Stack } from "expo-router";
+import { View, StyleSheet } from "react-native";
 
-import { LoadingScreen } from '@/components/LoadingScreen';
-import { ownerColors } from '@/constants/ownerTheme';
-import { useTenantContext } from '@/contexts/TenantContext';
+import { OwnerDrawer } from "@/components/owner/OwnerDrawer";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { OwnerShellProvider } from "@/contexts/OwnerShellContext";
+import { useTenantContext } from "@/contexts/TenantContext";
 
 export default function OwnerLayout() {
   const { tenant, loading, error } = useTenantContext();
@@ -12,73 +13,46 @@ export default function OwnerLayout() {
     return <LoadingScreen />;
   }
 
-  if (error || !tenant) {
+  if (error) {
     return <Redirect href="/" />;
   }
 
-  if (tenant.role !== 'owner' && tenant.role !== 'manager') {
+  if (!tenant) {
+    return <Redirect href="/" />;
+  }
+
+  const role = tenant.role;
+  if (role !== "owner" && role !== "manager") {
     return <Redirect href="/" />;
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: true,
-        headerStyle: { backgroundColor: ownerColors.bg },
-        headerTintColor: ownerColors.primary,
-        headerTitleStyle: { fontWeight: '600', color: ownerColors.text },
-        tabBarStyle: {
-          backgroundColor: ownerColors.bg,
-          borderTopColor: ownerColors.border,
-          borderTopWidth: 1,
-        },
-        tabBarActiveTintColor: ownerColors.primary,
-        tabBarInactiveTintColor: ownerColors.textDim,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="appointments"
-        options={{
-          title: 'Appointments',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="staff"
-        options={{
-          title: 'Team',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="more"
-        options={{
-          title: 'More',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="ellipsis-horizontal" size={size} color={color} />
-          ),
-        }}
-      />
-      {/* Non-tab screens — hidden from tab bar */}
-      <Tabs.Screen name="clients" options={{ href: null, title: 'Clients' }} />
-      <Tabs.Screen name="services" options={{ href: null, title: 'Services' }} />
-      <Tabs.Screen name="storefront" options={{ href: null, title: 'Storefront' }} />
-      <Tabs.Screen name="settings" options={{ href: null, title: 'Settings' }} />
-      <Tabs.Screen name="finance" options={{ href: null, title: 'Revenue' }} />
-      <Tabs.Screen name="reports" options={{ href: null, title: 'Reports' }} />
-    </Tabs>
+    <OwnerShellProvider>
+      <View style={styles.flex}>
+        <Stack
+          screenOptions={{
+            headerBackTitle: "Retour",
+            headerTintColor: "#6b5344",
+            headerStyle: { backgroundColor: "#f9f8f3" },
+            contentStyle: { backgroundColor: "#f9f8f3" },
+          }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="walk-in" options={{ title: "Passage rapide" }} />
+          <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
+          <Stack.Screen name="staff" options={{ title: "Équipe" }} />
+          <Stack.Screen name="services" options={{ title: "Services" }} />
+          <Stack.Screen name="storefront" options={{ title: "Vitrine" }} />
+          <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
+          <Stack.Screen name="finance" options={{ title: "Finance" }} />
+          <Stack.Screen name="reports" options={{ title: "Rapports" }} />
+          <Stack.Screen name="more" options={{ title: "Finance & rapports" }} />
+        </Stack>
+        <OwnerDrawer />
+      </View>
+    </OwnerShellProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+});

@@ -28,8 +28,26 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 async function syncRoleForUser(userId: string) {
-  const role = await fetchUserRole(userId);
-  useAuthStore.getState().setRole(role);
+  try {
+    const role = await fetchUserRole(userId);
+    useAuthStore.getState().setRole(role);
+  } catch {
+    useAuthStore.getState().setRole(null);
+  }
+}
+
+const SESSION_INIT_TIMEOUT_MS = 12_000;
+
+type SessionResult = Awaited<ReturnType<ReturnType<typeof getSupabase>['auth']['getSession']>>;
+
+async function getSessionSafe(): Promise<SessionResult> {
+  const timeout = new Promise<SessionResult>((resolve) => {
+    setTimeout(
+      () => resolve({ data: { session: null }, error: null }),
+      SESSION_INIT_TIMEOUT_MS,
+    );
+  });
+  return Promise.race([getSupabase().auth.getSession(), timeout]);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -46,19 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const init = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const timeout = new Promise<{ data: { session: null } }>((resolve) =>
-          setTimeout(() => resolve({ data: { session: null } }), 4000),
-        );
-        const { data } = await Promise.race([
-          getSupabase().auth.getSession(),
-          timeout,
-        ]);
+        const { data } = await getSessionSafe();
         if (!mounted) return;
         setSession(data.session);
         if (data.session?.user) {
-          await syncRoleForUser(data.session.user.id);
+          void syncRoleForUser(data.session.user.id);
         }
       } catch {
         // ignore — onAuthStateChange will drive state once the client is ready
@@ -71,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = getSupabase().auth.onAuthStateChange(async (event, nextSession) => {
+    } = getSupabase().auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
       try {
         if (event === 'SIGNED_OUT') {
@@ -83,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(nextSession);
 
         if (event === 'SIGNED_IN' && nextSession?.user) {
-          await syncRoleForUser(nextSession.user.id);
+          void syncRoleForUser(nextSession.user.id);
         }
 
         if (event === 'TOKEN_REFRESHED' && nextSession) {

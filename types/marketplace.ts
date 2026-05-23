@@ -1,4 +1,4 @@
-/** List item from `GET /marketplace-storefronts` (same shape as web BrowseSalons). */
+/** List item from `GET /marketplace-storefronts`. */
 export interface StorefrontSummary {
   id: string;
   business_id: string;
@@ -21,7 +21,102 @@ export interface MarketplaceStorefrontsResponse {
   total: number;
 }
 
-/** Subset of `get-storefront` payload used on mobile (extend as screens grow). */
+/** Alias used by SalonCard — maps from StorefrontSummary. */
+export interface SalonListItem {
+  id: string;
+  slug: string;
+  name: string;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  rating: number;
+  review_count: number;
+  city: string | null;
+  top_services: string[];
+  is_featured: boolean;
+  categories: string[];
+}
+
+export function toSalonListItem(s: StorefrontSummary): SalonListItem {
+  return {
+    id: s.id,
+    slug: s.slug,
+    name: s.title,
+    logo_url: s.logo_url,
+    cover_image_url: s.cover_image_url,
+    rating: s.avg_rating,
+    review_count: s.review_count,
+    city: s.city,
+    top_services: s.services_preview.map((p) => p.name),
+    is_featured: false,
+    categories: s.marketplace_categories ?? [],
+  };
+}
+
+export interface StorefrontService {
+  id: string;
+  name: string;
+  category: string;
+  categoryId: string | null;
+  description: string;
+  duration: string;
+  durationMin: number;
+  price: number;
+  currency: string;
+  popular: boolean;
+  imageUrl: string | null;
+  displayOrder: number;
+}
+
+export interface StorefrontStaffMember {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  avatar: string | null;
+  specialties: string[];
+  serviceIds: string[];
+}
+
+export interface StorefrontPromotion {
+  id: string;
+  title: string;
+  description: string;
+  discountType: string;
+  discountValue: number;
+  badge: string | null;
+  validFrom: string | null;
+  validUntil: string | null;
+  appliesTo: string[];
+}
+
+export interface StorefrontGalleryImage {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  displayOrder: number;
+}
+
+export interface StorefrontContact {
+  address: string | null;
+  city: string | null;
+  countryCode: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+}
+
+export interface StorefrontSections {
+  hero: boolean;
+  about: boolean;
+  services: boolean;
+  promotions: boolean;
+  gallery: boolean;
+  team: boolean;
+  reviews: boolean;
+  booking: boolean;
+}
+
+/** Full payload from `GET /get-storefront?slug=`. */
 export interface StorefrontDetail {
   id: string;
   businessId: string;
@@ -29,29 +124,26 @@ export interface StorefrontDetail {
   name: string;
   tagline: string | null;
   description: string | null;
+  extendedDescription: string | null;
   logoUrl: string | null;
   coverImageUrl: string | null;
+  accentColor: string;
+  verified: boolean;
   currencyCode: string;
+  countryCode: string | null;
+  headline: string | null;
+  tags: string[];
+  categories: string[];
+  featured: boolean;
   rating: number;
   reviewCount: number;
-  verified: boolean;
-  services: {
-    id: string;
-    name: string;
-    category: string;
-    duration: string;
-    price: number;
-    popular: boolean;
-    description: string | null;
-  }[];
-  sections?: { team: boolean; services: boolean };
-  team?: {
-    id: string;
-    name: string;
-    role: string;
-    bio: string;
-    avatar: string | null;
-    specialties: string[];
-    serviceIds: string[];
-  }[];
+  sections: StorefrontSections;
+  contact: StorefrontContact;
+  services: StorefrontService[];
+  team: StorefrontStaffMember[];
+  promotions: StorefrontPromotion[];
+  gallery: StorefrontGalleryImage[];
 }
+
+/** @deprecated Use StorefrontDetail */
+export type StorefrontSalon = StorefrontDetail;

@@ -1,33 +1,47 @@
+import type { Href } from "expo-router";
+
 export type OwnerNavItem = {
   key: string;
-  title: string;
-  subtitle: string;
+  titleKey: string;
+  subtitleKey: string;
   href: string;
 };
 
 export const OWNER_QUICK_NAV: OwnerNavItem[] = [
   {
-    key: 'clients',
-    title: 'Clients',
-    subtitle: 'Client roster and history',
-    href: '/(app)/owner/clients',
+    key: "appointments",
+    titleKey: "owner.appointments",
+    subtitleKey: "owner.tabAppointments",
+    href: "/(app)/owner/(tabs)/appointments",
   },
   {
-    key: 'services',
-    title: 'Services',
-    subtitle: 'Pricing and durations',
-    href: '/(app)/owner/services',
+    key: "clients",
+    titleKey: "owner.clients",
+    subtitleKey: "owner.clients",
+    href: "/(app)/owner/(tabs)/clients",
   },
   {
-    key: 'storefront',
-    title: 'Storefront',
-    subtitle: 'Public profile and gallery',
-    href: '/(app)/owner/storefront',
+    key: "staff",
+    titleKey: "owner.staff",
+    subtitleKey: "owner.staff",
+    href: "/(app)/owner/staff",
   },
   {
-    key: 'settings',
-    title: 'Settings',
-    subtitle: 'Business info and preferences',
-    href: '/(app)/owner/settings',
+    key: "services",
+    titleKey: "owner.services",
+    subtitleKey: "owner.services",
+    href: "/(app)/owner/services",
+  },
+  {
+    key: "storefront",
+    titleKey: "owner.storefront",
+    subtitleKey: "owner.storefront",
+    href: "/(app)/owner/storefront",
+  },
+  {
+    key: "settings",
+    titleKey: "owner.settings",
+    subtitleKey: "owner.settings",
+    href: "/(app)/owner/settings",
   },
 ];
