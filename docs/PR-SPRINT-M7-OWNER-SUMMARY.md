@@ -1,6 +1,7 @@
 # PR description — Sprint M7 Owner (copy-paste)
 
-> **Canonical spec:** [`kazione-docs/team/MOBILE/Sprint M7 — Web Parity & Owner Analytics.md`](../../../kazione-docs/team/MOBILE/Sprint%20M7%20%E2%80%94%20Web%20Parity%20%26%20Owner%20Analytics.md)
+> **Canonical spec:** [`kazione-docs/team/MOBILE/Sprint M7 — Web Parity & Owner Analytics.md`](../../../kazione-docs/team/MOBILE/Sprint%20M7%20%E2%80%94%20Web%20Parity%20%26%20Owner%20Analytics.md)  
+> **Implementation report:** [`kazione-docs/team/MOBILE/M7 — Implementation Report.md`](../../../kazione-docs/team/MOBILE/M7%20%E2%80%94%20Implementation%20Report.md)
 
 ## Summary
 
