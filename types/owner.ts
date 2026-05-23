@@ -141,9 +141,54 @@ export interface StorefrontRow {
   slug: string;
   title: string;
   tagline: string | null;
+  description: string | null;
+  extended_description: string | null;
   is_published: boolean;
   logo_url: string | null;
   cover_image_url: string | null;
+  marketplace_status: string;
+  marketplace_featured: boolean;
+  city: string | null;
+  phone: string | null;
+}
+
+export interface UpdateStorefrontData {
+  tagline?: string | null;
+  description?: string | null;
+  extended_description?: string | null;
+  cover_image_url?: string | null;
+  is_published?: boolean;
+  marketplace_featured?: boolean;
+  marketplace_status?: string;
+  city?: string | null;
+  phone?: string | null;
+}
+
+export interface GalleryItem {
+  id: string;
+  storefront_id: string;
+  image_url: string;
+  caption: string | null;
+  display_order: number;
+  created_at: string;
+}
+
+export interface StorefrontPromotion {
+  id: string;
+  business_id: string;
+  title: string;
+  description: string | null;
+  valid_until: string | null;
+  is_active: boolean;
+}
+
+export interface UserProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  avatar_url: string | null;
 }
 
 export interface BusinessRow {
