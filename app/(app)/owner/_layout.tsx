@@ -43,6 +43,8 @@ export default function OwnerLayout() {
           <Stack.Screen name="services" options={{ title: "Services" }} />
           <Stack.Screen name="storefront" options={{ title: "Vitrine" }} />
           <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
+          <Stack.Screen name="finance" options={{ title: "Finance" }} />
+          <Stack.Screen name="reports" options={{ title: "Rapports" }} />
           <Stack.Screen name="more" options={{ title: "Finance & rapports" }} />
         </Stack>
         <OwnerDrawer />

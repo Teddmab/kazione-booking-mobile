@@ -47,13 +47,23 @@ export default function OwnerMoreTabScreen() {
         ))}
         <Pressable
           style={styles.card}
-          onPress={() => router.push("/(app)/owner/more" as Href)}>
+          onPress={() => router.push("/(app)/owner/finance" as Href)}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="card-outline" size={22} color={ownerColors.primary} />
+          </View>
+          <View style={styles.textBlock}>
+            <Text style={styles.title}>{t("owner.finance")}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={ownerColors.textDim} />
+        </Pressable>
+        <Pressable
+          style={styles.card}
+          onPress={() => router.push("/(app)/owner/reports" as Href)}>
           <View style={styles.iconWrap}>
             <Ionicons name="bar-chart-outline" size={22} color={ownerColors.primary} />
           </View>
           <View style={styles.textBlock}>
-            <Text style={styles.title}>{t("owner.finance")}</Text>
-            <Text style={styles.sub}>{t("owner.webOnly")}</Text>
+            <Text style={styles.title}>{t("owner.reports")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={ownerColors.textDim} />
         </Pressable>
