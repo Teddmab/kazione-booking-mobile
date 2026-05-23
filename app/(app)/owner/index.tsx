@@ -93,6 +93,13 @@ export default function OwnerDashboardScreen() {
           )}
         </QueryState>
 
+        <Pressable
+          style={styles.walkInCard}
+          onPress={() => router.push("/(app)/owner/walk-in" as Href)}>
+          <Text style={styles.walkInTitle}>+ Passage rapide</Text>
+          <Text style={styles.walkInSub}>Réserver un client sans parcours complet</Text>
+        </Pressable>
+
         <Text style={styles.section}>Gestion</Text>
         <View style={styles.navGrid}>
           {OWNER_QUICK_NAV.map((item) => (
@@ -124,6 +131,14 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 20,
   },
+  walkInCard: {
+    backgroundColor: ownerColors.primary,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+  },
+  walkInTitle: { fontSize: 17, fontWeight: "700", color: "#fff" },
+  walkInSub: { fontSize: 13, color: "rgba(255,255,255,0.85)", marginTop: 4 },
   section: {
     fontSize: 13,
     fontWeight: "600",
