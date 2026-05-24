@@ -30,8 +30,11 @@ Same backend and auth as **kazione-booking-frontends** (Supabase + Edge `api`).
 
 ## Phase 4 — Owner / manager
 
-- [ ] Shell + tabs (appointments, clients, staff, services, finance, reports, insights, settings, storefront, marketplace listing)
-- [ ] Wire each area to existing REST paths used on web
+- [x] Shell + tabs (appointments, clients, staff, services) — M3–M4
+- [x] Finance overview + transactions + CSV export — M5
+- [x] Storefront editor (branding, gallery, promos) — M6
+- [ ] **Sprint M7 — Web parity** : dashboard charts, settings/business, clients KPIs, finance extended, suppliers, marketplace listing, reports analytics, AI Insights page, routing fix
+- [ ] Wire remaining areas to same REST paths as web (`/suppliers`, `/finance` expenses, `/ai-insights`, etc.)
 
 ## Phase 5 — Staff & reception
 

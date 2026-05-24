@@ -67,3 +67,64 @@ export interface TransactionFilters {
   page?: number;
   limit?: number;
 }
+
+export type ExpenseCategory =
+  | "supplies"
+  | "rent"
+  | "utilities"
+  | "marketing"
+  | "equipment"
+  | "staff"
+  | "other";
+
+export interface ExpenseRow {
+  id: string;
+  business_id: string;
+  supplier_id: string | null;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  currency_code: string;
+  date: string;
+  supplier: { id: string; name: string } | null;
+}
+
+export interface PaginatedExpenses {
+  expenses: ExpenseRow[];
+  total: number;
+}
+
+export interface CreateExpenseData {
+  supplier_id?: string | null;
+  category: ExpenseCategory;
+  description: string;
+  amount: number;
+  currency_code?: string;
+  date: string;
+  notes?: string | null;
+}
+
+export interface ExpenseBreakdown {
+  category: string;
+  amount: number;
+  expense_count: number;
+}
+
+export interface SupplierSpendRow {
+  supplier_id: string;
+  supplier_name: string;
+  total: number;
+  order_count: number;
+}
+
+export type ReportPeriodKey = "7d" | "30d" | "90d" | "ytd";
+
+export type FinanceTabKey = "overview" | "income" | "expenses" | "profitability";
+
+export type ReportsTabKey =
+  | "bookings"
+  | "clients"
+  | "staff"
+  | "revenue"
+  | "services"
+  | "transactions";

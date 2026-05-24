@@ -30,8 +30,8 @@ function isDrawerItemActive(key: string, pathname: string): boolean {
       !pathname.includes("/more")
     );
   }
-  if (key === "finance" || key === "suppliers" || key === "marketplace" || key === "reports" || key === "ai-insights") {
-    return pathname.includes("/owner/more");
+  if (key === "finance" || key === "reports" || key === "suppliers" || key === "marketplace" || key === "ai-insights") {
+    return pathname.includes(`/owner/${key === "ai-insights" ? "ai-insights" : key}`);
   }
   return pathname.includes(`/${key}`);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   View,
@@ -10,33 +10,40 @@ import {
   Pressable,
 } from "react-native";
 
+import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
 import { ClientDetailSheet } from "@/components/owner/ClientDetailSheet";
 import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
+import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useOwnerClients } from "@/hooks/useOwnerClients";
+import {
+  computeClientKPIs,
+  getClientStatus,
+  matchesClientFilter,
+  type ClientStatusFilter,
+} from "@/lib/clientStatus";
 import { clientDisplayName, formatCurrency, formatDate } from "@/lib/format";
 import type { ClientWithStats } from "@/types/owner";
 
-function ClientRow({
-  item,
-  onPress,
-}: {
-  item: ClientWithStats;
-  onPress: () => void;
-}) {
+function ClientRow({ item, onPress }: { item: ClientWithStats; onPress: () => void }) {
+  const { t } = useTranslation();
   const name = clientDisplayName(item.first_name, item.last_name);
+  const status = getClientStatus(item.appointment_count, item.last_visit);
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Text style={styles.name}>{name}</Text>
+      <View style={styles.nameRow}>
+        <Text style={styles.name}>{name}</Text>
+        <Text style={styles.statusBadge}>{status}</Text>
+      </View>
       {item.email ? <Text style={styles.meta}>{item.email}</Text> : null}
       {item.phone ? <Text style={styles.meta}>{item.phone}</Text> : null}
       <View style={styles.stats}>
-        <Text style={styles.stat}>{item.appointment_count} RDV</Text>
+        <Text style={styles.stat}>{t("owner.clientApptCount", { count: item.appointment_count })}</Text>
         <Text style={styles.stat}>{formatCurrency(item.total_spent)}</Text>
         {item.last_visit ? (
-          <Text style={styles.stat}>Dernière visite {formatDate(item.last_visit)}</Text>
+          <Text style={styles.stat}>{t("owner.clientLastVisit", { date: formatDate(item.last_visit) })}</Text>
         ) : null}
       </View>
     </Pressable>
@@ -51,53 +58,74 @@ export default function OwnerClientsScreen() {
   const [debounced, setDebounced] = useState("");
   const [selected, setSelected] = useState<ClientWithStats | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [filter, setFilter] = useState<ClientStatusFilter>("all");
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(search.trim()), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(search.trim()), 300);
+    return () => clearTimeout(timer);
   }, [search]);
 
   const { data, isLoading, isError, error, refetch, isRefetching } = useOwnerClients(
     businessId,
-    { search: debounced || undefined, limit: 50 },
+    { search: debounced || undefined, limit: 100 },
   );
 
-  const clients = data?.clients ?? [];
+  const allClients = data?.clients ?? [];
+  const filtered = allClients.filter((c) =>
+    matchesClientFilter(getClientStatus(c.appointment_count, c.last_visit), filter),
+  );
+  const kpis = computeClientKPIs(allClients, data?.total ?? allClients.length);
+
+  const filterChips = useMemo(
+    () => [
+      { key: "all" as const, label: t("owner.clientFilterAll") },
+      { key: "vip" as const, label: "VIP" },
+      { key: "active" as const, label: t("owner.clientFilterActive") },
+      { key: "new" as const, label: t("owner.clientFilterNew") },
+      { key: "at_risk" as const, label: t("owner.clientFilterAtRisk") },
+      { key: "inactive" as const, label: t("owner.clientFilterInactive") },
+    ],
+    [t],
+  );
 
   return (
     <View style={styles.flex}>
       <OwnerAppBar title={t("owner.clients")} />
+      <View style={styles.kpiGrid}>
+        <DashboardStatCard label={t("owner.clientsTotal")} value={String(kpis.total)} icon="people-outline" />
+        <DashboardStatCard label={t("owner.clientFilterNew")} value={String(kpis.new)} icon="person-add-outline" />
+        <DashboardStatCard label={t("owner.clientFilterActive")} value={String(kpis.active)} icon="heart-outline" />
+        <DashboardStatCard label="VIP" value={String(kpis.vip)} icon="star-outline" />
+      </View>
       <View style={styles.searchWrap}>
         <TextInput
           style={[ownerStyles.searchInput, styles.searchInput]}
-          placeholder="Rechercher nom, email ou téléphone…"
+          placeholder={t("owner.clientsSearchPlaceholder")}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
           autoCapitalize="none"
         />
         {search.length > 0 ? (
-          <Pressable
-            style={styles.clearBtn}
-            onPress={() => setSearch("")}
-            accessibilityLabel="Effacer la recherche">
+          <Pressable style={styles.clearBtn} onPress={() => setSearch("")} accessibilityLabel={t("owner.clearSearch")}>
             <Text style={styles.clearText}>✕</Text>
           </Pressable>
         ) : null}
       </View>
+      <View style={styles.filterWrap}>
+        <TabChipSelector value={filter} chips={filterChips} onChange={setFilter} />
+      </View>
       <QueryState
         loading={isLoading}
         error={isError ? (error as Error) : null}
-        empty={!isLoading && clients.length === 0}
-        emptyMessage={debounced ? "Aucun client pour cette recherche." : "Aucun client."}
+        empty={!isLoading && filtered.length === 0}
+        emptyMessage={debounced ? t("owner.clientsEmptySearch") : t("owner.clientsEmpty")}
         onRetry={() => void refetch()}>
         <FlatList
-          data={clients}
+          data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-          }
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
           renderItem={({ item }) => (
             <ClientRow
               item={item}
@@ -109,29 +137,18 @@ export default function OwnerClientsScreen() {
           )}
         />
       </QueryState>
-
-      <ClientDetailSheet
-        client={selected}
-        visible={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-      />
+      <ClientDetailSheet client={selected} visible={sheetOpen} onClose={() => setSheetOpen(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12, position: "relative" },
+  kpiGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 8 },
+  searchWrap: { paddingHorizontal: 16, paddingTop: 8, position: "relative" },
+  filterWrap: { paddingHorizontal: 16, paddingTop: 4 },
   searchInput: { paddingRight: 40 },
-  clearBtn: {
-    position: "absolute",
-    right: 24,
-    top: 24,
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  clearBtn: { position: "absolute", right: 24, top: 20, width: 28, height: 28, alignItems: "center", justifyContent: "center" },
   clearText: { fontSize: 16, color: ownerColors.textMuted },
   list: { padding: 16, paddingTop: 0 },
   card: {
@@ -142,7 +159,9 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
-  name: { fontSize: 16, fontWeight: "600", color: ownerColors.text },
+  nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  name: { fontSize: 16, fontWeight: "600", color: ownerColors.text, flex: 1 },
+  statusBadge: { fontSize: 11, fontWeight: "700", color: ownerColors.primary, textTransform: "uppercase" },
   meta: { fontSize: 14, color: ownerColors.textMuted, marginTop: 4 },
   stats: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 10 },
   stat: { fontSize: 12, color: ownerColors.textDim },

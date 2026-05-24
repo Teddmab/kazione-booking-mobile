@@ -153,6 +153,7 @@ export interface StorefrontRow {
 }
 
 export interface UpdateStorefrontData {
+  title?: string | null;
   tagline?: string | null;
   description?: string | null;
   extended_description?: string | null;

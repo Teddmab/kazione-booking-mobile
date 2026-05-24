@@ -1,3 +1,4 @@
+import { useRouter, type Href } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,7 +17,6 @@ import { SafeImage } from "@/components/SafeImage";
 import { PromotionFormSheet } from "@/components/owner/PromotionFormSheet";
 import { QueryState } from "@/components/owner/QueryState";
 import { StorefrontGalleryGrid } from "@/components/owner/StorefrontGalleryGrid";
-import { SwitchRow } from "@/components/owner/SwitchRow";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
 import {
@@ -44,12 +44,9 @@ function EditorForm({
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [tagline, setTagline] = useState(data.tagline ?? "");
   const [about, setAbout] = useState(data.extended_description ?? data.description ?? "");
-  const [marketplaceListed, setMarketplaceListed] = useState(
-    data.is_published || data.marketplace_status === "active",
-  );
-  const [featured, setFeatured] = useState(data.marketplace_featured ?? false);
   const [promoOpen, setPromoOpen] = useState(false);
 
   const update = useUpdateStorefront(businessId);
@@ -66,8 +63,6 @@ function EditorForm({
   useEffect(() => {
     setTagline(data.tagline ?? "");
     setAbout(data.extended_description ?? data.description ?? "");
-    setMarketplaceListed(data.is_published || data.marketplace_status === "active");
-    setFeatured(data.marketplace_featured ?? false);
   }, [data]);
 
   const draftPatch = useMemo(
@@ -75,16 +70,20 @@ function EditorForm({
       tagline: tagline.trim() || null,
       extended_description: about.trim() || null,
       description: about.trim() || null,
-      marketplace_featured: featured,
     }),
-    [tagline, about, featured],
+    [tagline, about],
   );
 
   const saveAll = () => {
     update.saveNow(draftPatch);
-    if (marketplaceListed !== data.is_published) {
-      publish.mutate(marketplaceListed);
-    }
+  };
+
+  const togglePublish = () => {
+    publish.mutate(!data.is_published);
+  };
+
+  const openPreview = () => {
+    if (data.slug) router.push(`/(app)/client/salon/${data.slug}` as Href);
   };
 
   const changeCover = async () => {
@@ -123,6 +122,12 @@ function EditorForm({
 
   return (
     <>
+      <View style={styles.statusRow}>
+        <Text style={styles.statusBadge}>{data.is_published ? t("owner.storefrontLive") : t("owner.storefrontDraft")}</Text>
+        <Pressable style={styles.linkBtn} onPress={openPreview}>
+          <Text style={styles.linkText}>{t("owner.storefrontPreview")}</Text>
+        </Pressable>
+      </View>
       <Text style={styles.section}>{t("owner.storefrontBranding")}</Text>
       <View style={styles.card}>
         <Text style={styles.label}>{t("owner.businessName")}</Text>
@@ -167,23 +172,13 @@ function EditorForm({
         </Pressable>
       </View>
 
-      <Text style={styles.section}>{t("owner.storefrontVisibility")}</Text>
+      <Text style={styles.section}>{t("owner.storefrontPublish")}</Text>
       <View style={styles.card}>
-        <SwitchRow
-          label={t("owner.marketplaceListed")}
-          subtitle={t("owner.marketplaceListedHint")}
-          value={marketplaceListed}
-          onValueChange={setMarketplaceListed}
-        />
-        <SwitchRow
-          label={t("owner.marketplaceFeatured")}
-          subtitle={t("owner.marketplaceFeaturedHint")}
-          value={featured}
-          onValueChange={(v) => {
-            setFeatured(v);
-            update.debouncedSave({ marketplace_featured: v });
-          }}
-        />
+        <Pressable style={styles.secondaryBtn} onPress={togglePublish} disabled={publish.isPending}>
+          <Text style={styles.secondaryBtnText}>
+            {data.is_published ? t("owner.storefrontUnpublish") : t("owner.storefrontPublishAction")}
+          </Text>
+        </Pressable>
       </View>
 
       <Text style={styles.section}>{t("owner.storefrontPromotions")}</Text>
@@ -317,4 +312,8 @@ const styles = StyleSheet.create({
   promoDate: { fontSize: 12, color: ownerColors.textDim, marginTop: 4 },
   saveBtn: { marginTop: 8 },
   disabled: { opacity: 0.7 },
+  statusRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  statusBadge: { fontSize: 13, fontWeight: "700", color: ownerColors.success },
+  linkBtn: { paddingVertical: 4 },
+  linkText: { fontSize: 14, fontWeight: "600", color: ownerColors.primary },
 });

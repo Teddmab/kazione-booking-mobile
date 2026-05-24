@@ -45,7 +45,10 @@ export default function OwnerLayout() {
           <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
           <Stack.Screen name="finance" options={{ title: "Finance" }} />
           <Stack.Screen name="reports" options={{ title: "Rapports" }} />
-          <Stack.Screen name="more" options={{ title: "Finance & rapports" }} />
+          <Stack.Screen name="suppliers" options={{ title: "Fournisseurs" }} />
+          <Stack.Screen name="marketplace" options={{ title: "Marketplace" }} />
+          <Stack.Screen name="ai-insights" options={{ title: "AI Insights" }} />
+          <Stack.Screen name="more" options={{ title: "Plus", headerShown: false }} />
         </Stack>
         <OwnerDrawer />
       </View>

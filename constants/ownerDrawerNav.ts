@@ -65,7 +65,7 @@ export const OWNER_DRAWER_SECTIONS: OwnerDrawerSection[] = [
       {
         key: "suppliers",
         labelKey: "owner.suppliers",
-        href: "/(app)/owner/more" as Href,
+        href: "/(app)/owner/suppliers" as Href,
         icon: "bus-outline",
       },
       {
@@ -77,7 +77,7 @@ export const OWNER_DRAWER_SECTIONS: OwnerDrawerSection[] = [
       {
         key: "marketplace",
         labelKey: "owner.marketplace",
-        href: "/(app)/owner/more" as Href,
+        href: "/(app)/owner/marketplace" as Href,
         icon: "bag-outline",
       },
       {
@@ -89,7 +89,7 @@ export const OWNER_DRAWER_SECTIONS: OwnerDrawerSection[] = [
       {
         key: "ai-insights",
         labelKey: "owner.aiInsights",
-        href: "/(app)/owner/more" as Href,
+        href: "/(app)/owner/ai-insights" as Href,
         icon: "sparkles-outline",
       },
       {
