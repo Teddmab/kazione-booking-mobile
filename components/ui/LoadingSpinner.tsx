@@ -9,7 +9,7 @@ interface LoadingSpinnerProps {
 export function LoadingSpinner({ message }: LoadingSpinnerProps) {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={COLORS.gold} />
+      <ActivityIndicator size="large" color={COLORS.orange} />
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );

@@ -18,6 +18,8 @@ interface InputProps {
   error?: string;
   maxLength?: number;
   keyboardType?: KeyboardTypeOptions;
+  onBlur?: () => void;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 export function Input({
@@ -29,6 +31,8 @@ export function Input({
   error,
   maxLength,
   keyboardType,
+  onBlur,
+  autoCapitalize,
 }: InputProps) {
   const [focused, setFocused] = useState(false);
 
@@ -48,9 +52,12 @@ export function Input({
         secureTextEntry={secureTextEntry}
         maxLength={maxLength}
         keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize ?? (secureTextEntry ? 'none' : undefined)}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        autoCapitalize={secureTextEntry ? 'none' : undefined}
+        onBlur={() => {
+          setFocused(false);
+          onBlur?.();
+        }}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
@@ -76,7 +83,7 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
   },
   inputFocused: {
-    borderColor: COLORS.gold,
+    borderColor: COLORS.orange,
   },
   inputError: {
     borderColor: COLORS.error,

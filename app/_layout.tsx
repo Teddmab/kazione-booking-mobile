@@ -1,5 +1,15 @@
 import '../global.css';
 
+import {
+  PlusJakartaSans_300Light,
+  PlusJakartaSans_300Light_Italic,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_400Regular_Italic,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
@@ -31,27 +41,35 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
+    PlusJakartaSans_300Light,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    PlusJakartaSans_300Light_Italic,
+    PlusJakartaSans_400Regular_Italic,
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
   const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (fontError) throw fontError;
+  }, [fontError]);
 
   useEffect(() => {
     void initI18n().then(() => setI18nReady(true));
   }, []);
 
   useEffect(() => {
-    if (loaded && i18nReady) {
+    if (fontsLoaded && i18nReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, i18nReady]);
+  }, [fontsLoaded, i18nReady]);
 
-  if (!loaded || !i18nReady) {
+  if (!fontsLoaded || !i18nReady) {
     return null;
   }
 

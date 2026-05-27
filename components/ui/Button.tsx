@@ -54,7 +54,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? COLORS.background : COLORS.gold}
+          color={variant === 'primary' ? '#FFFFFF' : COLORS.orange}
         />
       ) : (
         <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
@@ -83,30 +83,30 @@ const styles = StyleSheet.create({
 
 const variantStyles = StyleSheet.create({
   primary: {
-    backgroundColor: COLORS.gold,
+    backgroundColor: COLORS.orange,
   },
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: COLORS.gold,
+    borderColor: COLORS.border,
   },
   ghost: {
     backgroundColor: 'transparent',
   },
   danger: {
-    backgroundColor: COLORS.coral,
+    backgroundColor: COLORS.error,
   },
 });
 
 const labelStyles = StyleSheet.create({
   primary: {
-    color: COLORS.background,
+    color: '#FFFFFF',
   },
   secondary: {
-    color: COLORS.gold,
+    color: COLORS.orange,
   },
   ghost: {
-    color: COLORS.gold,
+    color: COLORS.orange,
   },
   danger: {
     color: '#FFFFFF',

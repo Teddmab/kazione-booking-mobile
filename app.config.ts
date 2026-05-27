@@ -5,18 +5,19 @@ const config: ExpoConfig = {
   slug: 'kazione-booking-mobile',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/images/icon.png',
+  icon: './assets/logos/logo-square-orange.png',
   scheme: 'kazione',
-  userInterfaceStyle: 'dark',
+  userInterfaceStyle: 'light',
   newArchEnabled: true,
   splash: {
-    image: './assets/images/splash-icon.png',
+    image: './assets/logos/logo-square-orange.png',
     resizeMode: 'contain',
-    backgroundColor: '#0C0B0A',
+    backgroundColor: '#FFFFFF',
   },
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.afrotouch.kazione',
+    icon: './assets/logos/logo-square-orange.png',
     infoPlist: {
       NSAppTransportSecurity: {
         NSAllowsLocalNetworking: true,
@@ -25,9 +26,10 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.afrotouch.kazione',
+    icon: './assets/logos/logo-square-orange.png',
     adaptiveIcon: {
-      foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#0C0B0A',
+      foregroundImage: './assets/logos/logo-icon-orange.png',
+      backgroundColor: '#FFFFFF',
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
@@ -35,7 +37,7 @@ const config: ExpoConfig = {
   web: {
     bundler: 'metro',
     output: 'static',
-    favicon: './assets/images/favicon.png',
+    favicon: './assets/logos/logo-icon-orange.png',
   },
   plugins: [
     'expo-router',

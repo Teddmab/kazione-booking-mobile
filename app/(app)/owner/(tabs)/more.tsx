@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: ownerColors.accentPeach,
+    backgroundColor: ownerColors.primarySurface,
     alignItems: "center",
     justifyContent: "center",
   },

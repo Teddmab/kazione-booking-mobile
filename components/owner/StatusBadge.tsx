@@ -15,11 +15,15 @@ type Props = { status: string };
 export function StatusBadge({ status }: Props) {
   const label = STATUS_FR[status] ?? status;
   const variant =
-    status === "confirmed" || status === "completed"
-      ? "success"
-      : status === "cancelled" || status === "no_show"
-        ? "danger"
-        : "neutral";
+    status === "confirmed"
+      ? "confirmed"
+      : status === "completed"
+        ? "completed"
+        : status === "cancelled" || status === "no_show"
+          ? "cancelled"
+          : status === "pending" || status === "pending_payment"
+            ? "pending"
+            : "neutral";
 
   return (
     <View style={[styles.badge, styles[variant]]}>
@@ -34,13 +38,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
   },
-  neutral: { backgroundColor: "#f5f0eb", borderColor: "#e8e0d8" },
-  success: { backgroundColor: "#e8f5e9", borderColor: "#c8e6c9" },
-  danger: { backgroundColor: "#ffebee", borderColor: "#ffcdd2" },
+  confirmed: { backgroundColor: "#DCFCE7" },
+  pending: { backgroundColor: "#FEF9C3" },
+  cancelled: { backgroundColor: "#FEE2E2" },
+  completed: { backgroundColor: "#F0DDD8" },
+  neutral: { backgroundColor: "#F5F5F5" },
   text: { fontSize: 12, fontWeight: "600" },
-  neutralText: { color: "#555" },
-  successText: { color: "#2e7d32" },
-  dangerText: { color: "#b00020" },
+  confirmedText: { color: "#166534" },
+  pendingText: { color: "#854D0E" },
+  cancelledText: { color: "#991B1B" },
+  completedText: { color: "#6B4C42" },
+  neutralText: { color: "#6B4C42" },
 });

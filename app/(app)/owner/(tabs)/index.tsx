@@ -71,7 +71,7 @@ export default function OwnerDashboardScreen() {
 
   return (
     <View style={styles.flex}>
-      <OwnerAppBar title={t("owner.dashboard")} subtitle={todayLabel} serifTitle />
+      <OwnerAppBar title={t("owner.dashboard")} subtitle={todayLabel} displayTitle />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
   },
-  sectionTitle: { fontFamily: ownerFonts.serif, fontSize: 22, fontWeight: "700", color: ownerColors.text },
+  sectionTitle: { fontFamily: ownerFonts.bold, fontSize: 22, fontWeight: "700", color: ownerColors.text },
   chips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   chipGreen: { backgroundColor: ownerColors.successMuted },

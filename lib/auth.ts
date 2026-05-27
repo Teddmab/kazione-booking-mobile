@@ -30,6 +30,24 @@ export async function signUpWithEmail(
   });
 }
 
+export interface RegisterBusinessOwnerInput {
+  email: string;
+  password: string;
+  ownerName: string;
+  businessName: string;
+}
+
+/** Owner onboarding — same as web SignupPage step 2 (POST /auth-register). */
+export async function registerBusinessOwner(input: RegisterBusinessOwnerInput): Promise<void> {
+  await api.post('/auth-register', {
+    email: input.email.trim().toLowerCase(),
+    password: input.password,
+    ownerName: input.ownerName.trim(),
+    businessName: input.businessName.trim(),
+    role: 'business',
+  });
+}
+
 export async function signInWithGoogle() {
   return getSupabase().auth.signInWithOAuth({
     provider: 'google',

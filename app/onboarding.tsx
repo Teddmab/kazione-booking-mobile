@@ -20,19 +20,19 @@ const SALON_COVER = require("../assets/images/onboarding/salon-afrotouch-cover.j
 
 const slides = [
   {
-    image: MARKETPLACE,
-    title: "Book beauty & wellness",
-    body: "Discover salons, choose services, and book a time that fits you — same marketplace as the web app.",
+    image: DASHBOARD,
+    title: "Your salon dashboard",
+    body: "Appointments, clients, finance and team — the same owner tools as on the web, on your phone.",
   },
   {
     image: SALON_COVER,
-    title: "One account",
-    body: "Clients book appointments. Salon teams manage the business from dedicated dashboards.",
+    title: "Run Afrotouch from anywhere",
+    body: "Check today's bookings, walk-ins, storefront and reports without opening a laptop.",
   },
   {
-    image: DASHBOARD,
-    title: "Let's go",
-    body: "Sign in or create an account to continue. You will use the same backend as Kazione Booking.",
+    image: MARKETPLACE,
+    title: "Sign in to continue",
+    body: "Use your owner or staff account. Client booking stays on kazione.app.",
   },
 ];
 

@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { COLORS, RADIUS, TYPOGRAPHY } from '@/constants/tokens';
 
-type BadgeVariant = 'success' | 'warning' | 'error' | 'gold' | 'muted';
+type BadgeVariant = 'success' | 'warning' | 'error' | 'brand' | 'muted';
 
 interface BadgeProps {
   label: string;
@@ -10,10 +10,10 @@ interface BadgeProps {
 }
 
 const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
-  success: { bg: 'rgba(76, 175, 130, 0.2)', text: COLORS.success },
-  warning: { bg: 'rgba(240, 168, 48, 0.2)', text: COLORS.warning },
-  error: { bg: 'rgba(224, 72, 72, 0.2)', text: COLORS.error },
-  gold: { bg: 'rgba(200, 169, 81, 0.2)', text: COLORS.gold },
+  success: { bg: COLORS.successMuted, text: '#166534' },
+  warning: { bg: COLORS.warningMuted, text: '#854D0E' },
+  error: { bg: COLORS.errorMuted, text: '#991B1B' },
+  brand: { bg: 'rgba(232, 78, 38, 0.12)', text: COLORS.orange },
   muted: { bg: COLORS.elevated, text: COLORS.textMuted },
 };
 

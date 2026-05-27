@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
   price: {
     ...TYPOGRAPHY.label,
-    color: COLORS.gold,
+    color: COLORS.orange,
     fontWeight: '700',
   },
 });

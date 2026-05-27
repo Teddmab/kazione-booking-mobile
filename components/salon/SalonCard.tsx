@@ -33,7 +33,7 @@ export function SalonCard({ salon, onPress, onBook }: SalonCardProps) {
           <Text style={styles.name} numberOfLines={1}>
             {salon.name}
           </Text>
-          {salon.is_featured ? <Badge label="Featured" variant="gold" /> : null}
+          {salon.is_featured ? <Badge label="Featured" variant="brand" /> : null}
         </View>
         <Text style={styles.meta} numberOfLines={1}>
           ★ {salon.rating.toFixed(1)} · {salon.city ?? '—'}
