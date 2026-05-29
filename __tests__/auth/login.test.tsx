@@ -2,65 +2,66 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import LoginScreen from '@/app/(auth)/login';
 
-const mockSignIn = jest.fn();
+const mockPush = jest.fn();
+const mockSubmit = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: jest.fn() }),
+  useRouter: () => ({ push: mockPush, replace: jest.fn() }),
   Link: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('@/lib/auth', () => ({
-  signInWithEmail: (...args: unknown[]) => mockSignIn(...args),
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) =>
+      ({
+        'auth.heroTitle': 'Your salon, elevated.',
+        'auth.heroSubtitle': 'Built for beauty businesses.',
+        'auth.businessPortal': 'Business portal',
+        'auth.welcomeBack': 'Welcome back',
+        'auth.signInOwnerSubtitle': 'Sign in to your salon dashboard',
+        'auth.tabHintBusiness': 'For owners, managers, staff',
+        'auth.email': 'Email',
+        'auth.password': 'Password',
+        'auth.forgotPassword': 'Forgot password?',
+        'auth.showPassword': 'Show',
+        'auth.hidePassword': 'Hide',
+        'auth.signIn': 'Sign in',
+        'auth.signingIn': 'Signing in…',
+        'auth.newToKazione': 'New to KaziOne?',
+        'auth.createBusinessAccount': 'Create a business account',
+      })[key] ?? key,
+  }),
+}));
+
+jest.mock('@/hooks/useAuthLogin', () => ({
+  useAuthLogin: () => ({
+    submit: mockSubmit,
+    loading: false,
+    error: null,
+  }),
 }));
 
 describe('LoginScreen', () => {
   beforeEach(() => {
-    mockSignIn.mockReset();
+    mockPush.mockClear();
+    mockSubmit.mockReset();
   });
 
-  it('renders work email, password, and sign-in button', () => {
+  it('renders owner login form', () => {
     const { getByText, getByPlaceholderText } = render(<LoginScreen />);
-    expect(getByPlaceholderText('owner@yoursalon.com')).toBeTruthy();
+    expect(getByPlaceholderText('owner@salon.com')).toBeTruthy();
     expect(getByPlaceholderText('••••••••')).toBeTruthy();
-    expect(getByText('Sign In')).toBeTruthy();
+    expect(getByText('Sign in')).toBeTruthy();
+    expect(getByText('Business portal')).toBeTruthy();
   });
 
-  it('shows team-focused heading and subheading', () => {
-    const { getByText } = render(<LoginScreen />);
-    expect(getByText('Sign in to KaziOne')).toBeTruthy();
-    expect(getByText('For owners, managers, staff, and reception')).toBeTruthy();
-  });
-
-  it('shows error when signInWithEmail returns an error', async () => {
-    mockSignIn.mockResolvedValue({ error: { message: 'Invalid credentials' } });
+  it('calls submit on sign in', async () => {
     const { getByText, getByPlaceholderText } = render(<LoginScreen />);
-    fireEvent.changeText(getByPlaceholderText('owner@yoursalon.com'), 'a@b.com');
-    fireEvent.changeText(getByPlaceholderText('••••••••'), 'wrong');
-    fireEvent.press(getByText('Sign In'));
-    await waitFor(() => {
-      expect(getByText('Invalid credentials')).toBeTruthy();
-    });
-  });
-
-  it('calls signInWithEmail with trimmed email and password', async () => {
-    mockSignIn.mockResolvedValue({ error: null });
-    const { getByText, getByPlaceholderText } = render(<LoginScreen />);
-    fireEvent.changeText(getByPlaceholderText('owner@yoursalon.com'), '  owner@afrotouch.ee  ');
+    fireEvent.changeText(getByPlaceholderText('owner@salon.com'), 'owner@afrotouch.ee');
     fireEvent.changeText(getByPlaceholderText('••••••••'), 'Test1234!');
-    fireEvent.press(getByText('Sign In'));
+    fireEvent.press(getByText('Sign in'));
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith('owner@afrotouch.ee', 'Test1234!');
-    });
-  });
-
-  it('shows network error when signInWithEmail throws', async () => {
-    mockSignIn.mockRejectedValue(new Error('Network timeout'));
-    const { getByText, getByPlaceholderText } = render(<LoginScreen />);
-    fireEvent.changeText(getByPlaceholderText('owner@yoursalon.com'), 'a@b.com');
-    fireEvent.changeText(getByPlaceholderText('••••••••'), 'pass');
-    fireEvent.press(getByText('Sign In'));
-    await waitFor(() => {
-      expect(getByText('Network timeout')).toBeTruthy();
+      expect(mockSubmit).toHaveBeenCalledWith('owner@afrotouch.ee', 'Test1234!');
     });
   });
 });

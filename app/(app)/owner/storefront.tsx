@@ -31,6 +31,7 @@ import {
   useUploadCoverImage,
   useUploadGalleryImage,
 } from "@/hooks/useOwnerStorefront";
+import { openStorefrontPreview } from "@/lib/openStorefrontPreview";
 import { pickImage } from "@/lib/imageUpload";
 import type { GalleryItem, StorefrontRow } from "@/types/owner";
 
@@ -83,7 +84,7 @@ function EditorForm({
   };
 
   const openPreview = () => {
-    if (data.slug) router.push(`/(app)/client/salon/${data.slug}` as Href);
+    if (data.slug) void openStorefrontPreview(data.slug);
   };
 
   const changeCover = async () => {

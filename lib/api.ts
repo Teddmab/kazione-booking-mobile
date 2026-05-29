@@ -28,9 +28,11 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 const PUBLIC_ENDPOINTS = [
+  "/auth-register",
   "/marketplace-storefronts",
   "/get-storefront",
   "/get-availability",
+  "/create-booking",
 ];
 
 export class ApiError extends Error {
@@ -104,6 +106,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (response.status === 401) {
     throw new ApiError("UNAUTHORIZED", "Unauthorized", 401);
+  }
+
+  if (response.status === 502 || response.status === 503) {
+    throw new ApiError(
+      "NETWORK_ERROR",
+      "Edge Functions indisponibles. Lancez `npm run dev` dans kazione-booking-backend.",
+      response.status,
+    );
   }
 
   let json: unknown;

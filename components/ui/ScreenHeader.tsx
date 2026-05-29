@@ -15,7 +15,7 @@ export function ScreenHeader({ title, showBack, onBack, rightAction }: ScreenHea
     <View style={styles.header}>
       {showBack ? (
         <Pressable onPress={onBack} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.gold} />
+          <Ionicons name="arrow-back" size={24} color={COLORS.orange} />
         </Pressable>
       ) : (
         <View style={styles.spacer} />
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...TYPOGRAPHY.h2,
-    color: COLORS.gold,
+    color: COLORS.orange,
     flex: 1,
     textAlign: 'center',
   },

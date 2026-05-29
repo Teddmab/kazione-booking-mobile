@@ -1,71 +1,87 @@
 import { useRouter, type Href } from 'expo-router';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { ownerColors } from '@/constants/ownerTheme';
-import { signOut } from '@/lib/auth';
+import { AuthBrandMark } from '@/components/auth/AuthBrandMark';
+import { AuthPrimaryButton } from '@/components/auth/AuthPrimaryButton';
+import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
+import { AUTH_THEME } from '@/constants/authTheme';
+import { TYPOGRAPHY } from '@/constants/tokens';
+
+const FEATURE_KEYS = [
+  'auth.featureBooking',
+  'auth.featureStaff',
+  'auth.featurePayments',
+  'auth.featureReports',
+] as const;
 
 export default function WelcomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.replace('/(auth)/login');
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Account not linked</Text>
-      <Text style={styles.body}>
-        Your account isn't linked to a salon yet.{'\n\n'}
-        Create your salon to get started, or ask your salon owner to add you as a team member.
-      </Text>
+    <AuthScreenLayout
+      heroTitle={t('auth.welcomeTitle')}
+      heroSubtitle={t('auth.welcomeSubtitle')}
+    >
+      <AuthBrandMark />
 
-      <Pressable
-        style={styles.primaryBtn}
-        onPress={() => router.push('/(auth)/create-business' as Href)}
-      >
-        <Text style={styles.primaryBtnText}>Create my salon</Text>
-      </Pressable>
+      <Text style={styles.tagline}>{t('auth.welcomeOwnerTagline')}</Text>
 
-      <Pressable style={styles.outlineBtn} onPress={() => void handleSignOut()}>
-        <Text style={styles.outlineBtnText}>Sign out</Text>
+      <View style={styles.features}>
+        {FEATURE_KEYS.map((key) => (
+          <View key={key} style={styles.featureRow}>
+            <View style={styles.featureDot} />
+            <Text style={styles.featureText}>{t(key)}</Text>
+          </View>
+        ))}
+      </View>
+
+      <AuthPrimaryButton
+        label={t('auth.signIn')}
+        onPress={() => router.push('/(auth)/login' as Href)}
+      />
+
+      <Pressable onPress={() => router.push('/(auth)/signup')}>
+        <Text style={styles.signupLink}>{t('auth.createBusinessAccount')}</Text>
       </Pressable>
-    </View>
+    </AuthScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: ownerColors.bg,
-    gap: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: ownerColors.text,
-  },
-  body: {
-    fontSize: 15,
-    color: ownerColors.textMuted,
+  tagline: {
+    ...TYPOGRAPHY.body,
+    color: AUTH_THEME.textSecondary,
     lineHeight: 22,
-    marginBottom: 8,
   },
-  primaryBtn: {
-    backgroundColor: ownerColors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+  features: {
+    gap: 10,
+    marginVertical: 4,
+  },
+  featureRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: ownerColors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
+  featureDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: AUTH_THEME.primary,
   },
-  outlineBtnText: { color: ownerColors.primary, fontSize: 15, fontWeight: '600' },
+  featureText: {
+    ...TYPOGRAPHY.body,
+    fontSize: 14,
+    color: AUTH_THEME.textSecondary,
+    flex: 1,
+  },
+  signupLink: {
+    ...TYPOGRAPHY.body,
+    fontSize: 15,
+    color: AUTH_THEME.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
 });

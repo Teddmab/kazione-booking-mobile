@@ -15,12 +15,12 @@ import { useTranslation } from "react-i18next";
 interface Props {
   title: string;
   subtitle?: string;
-  /** Dashboard uses serif title like web */
-  serifTitle?: boolean;
+  /** Dashboard uses larger bold title */
+  displayTitle?: boolean;
   rightSlot?: React.ReactNode;
 }
 
-export function OwnerAppBar({ title, subtitle, serifTitle, rightSlot }: Props) {
+export function OwnerAppBar({ title, subtitle, displayTitle, rightSlot }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { toggleDrawer } = useOwnerShell();
@@ -41,11 +41,11 @@ export function OwnerAppBar({ title, subtitle, serifTitle, rightSlot }: Props) {
           style={styles.menuBtn}
           onPress={toggleDrawer}
           accessibilityLabel={t("owner.openMenu")}>
-          <Ionicons name="menu" size={22} color={ownerColors.text} />
+          <Ionicons name="menu" size={22} color={ownerColors.primary} />
         </Pressable>
 
         <View style={styles.titleBlock}>
-          <Text style={[styles.title, serifTitle && styles.titleSerif]} numberOfLines={1}>
+          <Text style={[styles.title, displayTitle && styles.titleDisplay]} numberOfLines={1}>
             {title}
           </Text>
           {subtitle ? (
@@ -92,9 +92,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   titleBlock: { flex: 1, minWidth: 0 },
-  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text },
-  titleSerif: { fontFamily: ownerFonts.serif, fontSize: 26, fontWeight: "700" },
-  subtitle: { fontSize: 13, color: ownerColors.textMuted, marginTop: 2 },
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: ownerColors.text,
+    fontFamily: ownerFonts.bold,
+  },
+  titleDisplay: {
+    fontFamily: ownerFonts.bold,
+    fontSize: 26,
+    fontWeight: "700",
+  },
+  subtitle: {
+    fontSize: 13,
+    color: ownerColors.textMuted,
+    marginTop: 2,
+    fontFamily: ownerFonts.regular,
+  },
   actions: { flexDirection: "row", alignItems: "center", gap: 6 },
   iconBtn: {
     width: 40,

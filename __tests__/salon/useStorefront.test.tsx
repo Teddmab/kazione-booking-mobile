@@ -16,7 +16,7 @@ const mockStorefront = {
   extendedDescription: null,
   logoUrl: null,
   coverImageUrl: null,
-  accentColor: '#C8A951',
+  accentColor: '#E84E26',
   verified: true,
   currencyCode: 'EUR',
   countryCode: 'EE',

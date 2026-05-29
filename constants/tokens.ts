@@ -1,18 +1,22 @@
 export const COLORS = {
-  background: '#0C0B0A',
-  surface: '#1E1C1A',
-  elevated: '#2C2926',
-  border: '#3A3530',
-  gold: '#C8A951',
-  goldLight: '#E2CB8A',
-  goldDark: '#9A7E36',
-  coral: '#E05A3A',
-  text: '#F5EFDF',
-  textSecondary: '#A89880',
-  textMuted: '#6B5E52',
-  success: '#4CAF82',
-  warning: '#F0A830',
-  error: '#E04848',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceWarm: '#FDF3F0',
+  elevated: '#F5F5F5',
+  border: '#F0DDD8',
+  orange: '#E84E26',
+  orangeLight: '#F06540',
+  orangeDark: '#C43D1A',
+  coral: '#E84E26',
+  text: '#1A0F0A',
+  textSecondary: '#6B4C42',
+  textMuted: '#9B7B72',
+  success: '#2D7A4F',
+  successMuted: '#DCFCE7',
+  warning: '#D97706',
+  warningMuted: '#FEF9C3',
+  error: '#B91C1C',
+  errorMuted: '#FEE2E2',
 } as const;
 
 export const TYPOGRAPHY = {
@@ -43,10 +47,10 @@ export const RADIUS = {
 
 export const SHADOW = {
   card: {
-    shadowColor: '#000',
+    shadowColor: '#1A0F0A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
   },
 } as const;

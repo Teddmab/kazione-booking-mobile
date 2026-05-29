@@ -18,6 +18,7 @@ import { SwitchRow } from "@/components/owner/SwitchRow";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { openStorefrontPreview } from "@/lib/openStorefrontPreview";
 import {
   useOwnerStorefront,
   usePublishStorefront,
@@ -72,9 +73,7 @@ export default function OwnerMarketplaceScreen() {
   };
 
   const openPreview = () => {
-    if (data?.slug) {
-      router.push(`/(app)/client/salon/${data.slug}` as Href);
-    }
+    if (data?.slug) void openStorefrontPreview(data.slug);
   };
 
   return (

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Animated,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { OWNER_DRAWER_SECTIONS } from "@/constants/ownerDrawerNav";
+import { Logos } from "@/constants/logos";
 import { ownerDrawerColors } from "@/constants/ownerTheme";
 import { useOwnerShell } from "@/contexts/OwnerShellContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -74,15 +76,12 @@ export function OwnerDrawer() {
             { paddingTop: insets.top + 16, transform: [{ translateX: slide }] },
           ]}>
           <View style={styles.brandRow}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoLetter}>K</Text>
-            </View>
-            <View style={styles.brandText}>
-              <Text style={styles.brandName}>
-                {t("owner.brand")}
-                <Text style={styles.brandAccent}> {t("owner.brandAccent")}</Text>
-              </Text>
-            </View>
+            <Image
+              source={Logos.whiteFull}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="KaziOne"
+            />
           </View>
 
           <Pressable
@@ -116,7 +115,7 @@ export function OwnerDrawer() {
                       <Ionicons
                         name={item.icon}
                         size={20}
-                        color={active ? ownerDrawerColors.text : ownerDrawerColors.icon}
+                        color={active ? ownerDrawerColors.accent : ownerDrawerColors.icon}
                       />
                       <Text style={[styles.navLabel, active && styles.navLabelActive]}>
                         {t(item.labelKey)}
@@ -168,19 +167,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
-  logoCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: ownerDrawerColors.logoBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoLetter: { fontSize: 20, fontWeight: "700", color: ownerDrawerColors.gold },
-  brandText: { flex: 1 },
-  brandName: { fontSize: 18, fontWeight: "700", color: ownerDrawerColors.text },
-  brandAccent: { color: ownerDrawerColors.accent },
+  brandRow: { marginBottom: 20 },
+  logo: { width: 140, height: 46 },
   businessRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -207,10 +195,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 2,
+    borderLeftWidth: 3,
+    borderLeftColor: "transparent",
   },
-  navRowActive: { backgroundColor: ownerDrawerColors.bgActive },
+  navRowActive: {
+    backgroundColor: ownerDrawerColors.bgActive,
+    borderLeftColor: ownerDrawerColors.accent,
+  },
   navLabel: { fontSize: 15, color: ownerDrawerColors.textMuted, fontWeight: "500" },
-  navLabelActive: { color: ownerDrawerColors.text, fontWeight: "600" },
+  navLabelActive: { color: ownerDrawerColors.accent, fontWeight: "600" },
   footer: {
     flexDirection: "row",
     alignItems: "center",

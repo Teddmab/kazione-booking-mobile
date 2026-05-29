@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   pillActive: {
-    backgroundColor: COLORS.gold,
-    borderColor: COLORS.gold,
+    backgroundColor: COLORS.orange,
+    borderColor: COLORS.orange,
   },
   pillText: {
     ...TYPOGRAPHY.label,

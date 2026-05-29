@@ -1,34 +1,45 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
-import { COLORS, TYPOGRAPHY } from '@/constants/tokens';
+import { Logos } from '@/constants/logos';
 
 type LogoSize = 'sm' | 'md' | 'lg';
 type LogoVariant = 'full' | 'icon-only';
 
-const sizeMap: Record<LogoSize, number> = {
-  sm: 28,
-  md: 40,
-  lg: 56,
+const sizeMap: Record<LogoSize, { icon: number; fullW: number; fullH: number }> = {
+  sm: { icon: 28, fullW: 100, fullH: 33 },
+  md: { icon: 40, fullW: 120, fullH: 40 },
+  lg: { icon: 56, fullW: 140, fullH: 46 },
 };
 
 interface LogoProps {
   size?: LogoSize;
   variant?: LogoVariant;
+  /** Use white wordmark on dark backgrounds */
+  onDark?: boolean;
 }
 
-export function Logo({ size = 'md', variant = 'full' }: LogoProps) {
-  const dimension = sizeMap[size];
+export function Logo({ size = 'md', variant = 'full', onDark = false }: LogoProps) {
+  const dims = sizeMap[size];
+
+  if (variant === 'icon-only') {
+    return (
+      <Image
+        source={Logos.iconOrange}
+        style={{ width: dims.icon, height: dims.icon }}
+        resizeMode="contain"
+        accessibilityLabel="KaziOne"
+      />
+    );
+  }
 
   return (
     <View style={styles.row}>
       <Image
-        source={require('@/assets/images/icon.png')}
-        style={{ width: dimension, height: dimension, borderRadius: dimension / 2 }}
-        resizeMode="cover"
+        source={onDark ? Logos.whiteFull : Logos.blackFull}
+        style={{ width: dims.fullW, height: dims.fullH }}
+        resizeMode="contain"
+        accessibilityLabel="KaziOne"
       />
-      {variant === 'full' ? (
-        <Text style={[styles.wordmark, size === 'lg' && styles.wordmarkLg]}>KaziOne</Text>
-      ) : null}
     </View>
   );
 }
@@ -37,14 +48,5 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  wordmark: {
-    ...TYPOGRAPHY.h2,
-    color: COLORS.gold,
-  },
-  wordmarkLg: {
-    ...TYPOGRAPHY.display,
-    color: COLORS.gold,
   },
 });

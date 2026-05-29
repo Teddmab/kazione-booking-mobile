@@ -1,12 +1,18 @@
+import { Link, type Href } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { COLORS, SPACING, TYPOGRAPHY } from '@/constants/tokens';
+import { AuthBrandMark } from '@/components/auth/AuthBrandMark';
+import { AuthPrimaryButton } from '@/components/auth/AuthPrimaryButton';
+import { AuthScreenLayout } from '@/components/auth/AuthScreenLayout';
+import { AuthTextField } from '@/components/auth/AuthTextField';
+import { AUTH_THEME } from '@/constants/authTheme';
+import { TYPOGRAPHY } from '@/constants/tokens';
 import { resetPassword } from '@/lib/auth';
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -29,49 +35,78 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.container}>
-        <Text style={styles.heading}>Reset password</Text>
-        <Input
-          label="Email"
-          placeholder="you@example.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {success ? (
-          <Text style={styles.success}>
-            Check your inbox for a password reset link.
-          </Text>
-        ) : null}
-        <Button label="Send Reset Link" onPress={() => void submit()} loading={loading} />
+    <AuthScreenLayout showHero={false}>
+      <AuthBrandMark />
+
+      <View style={styles.heading}>
+        <Text style={styles.title}>{t('auth.resetTitle')}</Text>
+        <Text style={styles.subtitle}>{t('auth.resetSubtitle')}</Text>
       </View>
-    </KeyboardAvoidingView>
+
+      <AuthTextField
+        label={t('auth.email')}
+        placeholder="you@example.com"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoComplete="email"
+      />
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+      {success ? <Text style={styles.success}>{t('auth.resetSuccess')}</Text> : null}
+
+      <AuthPrimaryButton
+        label={t('auth.sendResetLink')}
+        onPress={() => void submit()}
+        loading={loading}
+      />
+
+      <Link href={'/(auth)/login' as Href}>
+        <Text style={styles.backLink}>{t('auth.backToSignIn')}</Text>
+      </Link>
+    </AuthScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: COLORS.background },
-  container: {
-    flex: 1,
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    justifyContent: 'center',
+  heading: { gap: 4 },
+  title: {
+    ...TYPOGRAPHY.display,
+    fontSize: 28,
+    color: AUTH_THEME.text,
   },
-  heading: {
-    ...TYPOGRAPHY.h1,
-    color: COLORS.text,
+  subtitle: {
+    ...TYPOGRAPHY.body,
+    fontSize: 14,
+    color: AUTH_THEME.textSecondary,
+    lineHeight: 22,
   },
-  error: {
+  errorBox: {
+    backgroundColor: AUTH_THEME.errorBg,
+    borderWidth: 1,
+    borderColor: AUTH_THEME.errorBorder,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  errorText: {
     ...TYPOGRAPHY.caption,
-    color: COLORS.error,
+    color: AUTH_THEME.error,
   },
   success: {
     ...TYPOGRAPHY.body,
-    color: COLORS.success,
+    color: '#2E7D4F',
+  },
+  backLink: {
+    ...TYPOGRAPHY.body,
+    fontSize: 14,
+    color: AUTH_THEME.primary,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });
