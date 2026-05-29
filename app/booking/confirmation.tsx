@@ -3,11 +3,11 @@ import { useEffect, useRef } from 'react';
 import {
   Animated,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
