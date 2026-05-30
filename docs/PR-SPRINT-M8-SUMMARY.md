@@ -2,7 +2,8 @@
 
 > **Canonical spec:** [`kazione-docs/team/MOBILE/Sprint M8 — brand alignment.md`](../../../kazione-docs/team/MOBILE/Sprint%20M8%20%E2%80%94%20brand%20alignment.md)  
 > **Implementation report:** [`docs/M8-IMPLEMENTATION-REPORT.md`](./M8-IMPLEMENTATION-REPORT.md)  
-> **Depends on:** Sprint M7 (`feat/sprint-m7-web-parity`) if not yet merged to `master`
+> **EAS preview fix (follow-up):** [`docs/M8-FIX-EAS-PREVIEW-IMPLEMENTATION-REPORT.md`](./M8-FIX-EAS-PREVIEW-IMPLEMENTATION-REPORT.md)  
+> **Depends on:** Sprint M7 merged (PR #9)
 
 ## Summary
 
@@ -67,4 +68,10 @@ Sprint **M8 — Brand Alignment & Design System** : alignement mobile sur le kit
 
 | Rôle | GitHub | Statut |
 | ---- | ------ | ------ |
-| Reviewer / merge approval | **@Teddmab** | ⬜ |
+| Reviewer / merge | **@Teddmab** | ✅ PR #12 merged |
+
+---
+
+## Follow-up — EAS preview APK
+
+Voir [`PR-SPRINT-M8-FIX-EAS-PREVIEW-SUMMARY.md`](./PR-SPRINT-M8-FIX-EAS-PREVIEW-SUMMARY.md) (branche `fix/eas-preview-android-build`).
