@@ -1,8 +1,8 @@
 # PR description — Sprint M8 Brand (copy-paste)
 
 > **Canonical spec:** [`kazione-docs/team/MOBILE/Sprint M8 — brand alignment.md`](../../../kazione-docs/team/MOBILE/Sprint%20M8%20%E2%80%94%20brand%20alignment.md)  
-> **Implementation report:** [`docs/M8-IMPLEMENTATION-REPORT.md`](./M8-IMPLEMENTATION-REPORT.md)  
-> **EAS preview fix (follow-up):** [`docs/M8-FIX-EAS-PREVIEW-IMPLEMENTATION-REPORT.md`](./M8-FIX-EAS-PREVIEW-IMPLEMENTATION-REPORT.md)  
+> **Implementation report:** [`kazione-docs/team/MOBILE/M8 — Implementation Report.md`](../../../kazione-docs/team/MOBILE/M8%20%E2%80%94%20Implementation%20Report.md)  
+> **EAS preview fix (follow-up):** [`kazione-docs/team/MOBILE/M8-FIX — EAS Preview Implementation Report.md`](../../../kazione-docs/team/MOBILE/M8-FIX%20%E2%80%94%20EAS%20Preview%20Implementation%20Report.md)  
 > **Depends on:** Sprint M7 merged (PR #9)
 
 ## Summary

@@ -1,7 +1,7 @@
 # PR description — M8-FIX EAS Preview Android (copy-paste)
 
-> **Implementation report:** [`docs/M8-FIX-EAS-PREVIEW-IMPLEMENTATION-REPORT.md`](./M8-FIX-EAS-PREVIEW-IMPLEMENTATION-REPORT.md)  
-> **Depends on:** M8 merged (PR #12)
+> **Implementation report:** [`kazione-docs/team/MOBILE/M8-FIX — EAS Preview Implementation Report.md`](../../../kazione-docs/team/MOBILE/M8-FIX%20%E2%80%94%20EAS%20Preview%20Implementation%20Report.md)  
+> **Depends on:** [M8 — Implementation Report.md](../../../kazione-docs/team/MOBILE/M8%20%E2%80%94%20Implementation%20Report.md) (PR #12 merged)
 
 ## Summary
 
