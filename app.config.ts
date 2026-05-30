@@ -9,6 +9,12 @@ const config: ExpoConfig = {
   scheme: 'kazione',
   userInterfaceStyle: 'light',
   newArchEnabled: true,
+  updates: {
+    url: 'https://u.expo.dev/68b7dcc4-7c49-4726-b0a4-00d820b24980',
+  },
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
   splash: {
     image: './assets/logos/logo-square-orange.png',
     resizeMode: 'contain',
