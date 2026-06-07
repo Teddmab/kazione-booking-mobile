@@ -15,6 +15,7 @@ import { useDebouncedCallback } from "use-debounce";
 
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { invalidateOwnerClientQueries } from "@/lib/ownerClientQueries";
 import { availabilityToDisplaySlots } from "@/lib/bookingSlots";
 import { clientDisplayName, formatCurrency, toIsoDate } from "@/lib/format";
 import { createBooking, getAvailability } from "@/services/booking";
@@ -90,6 +91,7 @@ export default function WalkInScreen() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["owner-appointments", businessId] });
       void queryClient.invalidateQueries({ queryKey: ["owner-dashboard-kpis", businessId] });
+      invalidateOwnerClientQueries(queryClient, businessId);
       Alert.alert("Réservé", "Le passage a été enregistré.", [
         { text: "OK", onPress: () => router.back() },
       ]);

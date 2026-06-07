@@ -115,6 +115,16 @@ export interface PaginatedClients {
   total: number;
 }
 
+/** Aggregated counts from GET /clients?action=stats */
+export interface ClientStats {
+  total: number;
+  new: number;
+  active: number;
+  vip: number;
+  at_risk: number;
+  inactive: number;
+}
+
 export interface OwnerServiceRow {
   id: string;
   name: string;

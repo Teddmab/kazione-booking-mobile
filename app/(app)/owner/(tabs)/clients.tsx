@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -18,8 +19,8 @@ import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useOwnerClients } from "@/hooks/useOwnerClients";
+import { ownerClientStatsOrEmpty, useOwnerClientStats } from "@/hooks/useOwnerClientStats";
 import {
-  computeClientKPIs,
   getClientStatus,
   matchesClientFilter,
   type ClientStatusFilter,
@@ -70,11 +71,31 @@ export default function OwnerClientsScreen() {
     { search: debounced || undefined, limit: 100 },
   );
 
+  const {
+    data: statsData,
+    refetch: refetchStats,
+    isRefetching: isRefetchingStats,
+  } = useOwnerClientStats(businessId);
+
+  const stats = ownerClientStatsOrEmpty(statsData);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!businessId) return;
+      void refetch();
+      void refetchStats();
+    }, [businessId, refetch, refetchStats]),
+  );
+
   const allClients = data?.clients ?? [];
   const filtered = allClients.filter((c) =>
     matchesClientFilter(getClientStatus(c.appointment_count, c.last_visit), filter),
   );
-  const kpis = computeClientKPIs(allClients, data?.total ?? allClients.length);
+
+  const refreshAll = useCallback(() => {
+    void refetch();
+    void refetchStats();
+  }, [refetch, refetchStats]);
 
   const filterChips = useMemo(
     () => [
@@ -92,10 +113,10 @@ export default function OwnerClientsScreen() {
     <View style={styles.flex}>
       <OwnerAppBar title={t("owner.clients")} />
       <View style={styles.kpiGrid}>
-        <DashboardStatCard label={t("owner.clientsTotal")} value={String(kpis.total)} icon="people-outline" />
-        <DashboardStatCard label={t("owner.clientFilterNew")} value={String(kpis.new)} icon="person-add-outline" />
-        <DashboardStatCard label={t("owner.clientFilterActive")} value={String(kpis.active)} icon="heart-outline" />
-        <DashboardStatCard label="VIP" value={String(kpis.vip)} icon="star-outline" />
+        <DashboardStatCard label={t("owner.clientsTotal")} value={String(stats.total)} icon="people-outline" />
+        <DashboardStatCard label={t("owner.clientFilterNew")} value={String(stats.new)} icon="person-add-outline" />
+        <DashboardStatCard label={t("owner.clientFilterActive")} value={String(stats.active)} icon="heart-outline" />
+        <DashboardStatCard label="VIP" value={String(stats.vip)} icon="star-outline" />
       </View>
       <View style={styles.searchWrap}>
         <TextInput
@@ -120,12 +141,17 @@ export default function OwnerClientsScreen() {
         error={isError ? (error as Error) : null}
         empty={!isLoading && filtered.length === 0}
         emptyMessage={debounced ? t("owner.clientsEmptySearch") : t("owner.clientsEmpty")}
-        onRetry={() => void refetch()}>
+        onRetry={refreshAll}>
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching || isRefetchingStats}
+              onRefresh={refreshAll}
+            />
+          }
           renderItem={({ item }) => (
             <ClientRow
               item={item}
