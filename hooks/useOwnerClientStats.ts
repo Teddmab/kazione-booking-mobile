@@ -23,5 +23,13 @@ export function useOwnerClientStats(businessId: string) {
 }
 
 export function ownerClientStatsOrEmpty(stats: ClientStats | undefined): ClientStats {
-  return stats ?? EMPTY_STATS;
+  if (!stats) return EMPTY_STATS;
+  return {
+    total: stats.total ?? 0,
+    new: stats.new ?? 0,
+    active: stats.active ?? 0,
+    vip: stats.vip ?? 0,
+    at_risk: stats.at_risk ?? 0,
+    inactive: stats.inactive ?? 0,
+  };
 }

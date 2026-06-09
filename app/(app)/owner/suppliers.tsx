@@ -16,6 +16,7 @@ import { HorizontalBarChart } from "@/components/owner/analytics/HorizontalBarCh
 import { SectionHeader } from "@/components/owner/analytics/SectionHeader";
 import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
 import { QueryState } from "@/components/owner/QueryState";
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
@@ -98,6 +99,7 @@ export default function OwnerSuppliersScreen() {
   };
 
   return (
+    <OwnerStackShell title={t("owner.suppliers")}>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.scroll}
@@ -177,6 +179,7 @@ export default function OwnerSuppliersScreen() {
         </View>
       ) : null}
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 

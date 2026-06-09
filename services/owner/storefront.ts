@@ -13,10 +13,11 @@ async function getSignedUpload(
   businessId: string,
   assetType: "logo" | "cover" | "gallery",
 ): Promise<UploadUrlResponse> {
-  return api.post<UploadUrlResponse>("/storefront-upload", {
+  const params = new URLSearchParams({
     business_id: businessId,
     asset_type: assetType,
   });
+  return api.post<UploadUrlResponse>(`/storefront-upload?${params}`);
 }
 
 async function putImage(uploadUrl: string, uri: string) {
@@ -38,16 +39,27 @@ export async function getOwnerStorefront(businessId: string): Promise<Storefront
   );
 }
 
+function coerceList<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (payload && typeof payload === "object" && "promotions" in payload) {
+    const nested = (payload as { promotions?: unknown }).promotions;
+    return Array.isArray(nested) ? (nested as T[]) : [];
+  }
+  return [];
+}
+
 export async function getGalleryImages(businessId: string): Promise<GalleryItem[]> {
-  return api.get<GalleryItem[]>(
+  const data = await api.get<GalleryItem[] | unknown>(
     `/storefront-owner?action=gallery&business_id=${encodeURIComponent(businessId)}`,
   );
+  return coerceList<GalleryItem>(data);
 }
 
 export async function getStorefrontPromotions(businessId: string): Promise<StorefrontPromotion[]> {
-  return api.get<StorefrontPromotion[]>(
+  const data = await api.get<StorefrontPromotion[] | unknown>(
     `/storefront-owner?action=promotions&business_id=${encodeURIComponent(businessId)}`,
   );
+  return coerceList<StorefrontPromotion>(data);
 }
 
 export async function updateStorefront(

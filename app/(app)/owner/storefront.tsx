@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import { SafeImage } from "@/components/SafeImage";
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { PromotionFormSheet } from "@/components/owner/PromotionFormSheet";
 import { QueryState } from "@/components/owner/QueryState";
 import { StorefrontGalleryGrid } from "@/components/owner/StorefrontGalleryGrid";
@@ -246,6 +247,7 @@ export default function OwnerStorefrontScreen() {
   };
 
   return (
+    <OwnerStackShell title={t("owner.storefront")}>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.scroll}
@@ -261,6 +263,7 @@ export default function OwnerStorefrontScreen() {
         ) : null}
       </QueryState>
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 
