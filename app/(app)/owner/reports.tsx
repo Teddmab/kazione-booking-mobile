@@ -20,7 +20,7 @@ import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { TransactionRow } from "@/components/owner/TransactionRow";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
-import { useOwnerClients } from "@/hooks/useOwnerClients";
+import { ownerClientStatsOrEmpty, useOwnerClientStats } from "@/hooks/useOwnerClientStats";
 import {
   useRevenueBreakdown,
   useRevenueSummary,
@@ -28,7 +28,6 @@ import {
   useTransactions,
 } from "@/hooks/useOwnerFinance";
 import { useOwnerDashboardKPIs } from "@/hooks/useOwnerAppointments";
-import { computeClientKPIs } from "@/lib/clientStatus";
 import { dateRangeForReportPeriod } from "@/lib/reportPeriod";
 import { formatCurrency } from "@/lib/format";
 import type { ReportPeriodKey, ReportsTabKey, TransactionStatusFilter } from "@/types/finance";
@@ -52,11 +51,10 @@ export default function OwnerReportsScreen() {
   const breakdown = useRevenueBreakdown(businessId, "custom", dateRange);
   const staffPerf = useStaffPerformanceFinance(businessId, "custom", dateRange);
   const kpis = useOwnerDashboardKPIs(businessId);
-  const clients = useOwnerClients(businessId, { limit: 200 });
+  const clientStatsQuery = useOwnerClientStats(businessId);
+  const clientStats = ownerClientStatsOrEmpty(clientStatsQuery.data);
 
   const appointments = useMemo(() => tx.data?.pages.flatMap((p) => p.appointments) ?? [], [tx.data]);
-  const clientList = clients.data?.clients ?? [];
-  const clientKpis = computeClientKPIs(clientList, clients.data?.total ?? clientList.length);
 
   const reportTabs = useMemo(
     () => [
@@ -99,10 +97,10 @@ export default function OwnerReportsScreen() {
   }));
 
   const clientSegments = [
-    { label: "VIP", value: clientKpis.vip, color: ownerColors.primary },
-    { label: t("owner.clientFilterActive"), value: clientKpis.active, color: ownerColors.success },
-    { label: t("owner.clientFilterNew"), value: clientKpis.new, color: ownerColors.warning },
-    { label: t("owner.clientFilterAtRisk"), value: clientKpis.atRisk, color: ownerColors.danger },
+    { label: "VIP", value: clientStats.vip, color: ownerColors.primary },
+    { label: t("owner.clientFilterActive"), value: clientStats.active, color: ownerColors.success },
+    { label: t("owner.clientFilterNew"), value: clientStats.new, color: ownerColors.warning },
+    { label: t("owner.clientFilterAtRisk"), value: clientStats.at_risk, color: ownerColors.danger },
   ];
 
   if (tab === "transactions") {
@@ -156,10 +154,10 @@ export default function OwnerReportsScreen() {
       {tab === "clients" ? (
         <>
           <View style={styles.grid}>
-            <DashboardStatCard label={t("owner.clientsTotal")} value={String(clientKpis.total)} icon="people-outline" />
-            <DashboardStatCard label={t("owner.clientFilterNew")} value={String(clientKpis.new)} icon="person-add-outline" />
-            <DashboardStatCard label={t("owner.clientFilterActive")} value={String(clientKpis.active)} icon="heart-outline" />
-            <DashboardStatCard label="VIP" value={String(clientKpis.vip)} icon="star-outline" />
+            <DashboardStatCard label={t("owner.clientsTotal")} value={String(clientStats.total)} icon="people-outline" />
+            <DashboardStatCard label={t("owner.clientFilterNew")} value={String(clientStats.new)} icon="person-add-outline" />
+            <DashboardStatCard label={t("owner.clientFilterActive")} value={String(clientStats.active)} icon="heart-outline" />
+            <DashboardStatCard label="VIP" value={String(clientStats.vip)} icon="star-outline" />
           </View>
           <Text style={styles.section}>{t("owner.reportsClientSegments")}</Text>
           <SegmentBarChart segments={clientSegments} />

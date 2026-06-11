@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { ClientFilters, PaginatedClients } from "@/types/owner";
+import type { ClientFilters, ClientStats, PaginatedClients } from "@/types/owner";
 
 export async function getClients(
   businessId: string,
@@ -13,4 +13,12 @@ export async function getClients(
   });
   if (search) params.set("search", search);
   return api.get<PaginatedClients>(`/clients?${params}`);
+}
+
+export async function getClientStats(businessId: string): Promise<ClientStats> {
+  const params = new URLSearchParams({
+    business_id: businessId,
+    action: "stats",
+  });
+  return api.get<ClientStats>(`/clients?${params}`);
 }
