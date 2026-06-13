@@ -4,7 +4,8 @@ import { getSupabase } from "@/lib/supabase";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const REQUEST_TIMEOUT_MS = 15_000;
+/** Local edge functions can cold-start >15s after isolate recycle. */
+const REQUEST_TIMEOUT_MS = __DEV__ ? 45_000 : 15_000;
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

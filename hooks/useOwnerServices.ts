@@ -6,6 +6,7 @@ import {
   deactivateService,
   getOwnerServices,
   updateService,
+  uploadAndAttachServiceImage,
 } from "@/services/owner/services";
 
 function parsePrice(price: string): number {
@@ -26,9 +27,11 @@ export function useSaveOwnerService(businessId: string) {
     mutationFn: async ({
       values,
       serviceId,
+      localImageUri,
     }: {
       values: ServiceFormValues;
       serviceId: string | null;
+      localImageUri?: string | null;
     }) => {
       const payload = {
         name: values.name.trim(),
@@ -38,14 +41,20 @@ export function useSaveOwnerService(businessId: string) {
         category_name: values.category_name.trim() || undefined,
         is_active: values.is_active,
       };
+      let saved;
       if (serviceId) {
-        return updateService(serviceId, payload);
+        saved = await updateService(serviceId, payload);
+      } else {
+        saved = await createService({
+          business_id: businessId,
+          ...payload,
+          currency_code: "EUR",
+        });
       }
-      return createService({
-        business_id: businessId,
-        ...payload,
-        currency_code: "EUR",
-      });
+      if (localImageUri) {
+        saved = await uploadAndAttachServiceImage(businessId, saved.id, localImageUri);
+      }
+      return saved;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["owner-services", businessId] });

@@ -134,6 +134,14 @@ export interface OwnerServiceRow {
   currency_code: string;
   is_active: boolean;
   category_name: string | null;
+  image_url?: string | null;
+}
+
+export interface StaffWorkingDay {
+  day: number;
+  is_working: boolean;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export interface StaffMember {
@@ -143,6 +151,94 @@ export interface StaffMember {
   role: string;
   is_active: boolean;
   avatar_url: string | null;
+  working_hours?: StaffWorkingDay[];
+  invited_at?: string | null;
+  invited_email?: string | null;
+  is_pending_invite?: boolean;
+  appointments_last_30_days?: number;
+}
+
+export interface DayHours {
+  open: boolean;
+  start: string;
+  end: string;
+}
+
+export interface BusinessSettingsRow {
+  id: string;
+  business_id: string;
+  operating_hours: Record<string, DayHours> | null;
+  notify_new_booking: boolean;
+  notify_cancellation: boolean;
+  notify_daily_summary: boolean;
+  notify_weekly_report: boolean;
+  notify_client_message: boolean;
+  admin_locale: string;
+  storefront_locale: string;
+  currency_code: string;
+  date_format: string;
+  deposit_percent: number;
+  allow_pay_later: boolean;
+  cancellation_hours: number;
+  reschedule_hours: number;
+  auto_confirm: boolean;
+  max_advance_days: number;
+  buffer_minutes: number;
+  enabled_payment_methods: string[];
+}
+
+export interface BusinessSettingsResponse {
+  business: BusinessRow;
+  settings: BusinessSettingsRow | null;
+}
+
+export interface UpdateBusinessSettingsInput {
+  business_id: string;
+  name?: string;
+  business_type?: string;
+  country?: string;
+  operating_hours?: Record<string, DayHours>;
+  notify_new_booking?: boolean;
+  notify_cancellation?: boolean;
+  notify_daily_summary?: boolean;
+  notify_weekly_report?: boolean;
+  notify_client_message?: boolean;
+  admin_locale?: string;
+  storefront_locale?: string;
+  currency_code?: string;
+  date_format?: string;
+  deposit_percent?: number;
+  allow_pay_later?: boolean;
+  cancellation_hours?: number;
+  reschedule_hours?: number;
+  auto_confirm?: boolean;
+  max_advance_days?: number;
+  buffer_minutes?: number;
+  enabled_payment_methods?: string[];
+}
+
+export interface ClientDetailRow extends ClientWithStats {
+  notes?: string | null;
+  tags?: string[];
+  date_of_birth?: string | null;
+  preferred_locale?: string | null;
+}
+
+export interface CreateClientInput {
+  business_id: string;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateClientInput {
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
 }
 
 export interface StorefrontRow {

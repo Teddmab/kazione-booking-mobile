@@ -25,6 +25,7 @@ import {
   useRescheduleOwnerAppointment,
   useUpdateOwnerAppointmentStatus,
 } from "@/hooks/useOwnerAppointments";
+import { useOwnerAppointmentsRealtime } from "@/hooks/useOwnerRealtime";
 import { formatWeekRangeLabel } from "@/lib/ownerCalendar";
 import type { AppointmentStatus, AppointmentWithRelations } from "@/types/owner";
 
@@ -35,6 +36,7 @@ export default function OwnerAppointmentsScreen() {
   const router = useRouter();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
+  useOwnerAppointmentsRealtime(businessId);
 
   const {
     weekStart,

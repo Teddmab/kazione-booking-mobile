@@ -36,10 +36,10 @@ export const OWNER_BOTTOM_TABS: OwnerTabRoute[] = [
     iconFocused: "people",
   },
   {
-    name: "more",
-    titleKey: "owner.tabMore",
-    href: "/(app)/owner/(tabs)/more" as Href,
-    icon: "ellipsis-horizontal",
-    iconFocused: "ellipsis-horizontal",
+    name: "staff",
+    titleKey: "owner.tabStaff",
+    href: "/(app)/owner/(tabs)/staff" as Href,
+    icon: "cut-outline",
+    iconFocused: "cut",
   },
 ];

@@ -1,5 +1,4 @@
-import { useNavigation } from "expo-router";
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 
 import { OwnerAddHeaderButton } from "@/components/owner/OwnerAddHeaderButton";
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { QueryState } from "@/components/owner/QueryState";
 import {
   ServiceFormSheet,
@@ -58,7 +58,6 @@ function ServiceRow({
 }
 
 export default function OwnerServicesScreen() {
-  const navigation = useNavigation();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
 
@@ -75,19 +74,17 @@ export default function OwnerServicesScreen() {
     setSheetOpen(true);
   }, []);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => <OwnerAddHeaderButton onPress={openAdd} />,
-    });
-  }, [navigation, openAdd]);
-
   const services = data ?? [];
   const sections = useMemo(() => groupServicesByCategory(services), [services]);
   const categories = useMemo(() => extractCategoryNames(services), [services]);
 
-  const onSubmit = (values: ServiceFormValues, serviceId: string | null) => {
+  const onSubmit = (
+    values: ServiceFormValues,
+    serviceId: string | null,
+    localImageUri?: string | null,
+  ) => {
     saveService.mutate(
-      { values, serviceId },
+      { values, serviceId, localImageUri },
       {
         onSuccess: () => {
           setSheetOpen(false);
@@ -126,7 +123,9 @@ export default function OwnerServicesScreen() {
   };
 
   return (
-    <View style={styles.flex}>
+    <OwnerStackShell
+      title="Services"
+      rightSlot={<OwnerAddHeaderButton onPress={openAdd} />}>
       <QueryState
         loading={isLoading}
         error={isError ? (error as Error) : null}
@@ -170,12 +169,11 @@ export default function OwnerServicesScreen() {
         onDeactivate={editing ? onDeactivate : undefined}
         busy={saveService.isPending || deactivate.isPending}
       />
-    </View>
+    </OwnerStackShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: ownerColors.bg },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   sectionHeader: {
     fontSize: 13,

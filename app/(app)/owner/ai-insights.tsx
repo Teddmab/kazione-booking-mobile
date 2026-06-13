@@ -10,8 +10,8 @@ import {
   View,
 } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { QueryState } from "@/components/owner/QueryState";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
@@ -83,21 +83,16 @@ export default function OwnerAIInsightsScreen() {
   };
 
   return (
+    <OwnerStackShell title={t("owner.aiInsights")}>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.scroll}
       refreshControl={
         <RefreshControl refreshing={insights.isRefetching} onRefresh={() => void insights.refetch()} />
       }>
-      <View style={styles.headerRow}>
-        <View style={styles.titleRow}>
-          <Ionicons name="sparkles" size={22} color={ownerColors.primary} />
-          <Text style={styles.pageTitle}>{t("owner.aiInsights")}</Text>
-        </View>
-        {insights.data?.cached ? (
-          <Text style={styles.cached}>{t("owner.aiCached")}</Text>
-        ) : null}
-      </View>
+      {insights.data?.cached ? (
+        <Text style={styles.cached}>{t("owner.aiCached")}</Text>
+      ) : null}
 
       <TabChipSelector
         value={periodKey}
@@ -139,6 +134,7 @@ export default function OwnerAIInsightsScreen() {
         <Text style={styles.financeLinkText}>{t("owner.aiViewFinance")}</Text>
       </Pressable>
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 

@@ -42,7 +42,7 @@ export const OWNER_DRAWER_SECTIONS: OwnerDrawerSection[] = [
       {
         key: "staff",
         labelKey: "owner.staff",
-        href: "/(app)/owner/staff" as Href,
+        href: "/(app)/owner/(tabs)/staff" as Href,
         icon: "cut-outline",
       },
     ],
