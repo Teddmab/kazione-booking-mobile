@@ -1,5 +1,4 @@
-import { useNavigation } from "expo-router";
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FlatList,
@@ -15,6 +14,7 @@ import { HorizontalBarChart } from "@/components/owner/analytics/HorizontalBarCh
 import { SegmentBarChart } from "@/components/owner/analytics/SegmentBarChart";
 import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
 import { ExportReportSheet } from "@/components/owner/ExportReportSheet";
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { QueryState } from "@/components/owner/QueryState";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { TransactionRow } from "@/components/owner/TransactionRow";
@@ -36,7 +36,6 @@ const STATUS_FILTERS: TransactionStatusFilter[] = ["all", "completed", "cancelle
 
 export default function OwnerReportsScreen() {
   const { t } = useTranslation();
-  const navigation = useNavigation();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
 
@@ -80,15 +79,11 @@ export default function OwnerReportsScreen() {
 
   const openExport = useCallback(() => setExportOpen(true), []);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable onPress={openExport} style={styles.exportBtn}>
-          <Text style={styles.exportText}>{t("owner.export")}</Text>
-        </Pressable>
-      ),
-    });
-  }, [navigation, openExport, t]);
+  const exportSlot = (
+    <Pressable onPress={openExport} style={styles.exportBtn}>
+      <Text style={styles.exportText}>{t("owner.export")}</Text>
+    </Pressable>
+  );
 
   const serviceChart = (revenue.data?.income_by_service ?? []).map((s) => ({
     label: s.service_name,
@@ -105,6 +100,7 @@ export default function OwnerReportsScreen() {
 
   if (tab === "transactions") {
     return (
+      <OwnerStackShell title={t("owner.reports")} rightSlot={exportSlot}>
       <View style={styles.flex}>
         <View style={styles.filters}>
           <TabChipSelector value={tab} chips={reportTabs} onChange={setTab} />
@@ -135,10 +131,12 @@ export default function OwnerReportsScreen() {
         </QueryState>
         <ExportReportSheet visible={exportOpen} businessId={businessId} onClose={() => setExportOpen(false)} />
       </View>
+      </OwnerStackShell>
     );
   }
 
   return (
+    <OwnerStackShell title={t("owner.reports")} rightSlot={exportSlot}>
     <ScrollView style={styles.flex} contentContainerStyle={styles.analyticsScroll}>
       <TabChipSelector value={reportPeriod} chips={periodChips} onChange={setReportPeriod} />
       <TabChipSelector value={tab} chips={reportTabs} onChange={setTab} />
@@ -196,6 +194,7 @@ export default function OwnerReportsScreen() {
 
       <ExportReportSheet visible={exportOpen} businessId={businessId} onClose={() => setExportOpen(false)} />
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 

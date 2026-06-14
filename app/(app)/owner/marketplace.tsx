@@ -13,6 +13,7 @@ import {
 
 import { SafeImage } from "@/components/SafeImage";
 import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { QueryState } from "@/components/owner/QueryState";
 import { SwitchRow } from "@/components/owner/SwitchRow";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
@@ -77,6 +78,7 @@ export default function OwnerMarketplaceScreen() {
   };
 
   return (
+    <OwnerStackShell title={t("owner.marketplace")}>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.scroll}
@@ -159,6 +161,7 @@ export default function OwnerMarketplaceScreen() {
         </Pressable>
       </QueryState>
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 

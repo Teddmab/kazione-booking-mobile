@@ -12,15 +12,24 @@ import {
 import { HorizontalBarChart } from "@/components/owner/analytics/HorizontalBarChart";
 import { SectionHeader } from "@/components/owner/analytics/SectionHeader";
 import { WeekBreakdownBar } from "@/components/owner/analytics/WeekBreakdownBar";
-import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
+import { AIInsightsCard } from "@/components/owner/dashboard/AIInsightsCard";
+import { FinanceOverviewCard } from "@/components/owner/dashboard/FinanceOverviewCard";
+import { PromotionsCard } from "@/components/owner/dashboard/PromotionsCard";
+import { StaffPerformanceCard } from "@/components/owner/dashboard/StaffPerformanceCard";
+import {
+  DashboardKpiPanel,
+  type DashboardKpiItem,
+} from "@/components/owner/dashboard/DashboardKpiPanel";
 import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
 import { RevenueBarChart } from "@/components/owner/RevenueBarChart";
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useAIInsights } from "@/hooks/useOwnerAI";
 import { useOwnerDashboardKPIs } from "@/hooks/useOwnerAppointments";
-import { useRevenueBreakdown, useRevenueSummary } from "@/hooks/useOwnerFinance";
+import { useRevenueBreakdown, useRevenueSummary, useStaffPerformanceFinance } from "@/hooks/useOwnerFinance";
+import { useStorefrontPromotions } from "@/hooks/useOwnerStorefront";
 import { useLanguage } from "@/hooks/useLanguage";
 import { formatCurrency, formatDateLong, formatTime } from "@/lib/format";
 
@@ -35,6 +44,15 @@ export default function OwnerDashboardScreen() {
     useOwnerDashboardKPIs(businessId);
   const revenue = useRevenueSummary(businessId, "month");
   const breakdown = useRevenueBreakdown(businessId, "month");
+  const staffPerfToday = useStaffPerformanceFinance(businessId, "today");
+  const staffPerfMonth = useStaffPerformanceFinance(businessId, "month");
+  const promotions = useStorefrontPromotions(businessId);
+  const aiInsights = useAIInsights(businessId, 30);
+
+  const commissionsDue = (staffPerfMonth.data ?? []).reduce(
+    (sum, row) => sum + row.commission_amount,
+    0,
+  );
 
   const todayLabel = formatDateLong(new Date(), i18n.language);
   const upcoming = kpis?.upcoming_today ?? [];
@@ -67,7 +85,62 @@ export default function OwnerDashboardScreen() {
     void refetch();
     void revenue.refetch();
     void breakdown.refetch();
+    void staffPerfToday.refetch();
+    void staffPerfMonth.refetch();
+    void promotions.refetch();
+    void aiInsights.refetch();
   };
+
+  const kpiItems: DashboardKpiItem[] = [
+    {
+      key: "today",
+      label: t("owner.kpiTodayBookings"),
+      value: String(kpis?.today?.total ?? 0),
+      hint: t("owner.kpiRemaining", { count: kpis?.today?.remaining ?? 0 }),
+      icon: "calendar-outline",
+    },
+    {
+      key: "week",
+      label: t("owner.kpiWeeklyRevenue"),
+      value: formatCurrency(kpis?.this_week?.revenue ?? 0),
+      hint: t("owner.kpiCompleted", { count: kpis?.this_week?.completed ?? 0 }),
+      hintSuccess: true,
+      icon: "card-outline",
+    },
+    {
+      key: "month",
+      label: t("owner.kpiMonthlyRevenue"),
+      value: formatCurrency(monthRevenue),
+      hint: t("owner.kpiBookings", { count: monthTotal }),
+      hintSuccess: true,
+      icon: "trending-up-outline",
+    },
+    {
+      key: "staff",
+      label: t("owner.kpiActiveStaff"),
+      value: String(staffOnToday.length),
+      hint: t("owner.kpiWorkingToday"),
+      icon: "people-outline",
+    },
+    {
+      key: "ticket",
+      label: t("owner.kpiAvgTicket"),
+      value: formatCurrency(avgTicket),
+      hint: t("owner.kpiThisMonth"),
+      icon: "cash-outline",
+    },
+    {
+      key: "rating",
+      label: t("owner.kpiAvgRating"),
+      value: avgRating > 0 ? avgRating.toFixed(1) : "—",
+      hint:
+        avgRating > 0
+          ? t("owner.kpiCompletion", { percent: Math.round(completionRate) })
+          : t("owner.kpiNoReviews"),
+      hintSuccess: completionRate > 0,
+      icon: "star-outline",
+    },
+  ];
 
   return (
     <View style={styles.flex}>
@@ -80,94 +153,8 @@ export default function OwnerDashboardScreen() {
           loading={isLoading}
           error={isError ? (error as Error) : null}
           onRetry={refreshAll}>
-          <View style={styles.statsGrid}>
-            <DashboardStatCard
-              label={t("owner.kpiTodayBookings")}
-              value={String(kpis?.today?.total ?? 0)}
-              hint={t("owner.kpiRemaining", { count: kpis?.today?.remaining ?? 0 })}
-              icon="calendar-outline"
-            />
-            <DashboardStatCard
-              label={t("owner.kpiWeeklyRevenue")}
-              value={formatCurrency(kpis?.this_week?.revenue ?? 0)}
-              hint={t("owner.kpiCompleted", { count: kpis?.this_week?.completed ?? 0 })}
-              hintSuccess
-              icon="card-outline"
-            />
-            <DashboardStatCard
-              label={t("owner.kpiMonthlyRevenue")}
-              value={formatCurrency(monthRevenue)}
-              hint={t("owner.kpiBookings", { count: monthTotal })}
-              hintSuccess
-              icon="trending-up-outline"
-            />
-            <DashboardStatCard
-              label={t("owner.kpiActiveStaff")}
-              value={String(staffOnToday.length)}
-              hint={t("owner.kpiWorkingToday")}
-              icon="people-outline"
-            />
-            <DashboardStatCard
-              label={t("owner.kpiAvgTicket")}
-              value={formatCurrency(avgTicket)}
-              hint={t("owner.kpiThisMonth")}
-              icon="cash-outline"
-            />
-            <DashboardStatCard
-              label={t("owner.kpiAvgRating")}
-              value={avgRating > 0 ? avgRating.toFixed(1) : t("owner.kpiNoReviews")}
-              hint={t("owner.kpiCompletion", { percent: Math.round(completionRate) })}
-              hintSuccess={completionRate > 0}
-              icon="star-outline"
-            />
-          </View>
+          <DashboardKpiPanel title={t("owner.dashboardOverview")} items={kpiItems} />
         </QueryState>
-
-        {staffOnToday.length > 0 ? (
-          <>
-            <SectionHeader title={t("owner.dashboardStaffToday")} />
-            <View style={styles.staffRow}>
-              {staffOnToday.map((s) => (
-                <View key={s.staff_profile_id} style={styles.staffChip}>
-                  <Text style={styles.staffInitial}>{s.display_name[0]?.toUpperCase() ?? "?"}</Text>
-                  <Text style={styles.staffName} numberOfLines={1}>{s.display_name}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        ) : null}
-
-        <SectionHeader title={t("owner.dashboardWeekBreakdown")} />
-        <WeekBreakdownBar
-          pending={weekPending}
-          completed={weekCompleted}
-          cancelled={weekCancelled}
-          labels={{
-            pending: t("owner.pending"),
-            completed: t("owner.txStatus_completed"),
-            cancelled: t("owner.txStatus_cancelled"),
-          }}
-        />
-
-        <SectionHeader title={t("owner.dashboardRevenueTrend")} />
-        <RevenueBarChart data={breakdown.data ?? []} language={language} />
-
-        <SectionHeader title={t("owner.dashboardTopServices")} />
-        <HorizontalBarChart items={topServices} emptyLabel={t("owner.financeNoData")} />
-
-        {busyHours.length > 0 ? (
-          <>
-            <SectionHeader title={t("owner.dashboardBusyTimes")} />
-            <HorizontalBarChart items={busyHours} emptyLabel={t("owner.financeNoData")} />
-          </>
-        ) : null}
-
-        <Pressable
-          style={styles.aiTeaser}
-          onPress={() => router.push("/(app)/owner/ai-insights" as Href)}>
-          <Text style={styles.aiTeaserTitle}>{t("owner.aiInsights")}</Text>
-          <Text style={styles.aiTeaserSub}>{t("owner.dashboardAiTeaser")}</Text>
-        </Pressable>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{t("owner.todayAppointments")}</Text>
@@ -201,6 +188,63 @@ export default function OwnerDashboardScreen() {
           ))
         )}
 
+        {staffOnToday.length > 0 ? (
+          <>
+            <SectionHeader title={t("owner.dashboardStaffToday")} />
+            <View style={styles.staffRow}>
+              {staffOnToday.map((s) => (
+                <View key={s.staff_profile_id} style={styles.staffChip}>
+                  <Text style={styles.staffInitial}>{s.display_name[0]?.toUpperCase() ?? "?"}</Text>
+                  <Text style={styles.staffName} numberOfLines={1}>{s.display_name}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        <SectionHeader title={t("owner.dashboardWeekBreakdown")} />
+        <WeekBreakdownBar
+          pending={weekPending}
+          completed={weekCompleted}
+          cancelled={weekCancelled}
+          labels={{
+            pending: t("owner.pending"),
+            completed: t("owner.txStatus_completed"),
+            cancelled: t("owner.txStatus_cancelled"),
+          }}
+        />
+
+        <SectionHeader title={t("owner.dashboardRevenueTrend")} />
+        <RevenueBarChart data={breakdown.data ?? []} language={language} />
+
+        <SectionHeader title={t("owner.dashboardTopServices")} />
+        <HorizontalBarChart items={topServices} emptyLabel={t("owner.financeNoData")} />
+
+        <AIInsightsCard
+          insights={aiInsights.data?.insights ?? []}
+          loading={aiInsights.isLoading}
+        />
+
+        {busyHours.length > 0 ? (
+          <>
+            <SectionHeader title={t("owner.dashboardBusyTimes")} />
+            <HorizontalBarChart items={busyHours} emptyLabel={t("owner.financeNoData")} />
+          </>
+        ) : null}
+
+        <StaffPerformanceCard
+          rows={staffPerfToday.data ?? []}
+          loading={staffPerfToday.isLoading}
+        />
+
+        <PromotionsCard promotions={promotions.data ?? []} />
+
+        <FinanceOverviewCard
+          summary={revenue.data}
+          commissionsDue={commissionsDue}
+          onExport={() => router.push("/(app)/owner/reports" as Href)}
+        />
+
         <Pressable style={styles.walkInCard} onPress={() => router.push("/(app)/owner/walk-in" as Href)}>
           <Text style={styles.walkInTitle}>{t("owner.walkInTitle")}</Text>
           <Text style={styles.walkInSub}>{t("owner.walkInSub")}</Text>
@@ -224,7 +268,6 @@ function aggregateBusyHours(appointments: { starts_at: string }[]) {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
   scroll: { padding: 16, paddingBottom: 24 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 8 },
   staffRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
   staffChip: {
     flexDirection: "row",
@@ -249,17 +292,6 @@ const styles = StyleSheet.create({
     color: ownerColors.primary,
   },
   staffName: { fontSize: 13, color: ownerColors.text, flex: 1 },
-  aiTeaser: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    padding: 14,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  aiTeaserTitle: { fontSize: 16, fontWeight: "700", color: ownerColors.text },
-  aiTeaserSub: { fontSize: 13, color: ownerColors.primary, marginTop: 4 },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",

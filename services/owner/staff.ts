@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { StaffMember } from "@/types/owner";
+import type { StaffMember, StaffWorkingDay } from "@/types/owner";
 
 export interface InviteStaffInput {
   business_id: string;
@@ -28,4 +28,32 @@ export async function inviteStaff(input: InviteStaffInput): Promise<{
 
 export async function updateStaff(id: string, data: UpdateStaffInput): Promise<StaffMember> {
   return api.patch<StaffMember>(`/staff?id=${encodeURIComponent(id)}`, data);
+}
+
+export async function updateStaffSchedule(
+  staffId: string,
+  schedule: StaffWorkingDay[],
+): Promise<{ success: boolean; schedule: StaffWorkingDay[] }> {
+  return api.put(`/staff?action=schedule&id=${encodeURIComponent(staffId)}`, schedule);
+}
+
+export async function getStaffServices(staffId: string): Promise<{ service_ids: string[] }> {
+  return api.get(`/staff?action=services&id=${encodeURIComponent(staffId)}`);
+}
+
+export async function assignStaffServices(
+  staffId: string,
+  serviceIds: string[],
+): Promise<{ success: boolean; service_ids: string[] }> {
+  return api.patch(`/staff?action=assign-services&id=${encodeURIComponent(staffId)}`, {
+    service_ids: serviceIds,
+  });
+}
+
+export async function resendStaffInvite(staffId: string): Promise<{
+  invite_sent: boolean;
+  email: string;
+  email_error?: string | null;
+}> {
+  return api.patch(`/staff?action=resend-invite&id=${encodeURIComponent(staffId)}`, {});
 }

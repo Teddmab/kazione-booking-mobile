@@ -14,7 +14,7 @@ export default function OwnerTabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Accueil" }} />
       <Tabs.Screen name="appointments" options={{ title: "RDV" }} />
       <Tabs.Screen name="clients" options={{ title: "Clients" }} />
-      <Tabs.Screen name="more" options={{ title: "Plus" }} />
+      <Tabs.Screen name="staff" options={{ title: "Équipe" }} />
     </Tabs>
   );
 }

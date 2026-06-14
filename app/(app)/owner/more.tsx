@@ -3,6 +3,7 @@ import { useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, StyleSheet, Text } from "react-native";
 
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 
@@ -27,6 +28,7 @@ export default function OwnerMoreScreen() {
   };
 
   return (
+    <OwnerStackShell title={t("owner.tabMore")}>
     <ScrollView style={styles.flex} contentContainerStyle={styles.scroll}>
       <Text style={styles.intro}>{t("owner.moreIntro")}</Text>
       {LINKS.map((item) => (
@@ -41,6 +43,7 @@ export default function OwnerMoreScreen() {
         <Text style={styles.signOutText}>{t("owner.signOut")}</Text>
       </Pressable>
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 

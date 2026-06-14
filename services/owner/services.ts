@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { prepareWebpUri, uriToBlob } from "@/lib/imageUpload";
 import type { OwnerServiceRow } from "@/types/owner";
 
 export interface CreateServiceInput {
@@ -19,6 +20,35 @@ export interface UpdateServiceInput {
   description?: string | null;
   category_name?: string | null;
   is_active?: boolean;
+  image_url?: string | null;
+}
+
+async function uploadServiceImage(businessId: string, localUri: string): Promise<string> {
+  const params = new URLSearchParams({
+    business_id: businessId,
+    asset_type: "gallery",
+  });
+  const { upload_url, public_url } = await api.post<{ upload_url: string; public_url: string }>(
+    `/storefront-upload?${params}`,
+  );
+  const webpUri = await prepareWebpUri(localUri);
+  const blob = await uriToBlob(webpUri);
+  const res = await fetch(upload_url, {
+    method: "PUT",
+    body: blob,
+    headers: { "Content-Type": "image/webp" },
+  });
+  if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+  return public_url;
+}
+
+export async function uploadAndAttachServiceImage(
+  businessId: string,
+  serviceId: string,
+  localUri: string,
+): Promise<OwnerServiceRow> {
+  const imageUrl = await uploadServiceImage(businessId, localUri);
+  return updateService(serviceId, { image_url: imageUrl });
 }
 
 export async function getOwnerServices(businessId: string): Promise<OwnerServiceRow[]> {

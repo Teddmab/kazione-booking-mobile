@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshControl, ScrollView, StyleSheet, Text, View, TextInput, Pressable } from "react-native";
 
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { HorizontalBarChart } from "@/components/owner/analytics/HorizontalBarChart";
 import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
 import { PeriodChipSelector } from "@/components/owner/PeriodChipSelector";
@@ -137,6 +138,7 @@ export default function OwnerFinanceScreen() {
   };
 
   return (
+    <OwnerStackShell title={t("owner.finance")}>
     <ScrollView
       style={styles.flex}
       contentContainerStyle={styles.scroll}
@@ -224,6 +226,7 @@ export default function OwnerFinanceScreen() {
         ) : null}
       </QueryState>
     </ScrollView>
+    </OwnerStackShell>
   );
 }
 

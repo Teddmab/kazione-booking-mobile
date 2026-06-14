@@ -37,17 +37,17 @@ export default function OwnerLayout() {
             contentStyle: { backgroundColor: "#f9f8f3" },
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="walk-in" options={{ title: "Passage rapide" }} />
-          <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
-          <Stack.Screen name="staff" options={{ title: "Équipe" }} />
-          <Stack.Screen name="services" options={{ title: "Services" }} />
-          <Stack.Screen name="storefront" options={{ title: "Vitrine" }} />
-          <Stack.Screen name="settings" options={{ title: "Paramètres" }} />
-          <Stack.Screen name="finance" options={{ title: "Finance" }} />
-          <Stack.Screen name="reports" options={{ title: "Rapports" }} />
-          <Stack.Screen name="suppliers" options={{ title: "Fournisseurs" }} />
-          <Stack.Screen name="marketplace" options={{ title: "Marketplace" }} />
-          <Stack.Screen name="ai-insights" options={{ title: "AI Insights" }} />
+          <Stack.Screen name="walk-in" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="staff" options={{ headerShown: false }} />
+          <Stack.Screen name="services" options={{ headerShown: false }} />
+          <Stack.Screen name="storefront" options={{ headerShown: false }} />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
+          <Stack.Screen name="finance" options={{ headerShown: false }} />
+          <Stack.Screen name="reports" options={{ headerShown: false }} />
+          <Stack.Screen name="suppliers" options={{ headerShown: false }} />
+          <Stack.Screen name="marketplace" options={{ headerShown: false }} />
+          <Stack.Screen name="ai-insights" options={{ headerShown: false }} />
           <Stack.Screen name="more" options={{ title: "Plus", headerShown: false }} />
         </Stack>
         <OwnerDrawer />

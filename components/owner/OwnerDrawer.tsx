@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname, type Href } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Animated,
@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BusinessSwitcherSheet } from "@/components/owner/BusinessSwitcherSheet";
 import { OWNER_DRAWER_SECTIONS } from "@/constants/ownerDrawerNav";
 import { Logos } from "@/constants/logos";
 import { ownerDrawerColors } from "@/constants/ownerTheme";
@@ -29,8 +30,11 @@ function isDrawerItemActive(key: string, pathname: string): boolean {
       pathname.includes("/owner/(tabs)") &&
       !pathname.includes("appointments") &&
       !pathname.includes("clients") &&
-      !pathname.includes("/more")
+      !pathname.includes("/staff")
     );
+  }
+  if (key === "staff") {
+    return pathname.includes("/staff");
   }
   if (key === "finance" || key === "reports" || key === "suppliers" || key === "marketplace" || key === "ai-insights") {
     return pathname.includes(`/owner/${key === "ai-insights" ? "ai-insights" : key}`);
@@ -44,9 +48,11 @@ export function OwnerDrawer() {
   const router = useRouter();
   const pathname = usePathname();
   const { drawerOpen, closeDrawer } = useOwnerShell();
-  const { tenant, businesses, setActiveBusiness } = useTenantContext();
+  const { tenant } = useTenantContext();
   const { user, signOut } = useAuth();
   const slide = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [switcherCreate, setSwitcherCreate] = useState(false);
 
   const email = user?.email ?? "";
   const initial = email[0]?.toUpperCase() ?? "M";
@@ -84,22 +90,28 @@ export function OwnerDrawer() {
             />
           </View>
 
-          <Pressable
-            style={styles.businessRow}
-            onPress={() => {
-              if (businesses.length > 1 && tenant) {
-                const idx = businesses.findIndex((b) => b.businessId === tenant.businessId);
-                const next = businesses[(idx + 1) % businesses.length];
-                void setActiveBusiness(next.businessId);
-              }
-            }}>
-            <Text style={styles.businessName} numberOfLines={1}>
-              {tenant?.businessName ?? t("owner.brand")}
-            </Text>
-            {businesses.length > 1 ? (
-              <Ionicons name="add" size={20} color={ownerDrawerColors.textMuted} />
-            ) : null}
-          </Pressable>
+          <View style={styles.businessRow}>
+            <Pressable
+              style={styles.businessNameBtn}
+              onPress={() => {
+                setSwitcherCreate(false);
+                setSwitcherOpen(true);
+              }}>
+              <Text style={styles.businessName} numberOfLines={1}>
+                {tenant?.businessName ?? t("owner.brand")}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={ownerDrawerColors.textMuted} />
+            </Pressable>
+            <Pressable
+              style={styles.addBusinessBtn}
+              accessibilityLabel={t("owner.addBusiness")}
+              onPress={() => {
+                setSwitcherCreate(true);
+                setSwitcherOpen(true);
+              }}>
+              <Ionicons name="add" size={18} color="#fff" />
+            </Pressable>
+          </View>
 
           <ScrollView style={styles.nav} showsVerticalScrollIndicator={false}>
             {OWNER_DRAWER_SECTIONS.map((section) => (
@@ -150,6 +162,15 @@ export function OwnerDrawer() {
           </Pressable>
         </Animated.View>
       </View>
+
+      <BusinessSwitcherSheet
+        visible={switcherOpen}
+        startOnCreate={switcherCreate}
+        onClose={() => {
+          setSwitcherOpen(false);
+          setSwitcherCreate(false);
+        }}
+      />
     </Modal>
   );
 }
@@ -172,11 +193,25 @@ const styles = StyleSheet.create({
   businessRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 8,
     marginBottom: 20,
+  },
+  businessNameBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingVertical: 4,
   },
   businessName: { fontSize: 15, color: ownerDrawerColors.text, flex: 1 },
+  addBusinessBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: ownerDrawerColors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   section: { marginBottom: 16 },
   sectionTitle: {
     fontSize: 11,

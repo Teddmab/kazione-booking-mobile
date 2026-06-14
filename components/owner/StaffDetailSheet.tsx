@@ -33,10 +33,24 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSave: (id: string, values: StaffUpdateValues) => void;
+  onEditSchedule?: () => void;
+  onEditServices?: () => void;
+  onResendInvite?: () => void;
   busy?: boolean;
+  resendBusy?: boolean;
 }
 
-export function StaffDetailSheet({ member, visible, onClose, onSave, busy }: Props) {
+export function StaffDetailSheet({
+  member,
+  visible,
+  onClose,
+  onSave,
+  onEditSchedule,
+  onEditServices,
+  onResendInvite,
+  busy,
+  resendBusy,
+}: Props) {
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<EditableRole>("staff");
   const [isActive, setIsActive] = useState(true);
@@ -94,6 +108,33 @@ export function StaffDetailSheet({ member, visible, onClose, onSave, busy }: Pro
                 trackColor={{ true: ownerColors.primary }}
               />
             </View>
+
+            {member.appointments_last_30_days != null ? (
+              <Text style={styles.perf}>
+                Performance : {member.appointments_last_30_days} rendez-vous (30 derniers jours)
+              </Text>
+            ) : null}
+
+            {onEditSchedule ? (
+              <Pressable style={styles.actionBtn} onPress={onEditSchedule}>
+                <Text style={styles.actionText}>Modifier les horaires</Text>
+              </Pressable>
+            ) : null}
+            {onEditServices ? (
+              <Pressable style={styles.actionBtn} onPress={onEditServices}>
+                <Text style={styles.actionText}>Assigner les services</Text>
+              </Pressable>
+            ) : null}
+            {onResendInvite ? (
+              <Pressable
+                style={[styles.actionBtn, styles.actionOutline]}
+                disabled={resendBusy}
+                onPress={onResendInvite}>
+                <Text style={styles.actionOutlineText}>
+                  {resendBusy ? "Envoi…" : "Renvoyer l'invitation"}
+                </Text>
+              </Pressable>
+            ) : null}
           </ScrollView>
 
           <Pressable
@@ -149,6 +190,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   switchLabel: { fontSize: 15, color: ownerColors.text },
+  perf: { fontSize: 14, color: ownerColors.textMuted, marginTop: 16, lineHeight: 20 },
+  actionBtn: {
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: ownerColors.primaryMuted,
+    alignItems: "center",
+  },
+  actionText: { fontSize: 14, fontWeight: "600", color: ownerColors.primary },
+  actionOutline: { backgroundColor: ownerColors.card, borderWidth: 1, borderColor: ownerColors.border },
+  actionOutlineText: { fontSize: 14, fontWeight: "600", color: ownerColors.text },
   primaryBtn: {
     backgroundColor: ownerColors.primary,
     paddingVertical: 14,

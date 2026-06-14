@@ -1,6 +1,8 @@
+import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -32,7 +34,7 @@ interface Props {
   categorySuggestions: string[];
   defaultCurrency?: string;
   onClose: () => void;
-  onSubmit: (values: ServiceFormValues, serviceId: string | null) => void;
+  onSubmit: (values: ServiceFormValues, serviceId: string | null, localImageUri?: string | null) => void;
   onDeactivate?: (serviceId: string) => void;
   busy?: boolean;
 }
@@ -59,9 +61,12 @@ export function ServiceFormSheet({
   busy,
 }: Props) {
   const [form, setForm] = useState<ServiceFormValues>(emptyForm(defaultCurrency));
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
+    setLocalImageUri(null);
     if (service) {
       setForm({
         name: service.name,
@@ -71,10 +76,27 @@ export function ServiceFormSheet({
         description: service.description ?? "",
         is_active: service.is_active,
       });
+      setExistingImageUrl(service.image_url ?? null);
     } else {
       setForm(emptyForm(defaultCurrency));
+      setExistingImageUrl(null);
     }
   }, [visible, service, defaultCurrency]);
+
+  const pickImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission requise", "Autorisez l'accès aux photos.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setLocalImageUri(result.assets[0].uri);
+    }
+  };
 
   const validate = (): boolean => {
     if (!form.name.trim()) {
@@ -91,8 +113,10 @@ export function ServiceFormSheet({
 
   const save = () => {
     if (!validate()) return;
-    onSubmit(form, service?.id ?? null);
+    onSubmit(form, service?.id ?? null, localImageUri);
   };
+
+  const previewUri = localImageUri ?? existingImageUrl;
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -113,6 +137,16 @@ export function ServiceFormSheet({
               onChange={(category_name) => setForm((f) => ({ ...f, category_name }))}
               suggestions={categorySuggestions}
             />
+
+            <Text style={styles.label}>Image</Text>
+            {previewUri ? (
+              <Image source={{ uri: previewUri }} style={styles.preview} />
+            ) : null}
+            <Pressable style={styles.imageBtn} onPress={() => void pickImage()}>
+              <Text style={styles.imageBtnText}>
+                {previewUri ? "Changer l'image" : "Ajouter une image"}
+              </Text>
+            </Pressable>
 
             <Text style={styles.label}>Durée (minutes)</Text>
             <View style={styles.durationRow}>
@@ -230,6 +264,16 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: ownerColors.primaryMuted, borderColor: ownerColors.primary },
   chipText: { fontSize: 14, color: ownerColors.textMuted },
   chipTextActive: { color: ownerColors.primary, fontWeight: "600" },
+  preview: { width: "100%", height: 140, borderRadius: 12, marginTop: 6, backgroundColor: ownerColors.bg },
+  imageBtn: {
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    alignItems: "center",
+  },
+  imageBtnText: { fontSize: 14, fontWeight: "600", color: ownerColors.primary },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",

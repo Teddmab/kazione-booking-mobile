@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { QueryState } from "@/components/owner/QueryState";
 import { ownerColors } from "@/constants/ownerTheme";
 import {
@@ -43,6 +44,7 @@ export default function OwnerNotificationsScreen() {
   };
 
   return (
+    <OwnerStackShell title="Notifications">
     <View style={styles.flex}>
       {items.some((n) => !n.is_read) ? (
         <Pressable
@@ -78,6 +80,7 @@ export default function OwnerNotificationsScreen() {
         />
       </QueryState>
     </View>
+    </OwnerStackShell>
   );
 }
 

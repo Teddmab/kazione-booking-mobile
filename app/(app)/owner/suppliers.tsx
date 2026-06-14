@@ -14,6 +14,7 @@ import { HorizontalBarChart } from "@/components/owner/analytics/HorizontalBarCh
 import { SectionHeader } from "@/components/owner/analytics/SectionHeader";
 import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
 import { QueryState } from "@/components/owner/QueryState";
+import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { AddSupplierSheet } from "@/components/owner/suppliers/AddSupplierSheet";
 import { AddProductSheet } from "@/components/owner/suppliers/AddProductSheet";
@@ -81,7 +82,7 @@ export default function OwnerSuppliersScreen() {
   };
 
   return (
-    <>
+    <OwnerStackShell title={t("owner.suppliers")}>
       <ScrollView
         style={styles.flex}
         contentContainerStyle={styles.scroll}
@@ -187,7 +188,7 @@ export default function OwnerSuppliersScreen() {
       <AddSupplierSheet visible={addSupplierOpen} onClose={() => setAddSupplierOpen(false)} businessId={businessId} />
       <AddProductSheet visible={addProductOpen} onClose={() => setAddProductOpen(false)} businessId={businessId} />
       <CreateOrderSheet visible={createOrderOpen} onClose={() => setCreateOrderOpen(false)} businessId={businessId} />
-    </>
+    </OwnerStackShell>
   );
 }
 

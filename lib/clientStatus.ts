@@ -36,6 +36,7 @@ export function computeClientKPIs(
   let active = 0;
   let newCount = 0;
   let atRisk = 0;
+  let inactive = 0;
 
   for (const c of clients) {
     const s = getClientStatus(c.appointment_count, c.last_visit);
@@ -43,7 +44,8 @@ export function computeClientKPIs(
     else if (s === "Active") active++;
     else if (s === "New") newCount++;
     else if (s === "At risk") atRisk++;
+    else if (s === "Inactive") inactive++;
   }
 
-  return { total, new: newCount, active, vip, atRisk };
+  return { total, new: newCount, active, vip, at_risk: atRisk, inactive };
 }
