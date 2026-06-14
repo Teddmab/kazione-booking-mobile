@@ -60,6 +60,15 @@ export function useAuthLogin() {
         }
 
         router.replace('/');
+      } catch (err) {
+        // Catches throws from getSupabase() (missing env vars) or other unexpected errors
+        const msg =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : t('common.error');
+        setError(msg);
       } finally {
         setLoading(false);
       }
