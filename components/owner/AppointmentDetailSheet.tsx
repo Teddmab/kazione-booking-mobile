@@ -34,6 +34,7 @@ interface Props {
   onConfirmStatus: (id: string, status: AppointmentStatus) => void;
   onCancel: (id: string, reason: string) => void;
   onReschedule: (appt: AppointmentWithRelations) => void;
+  onDelete: (id: string) => void;
   busy?: boolean;
   businessId: string;
 }
@@ -45,12 +46,15 @@ export function AppointmentDetailSheet({
   onConfirmStatus,
   onCancel,
   onReschedule,
+  onDelete,
   busy,
   businessId,
 }: Props) {
   const [showReasons, setShowReasons] = useState(false);
   const [customReason, setCustomReason] = useState("");
   const [productsSheetOpen, setProductsSheetOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
 
   if (!appointment) return null;
 
@@ -195,6 +199,42 @@ export function AppointmentDetailSheet({
                   </Pressable>
                 </View>
               ) : null}
+
+              {/* Delete — only for completed appointments */}
+              {status === "completed" && !showDeleteConfirm ? (
+                <Pressable
+                  style={styles.deleteBtn}
+                  onPress={() => { setShowDeleteConfirm(true); setDeleteInput(""); }}>
+                  <Text style={styles.deleteText}>Supprimer ce rendez-vous</Text>
+                </Pressable>
+              ) : null}
+
+              {showDeleteConfirm ? (
+                <View style={styles.deleteBox}>
+                  <Text style={styles.deleteBoxTitle}>Supprimer le rendez-vous ?</Text>
+                  <Text style={styles.deleteBoxHint}>
+                    Cette action est irréversible. Tapez{" "}
+                    <Text style={styles.deleteWord}>delete</Text> pour confirmer.
+                  </Text>
+                  <TextInput
+                    style={styles.deleteInput}
+                    placeholder="delete"
+                    value={deleteInput}
+                    onChangeText={setDeleteInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <Pressable
+                    style={[styles.deleteConfirmBtn, deleteInput !== "delete" && styles.disabled]}
+                    disabled={deleteInput !== "delete" || busy}
+                    onPress={() => { onDelete(appointment.id); setShowDeleteConfirm(false); }}>
+                    <Text style={styles.deleteConfirmText}>Supprimer définitivement</Text>
+                  </Pressable>
+                  <Pressable onPress={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}>
+                    <Text style={styles.cancelLink}>Annuler</Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </ScrollView>
 
             <Pressable style={styles.closeBtn} onPress={onClose}>
@@ -304,4 +344,39 @@ const styles = StyleSheet.create({
   cancelLink: { textAlign: "center", color: ownerColors.textMuted, paddingVertical: 8 },
   closeBtn: { alignItems: "center", paddingTop: 8 },
   closeText: { fontSize: 15, color: ownerColors.primary, fontWeight: "600" },
+  deleteBtn: {
+    marginTop: 24,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  deleteText: { fontSize: 14, color: ownerColors.danger, fontWeight: "500" },
+  deleteBox: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ownerColors.danger,
+    backgroundColor: "#fff5f5",
+    gap: 10,
+  },
+  deleteBoxTitle: { fontSize: 16, fontWeight: "700", color: ownerColors.danger },
+  deleteBoxHint: { fontSize: 13, color: ownerColors.textDim, lineHeight: 19 },
+  deleteWord: { fontWeight: "700", color: ownerColors.danger },
+  deleteInput: {
+    borderWidth: 1,
+    borderColor: ownerColors.danger,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: "#fff",
+    color: ownerColors.text,
+  },
+  deleteConfirmBtn: {
+    backgroundColor: ownerColors.danger,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  deleteConfirmText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  disabled: { opacity: 0.4 },
 });
