@@ -30,7 +30,7 @@ import {
 import { useOwnerProducts } from "@/hooks/useOwnerProducts";
 import { dateRangeForPeriod } from "@/lib/financePeriod";
 import { formatCurrency } from "@/lib/format";
-import type { SupplierWithStats } from "@/types/suppliers";
+import type { SupplierType, SupplierWithStats } from "@/types/suppliers";
 
 type Tab = "overview" | "suppliers" | "purchases" | "inventory";
 
@@ -40,6 +40,7 @@ export default function OwnerSuppliersScreen() {
   const businessId = tenant?.businessId ?? "";
   const [tab, setTab] = useState<Tab>("overview");
   const [addSupplierOpen, setAddSupplierOpen] = useState(false);
+  const [supplierPrefill, setSupplierPrefill] = useState<{ name: string; supplier_type: SupplierType } | undefined>();
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
@@ -185,9 +186,23 @@ export default function OwnerSuppliersScreen() {
         )}
       </ScrollView>
 
-      <AddSupplierSheet visible={addSupplierOpen} onClose={() => setAddSupplierOpen(false)} businessId={businessId} />
+      <AddSupplierSheet
+        visible={addSupplierOpen}
+        onClose={() => { setAddSupplierOpen(false); setSupplierPrefill(undefined); }}
+        businessId={businessId}
+        prefill={supplierPrefill}
+      />
       <AddProductSheet visible={addProductOpen} onClose={() => setAddProductOpen(false)} businessId={businessId} />
-      <CreateOrderSheet visible={createOrderOpen} onClose={() => setCreateOrderOpen(false)} businessId={businessId} />
+      <CreateOrderSheet
+        visible={createOrderOpen}
+        onClose={() => setCreateOrderOpen(false)}
+        businessId={businessId}
+        onNewSupplierNeeded={(name, supplier_type) => {
+          setCreateOrderOpen(false);
+          setSupplierPrefill({ name, supplier_type });
+          setAddSupplierOpen(true);
+        }}
+      />
     </OwnerStackShell>
   );
 }

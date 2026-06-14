@@ -1,6 +1,8 @@
+import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -11,30 +13,35 @@ import {
 } from "react-native";
 
 import { ownerColors } from "@/constants/ownerTheme";
-import { useCreateSupplierOrder, useUpdateOrderStatus } from "@/hooks/useOwnerSuppliers";
+import { useCreateSupplierOrder, useUpdateOrderStatus, useSuppliers } from "@/hooks/useOwnerSuppliers";
 import { useOwnerProducts } from "@/hooks/useOwnerProducts";
-import { useSuppliers } from "@/hooks/useOwnerSuppliers";
-import type { OrderLineItem, SupplierOrderRow } from "@/types/suppliers";
+import { uploadInvoiceImage } from "@/lib/storage";
+import { scanInvoice } from "@/services/owner/suppliers";
+import type { OrderLineItem, SupplierOrderRow, SupplierType } from "@/types/suppliers";
+import type { SupplierWithStats } from "@/types/suppliers";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   businessId: string;
+  /** Called after scan when supplier wasn't found — allows opening AddSupplierSheet pre-filled */
+  onNewSupplierNeeded?: (name: string, type: SupplierType) => void;
 }
 
 const EMPTY_LINE: OrderLineItem = { product_name: "", sku: null, quantity: 1, unit_price: 0, product_id: null };
 
-export function CreateOrderSheet({ visible, onClose, businessId }: Props) {
+export function CreateOrderSheet({ visible, onClose, businessId, onNewSupplierNeeded }: Props) {
   const [supplierId, setSupplierId] = useState("");
   const [reference, setReference] = useState("");
   const [items, setItems] = useState<OrderLineItem[]>([{ ...EMPTY_LINE }]);
+  const [scanning, setScanning] = useState(false);
 
   const suppliers = useSuppliers(businessId);
   const products = useOwnerProducts(businessId);
   const createOrder = useCreateSupplierOrder(businessId);
   const updateStatus = useUpdateOrderStatus(businessId);
 
-  const supplierList = suppliers.data?.suppliers ?? [];
+  const supplierList = (suppliers.data?.suppliers ?? []) as SupplierWithStats[];
   const productList = products.data?.products ?? [];
 
   const total = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
@@ -70,7 +77,69 @@ export function CreateOrderSheet({ visible, onClose, businessId }: Props) {
     setItems([{ ...EMPTY_LINE }]);
   }
 
-  const canSubmit = !!supplierId && items.some((i) => i.product_name.trim()) && !createOrder.isPending;
+  async function handleScanInvoice() {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Allow camera access in Settings to scan invoices.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: "images",
+      quality: 0.85,
+      allowsEditing: false,
+    });
+
+    if (result.canceled) return;
+
+    setScanning(true);
+    try {
+      const imageUrl = await uploadInvoiceImage(businessId, result.assets[0].uri);
+      const scanned = await scanInvoice(businessId, imageUrl);
+
+      // Pre-fill items from scan
+      if (scanned.items.length > 0) {
+        setItems(scanned.items.map((i) => ({
+          product_name: i.product_name,
+          sku: i.sku ?? null,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          product_id: null,
+        })));
+      }
+
+      // Auto-match or prompt for supplier
+      if (scanned.matched_supplier) {
+        setSupplierId(scanned.matched_supplier.id);
+      } else if (scanned.supplier_hint) {
+        // Supplier not found — ask if they want to create it
+        Alert.alert(
+          "New supplier detected",
+          `"${scanned.supplier_hint}" is not in your supplier list. Create it?`,
+          [
+            { text: "Skip", style: "cancel" },
+            {
+              text: "Create Supplier",
+              onPress: () => {
+                onNewSupplierNeeded?.(scanned.supplier_hint!, scanned.supplier_type_hint);
+              },
+            },
+          ],
+        );
+      }
+
+      if (scanned.items.length === 0) {
+        Alert.alert("Scan complete", "No line items detected. Please fill in manually.");
+      }
+    } catch (e) {
+      Alert.alert("Scan failed", "Could not read the invoice. Please fill in manually.");
+      console.error("Invoice scan error:", e);
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  const canSubmit = !!supplierId && items.some((i) => i.product_name.trim()) && !createOrder.isPending && !scanning;
 
   function submitOrder(andReceive = false) {
     const validItems = items.filter((i) => i.product_name.trim());
@@ -98,6 +167,22 @@ export function CreateOrderSheet({ visible, onClose, businessId }: Props) {
           <Text style={styles.title}>Record Purchase</Text>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+            {/* Scan invoice button */}
+            <Pressable
+              style={[styles.scanBtn, scanning && styles.scanBtnDisabled]}
+              onPress={handleScanInvoice}
+              disabled={scanning}
+            >
+              {scanning ? (
+                <View style={styles.scanBtnInner}>
+                  <ActivityIndicator size="small" color={ownerColors.primary} />
+                  <Text style={styles.scanBtnText}>Analysing invoice…</Text>
+                </View>
+              ) : (
+                <Text style={styles.scanBtnText}>📷  Scan Invoice</Text>
+              )}
+            </Pressable>
+
             {/* Supplier selector */}
             <Text style={styles.label}>Supplier *</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
@@ -200,6 +285,20 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: ownerColors.border, alignSelf: "center", marginBottom: 16 },
   title: { fontSize: 18, fontWeight: "700", color: ownerColors.text, marginBottom: 8 },
   form: { marginBottom: 8 },
+  scanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: ownerColors.primary,
+    borderRadius: 10,
+    borderStyle: "dashed",
+    paddingVertical: 11,
+    marginBottom: 4,
+  },
+  scanBtnDisabled: { opacity: 0.6 },
+  scanBtnInner: { flexDirection: "row", alignItems: "center", gap: 8 },
+  scanBtnText: { fontSize: 14, fontWeight: "600", color: ownerColors.primary },
   label: { fontSize: 12, color: ownerColors.textDim, marginBottom: 4, marginTop: 10 },
   input: { borderWidth: 1, borderColor: ownerColors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: ownerColors.text, backgroundColor: ownerColors.bg },
   chipRow: { marginVertical: 4 },

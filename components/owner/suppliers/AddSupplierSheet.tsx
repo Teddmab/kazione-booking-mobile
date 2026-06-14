@@ -12,25 +12,52 @@ import {
 
 import { ownerColors } from "@/constants/ownerTheme";
 import { useCreateSupplier } from "@/hooks/useOwnerSuppliers";
+import type { SupplierType } from "@/types/suppliers";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   businessId: string;
+  /** Pre-fill fields when created from invoice scan */
+  prefill?: { name?: string; supplier_type?: SupplierType };
 }
 
-const EMPTY = { name: "", contact_name: "", email: "", phone: "", address: "", notes: "" };
+const SUPPLIER_TYPES: { key: SupplierType; label: string; emoji: string }[] = [
+  { key: "product", label: "Products", emoji: "📦" },
+  { key: "rent", label: "Rent / Lease", emoji: "🏠" },
+  { key: "utility", label: "Utilities", emoji: "⚡" },
+  { key: "service", label: "Services", emoji: "🔧" },
+  { key: "other", label: "Other", emoji: "📋" },
+];
 
-export function AddSupplierSheet({ visible, onClose, businessId }: Props) {
-  const [form, setForm] = useState(EMPTY);
+const EMPTY = {
+  name: "",
+  supplier_type: "product" as SupplierType,
+  contact_name: "",
+  email: "",
+  phone: "",
+  address: "",
+  notes: "",
+};
+
+export function AddSupplierSheet({ visible, onClose, businessId, prefill }: Props) {
+  const [form, setForm] = useState(() => ({
+    ...EMPTY,
+    name: prefill?.name ?? "",
+    supplier_type: prefill?.supplier_type ?? "product" as SupplierType,
+  }));
   const createSupplier = useCreateSupplier(businessId);
 
-  function set(field: keyof typeof EMPTY, value: string) {
+  function set<K extends keyof typeof EMPTY>(field: K, value: typeof EMPTY[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
   function reset() {
-    setForm(EMPTY);
+    setForm({
+      ...EMPTY,
+      name: prefill?.name ?? "",
+      supplier_type: prefill?.supplier_type ?? "product",
+    });
   }
 
   function handleSubmit() {
@@ -38,6 +65,7 @@ export function AddSupplierSheet({ visible, onClose, businessId }: Props) {
     createSupplier.mutate(
       {
         name: form.name.trim(),
+        supplier_type: form.supplier_type,
         contact_name: form.contact_name || null,
         email: form.email || null,
         phone: form.phone || null,
@@ -61,6 +89,21 @@ export function AddSupplierSheet({ visible, onClose, businessId }: Props) {
           <Text style={styles.title}>Add Supplier</Text>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+            <Text style={styles.label}>Type *</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+              {SUPPLIER_TYPES.map((t) => (
+                <Pressable
+                  key={t.key}
+                  style={[styles.chip, form.supplier_type === t.key && styles.chipActive]}
+                  onPress={() => set("supplier_type", t.key)}
+                >
+                  <Text style={[styles.chipText, form.supplier_type === t.key && styles.chipTextActive]}>
+                    {t.emoji} {t.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
             <Text style={styles.label}>Name *</Text>
             <TextInput
               style={styles.input}
@@ -73,7 +116,7 @@ export function AddSupplierSheet({ visible, onClose, businessId }: Props) {
             <TextInput style={styles.input} placeholder="e.g. Maria Kivi" value={form.contact_name} onChangeText={(v) => set("contact_name", v)} />
 
             <Text style={styles.label}>Email</Text>
-            <TextInput style={styles.input} placeholder="supplier@email.com" keyboardType="email-address" value={form.email} onChangeText={(v) => set("email", v)} />
+            <TextInput style={styles.input} placeholder="supplier@email.com" keyboardType="email-address" autoCapitalize="none" value={form.email} onChangeText={(v) => set("email", v)} />
 
             <Text style={styles.label}>Phone</Text>
             <TextInput style={styles.input} placeholder="+372..." keyboardType="phone-pad" value={form.phone} onChangeText={(v) => set("phone", v)} />
@@ -122,12 +165,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 32,
-    maxHeight: "85%",
+    maxHeight: "90%",
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: ownerColors.border, alignSelf: "center", marginBottom: 16 },
-  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text, marginBottom: 16 },
+  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text, marginBottom: 8 },
   form: { marginBottom: 12 },
   label: { fontSize: 12, color: ownerColors.textDim, marginBottom: 4, marginTop: 10 },
+  chipRow: { marginVertical: 4 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: ownerColors.border, marginRight: 8 },
+  chipActive: { borderColor: ownerColors.primary, backgroundColor: ownerColors.primaryMuted },
+  chipText: { fontSize: 13, color: ownerColors.textMuted },
+  chipTextActive: { color: ownerColors.primary, fontWeight: "600" },
   input: {
     borderWidth: 1, borderColor: ownerColors.border, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: ownerColors.text, backgroundColor: ownerColors.bg,

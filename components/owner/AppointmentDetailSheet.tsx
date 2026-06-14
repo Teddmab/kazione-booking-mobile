@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 
+import { ProductsUsedSheet } from "@/components/owner/appointments/ProductsUsedSheet";
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors } from "@/constants/ownerTheme";
 import {
@@ -34,6 +35,7 @@ interface Props {
   onCancel: (id: string, reason: string) => void;
   onReschedule: (appt: AppointmentWithRelations) => void;
   busy?: boolean;
+  businessId: string;
 }
 
 export function AppointmentDetailSheet({
@@ -44,9 +46,11 @@ export function AppointmentDetailSheet({
   onCancel,
   onReschedule,
   busy,
+  businessId,
 }: Props) {
   const [showReasons, setShowReasons] = useState(false);
   const [customReason, setCustomReason] = useState("");
+  const [productsSheetOpen, setProductsSheetOpen] = useState(false);
 
   if (!appointment) return null;
 
@@ -64,135 +68,153 @@ export function AppointmentDetailSheet({
     setCustomReason("");
   };
 
+  function handleCompletePress() {
+    // Show products-used sheet; onConfirm will fire the actual status update
+    setProductsSheetOpen(true);
+  }
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.handle} />
-          <ScrollView contentContainerStyle={styles.content}>
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>{name}</Text>
-              <StatusBadge status={appointment.status} />
-            </View>
+    <>
+      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.handle} />
+            <ScrollView contentContainerStyle={styles.content}>
+              <View style={styles.headerRow}>
+                <Text style={styles.title}>{name}</Text>
+                <StatusBadge status={appointment.status} />
+              </View>
 
-            {appointment.client.phone ? (
-              <Text style={styles.line}>📞 {appointment.client.phone}</Text>
-            ) : null}
-            {appointment.client.email ? (
-              <Text style={styles.line}>✉️ {appointment.client.email}</Text>
-            ) : null}
+              {appointment.client.phone ? (
+                <Text style={styles.line}>📞 {appointment.client.phone}</Text>
+              ) : null}
+              {appointment.client.email ? (
+                <Text style={styles.line}>✉️ {appointment.client.email}</Text>
+              ) : null}
 
-            <Text style={styles.section}>Prestation</Text>
-            <Text style={styles.line}>
-              {appointment.service.name} · {appointment.service.duration_minutes} min ·{" "}
-              {formatCurrency(appointment.price)}
-            </Text>
+              <Text style={styles.section}>Prestation</Text>
+              <Text style={styles.line}>
+                {appointment.service.name} · {appointment.service.duration_minutes} min ·{" "}
+                {formatCurrency(appointment.price)}
+              </Text>
 
-            <Text style={styles.section}>Équipe & horaire</Text>
-            <Text style={styles.line}>
-              {appointment.staff?.display_name ?? "Sans préférence"}
-            </Text>
-            <Text style={styles.line}>
-              {formatDate(appointment.starts_at)} · {formatTime(appointment.starts_at)} –{" "}
-              {formatTime(appointment.ends_at)}
-            </Text>
+              <Text style={styles.section}>Équipe & horaire</Text>
+              <Text style={styles.line}>
+                {appointment.staff?.display_name ?? "Sans préférence"}
+              </Text>
+              <Text style={styles.line}>
+                {formatDate(appointment.starts_at)} · {formatTime(appointment.starts_at)} –{" "}
+                {formatTime(appointment.ends_at)}
+              </Text>
 
-            <Text style={styles.ref}>Réf. {appointment.booking_reference}</Text>
+              <Text style={styles.ref}>Réf. {appointment.booking_reference}</Text>
 
-            {!readOnly && !showReasons ? (
-              <View style={styles.actions}>
-                {status === "pending" ? (
-                  <>
+              {!readOnly && !showReasons ? (
+                <View style={styles.actions}>
+                  {status === "pending" ? (
+                    <>
+                      <Pressable
+                        style={styles.primaryBtn}
+                        disabled={busy}
+                        onPress={() => onConfirmStatus(appointment.id, "confirmed")}>
+                        <Text style={styles.primaryBtnText}>Confirmer</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.dangerOutline}
+                        disabled={busy}
+                        onPress={() => setShowReasons(true)}>
+                        <Text style={styles.dangerText}>Annuler</Text>
+                      </Pressable>
+                    </>
+                  ) : null}
+
+                  {status === "confirmed" || status === "in_progress" ? (
+                    <>
+                      <Pressable
+                        style={styles.primaryBtn}
+                        disabled={busy}
+                        onPress={handleCompletePress}>
+                        <Text style={styles.primaryBtnText}>Terminer</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.outlineBtn}
+                        disabled={busy}
+                        onPress={() => onConfirmStatus(appointment.id, "no_show")}>
+                        <Text style={styles.outlineText}>Absent</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.outlineBtn}
+                        disabled={busy}
+                        onPress={() => {
+                          onClose();
+                          onReschedule(appointment);
+                        }}>
+                        <Text style={styles.outlineText}>Reprogrammer</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.dangerOutline}
+                        disabled={busy}
+                        onPress={() => setShowReasons(true)}>
+                        <Text style={styles.dangerText}>Annuler</Text>
+                      </Pressable>
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {showReasons ? (
+                <View style={styles.reasonBox}>
+                  <Text style={styles.section}>Motif d&apos;annulation</Text>
+                  {CANCEL_REASONS.map((r) => (
                     <Pressable
-                      style={styles.primaryBtn}
-                      disabled={busy}
-                      onPress={() => onConfirmStatus(appointment.id, "confirmed")}>
-                      <Text style={styles.primaryBtnText}>Confirmer</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.dangerOutline}
-                      disabled={busy}
-                      onPress={() => setShowReasons(true)}>
-                      <Text style={styles.dangerText}>Annuler</Text>
-                    </Pressable>
-                  </>
-                ) : null}
-
-                {status === "confirmed" || status === "in_progress" ? (
-                  <>
-                    <Pressable
-                      style={styles.primaryBtn}
-                      disabled={busy}
-                      onPress={() => onConfirmStatus(appointment.id, "completed")}>
-                      <Text style={styles.primaryBtnText}>Terminer</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.outlineBtn}
-                      disabled={busy}
-                      onPress={() => onConfirmStatus(appointment.id, "no_show")}>
-                      <Text style={styles.outlineText}>Absent</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.outlineBtn}
+                      key={r}
+                      style={styles.reasonChip}
                       disabled={busy}
                       onPress={() => {
-                        onClose();
-                        onReschedule(appointment);
+                        if (r === "Autre") return;
+                        submitCancel(r);
                       }}>
-                      <Text style={styles.outlineText}>Reprogrammer</Text>
+                      <Text style={styles.reasonChipText}>{r}</Text>
                     </Pressable>
-                    <Pressable
-                      style={styles.dangerOutline}
-                      disabled={busy}
-                      onPress={() => setShowReasons(true)}>
-                      <Text style={styles.dangerText}>Annuler</Text>
-                    </Pressable>
-                  </>
-                ) : null}
-              </View>
-            ) : null}
-
-            {showReasons ? (
-              <View style={styles.reasonBox}>
-                <Text style={styles.section}>Motif d&apos;annulation</Text>
-                {CANCEL_REASONS.map((r) => (
+                  ))}
+                  <TextInput
+                    style={styles.reasonInput}
+                    placeholder="Précisez le motif…"
+                    value={customReason}
+                    onChangeText={setCustomReason}
+                    multiline
+                  />
                   <Pressable
-                    key={r}
-                    style={styles.reasonChip}
-                    disabled={busy}
-                    onPress={() => {
-                      if (r === "Autre") return;
-                      submitCancel(r);
-                    }}>
-                    <Text style={styles.reasonChipText}>{r}</Text>
+                    style={styles.primaryBtn}
+                    disabled={busy || !customReason.trim()}
+                    onPress={() => submitCancel(customReason)}>
+                    <Text style={styles.primaryBtnText}>Confirmer l&apos;annulation</Text>
                   </Pressable>
-                ))}
-                <TextInput
-                  style={styles.reasonInput}
-                  placeholder="Précisez le motif…"
-                  value={customReason}
-                  onChangeText={setCustomReason}
-                  multiline
-                />
-                <Pressable
-                  style={styles.primaryBtn}
-                  disabled={busy || !customReason.trim()}
-                  onPress={() => submitCancel(customReason)}>
-                  <Text style={styles.primaryBtnText}>Confirmer l&apos;annulation</Text>
-                </Pressable>
-                <Pressable onPress={() => setShowReasons(false)}>
-                  <Text style={styles.cancelLink}>Retour</Text>
-                </Pressable>
-              </View>
-            ) : null}
-          </ScrollView>
+                  <Pressable onPress={() => setShowReasons(false)}>
+                    <Text style={styles.cancelLink}>Retour</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </ScrollView>
 
-          <Pressable style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>Fermer</Text>
+            <Pressable style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.closeText}>Fermer</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </Modal>
+
+      <ProductsUsedSheet
+        visible={productsSheetOpen}
+        onClose={() => setProductsSheetOpen(false)}
+        businessId={businessId}
+        appointmentId={appointment.id}
+        onConfirm={() => {
+          setProductsSheetOpen(false);
+          onConfirmStatus(appointment.id, "completed");
+        }}
+      />
+    </>
   );
 }
 

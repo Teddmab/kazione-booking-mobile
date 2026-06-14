@@ -191,6 +191,7 @@ export default function OwnerAppointmentsScreen() {
           setSheetOpen(false);
         }}
         busy={busy}
+        businessId={businessId}
       />
 
       <RescheduleSheet

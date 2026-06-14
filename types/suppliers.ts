@@ -1,9 +1,11 @@
 export type SupplierOrderStatus = "draft" | "ordered" | "received" | "cancelled";
+export type SupplierType = "product" | "rent" | "utility" | "service" | "other";
 
 export interface SupplierRow {
   id: string;
   business_id: string;
   name: string;
+  supplier_type: SupplierType;
   contact_name: string | null;
   email: string | null;
   phone: string | null;
@@ -34,12 +36,21 @@ export interface PaginatedSuppliers {
 
 export interface CreateSupplierData {
   name: string;
+  supplier_type?: SupplierType;
   contact_name?: string | null;
   email?: string | null;
   phone?: string | null;
   website?: string | null;
   address?: string | null;
   notes?: string | null;
+}
+
+export interface ScanInvoiceResult {
+  supplier_hint: string | null;
+  supplier_type_hint: SupplierType;
+  items: OrderLineItem[];
+  raw_total: number | null;
+  matched_supplier: { id: string; name: string } | null;
 }
 
 export interface SupplierDetail extends SupplierRow {

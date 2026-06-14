@@ -4,6 +4,7 @@ import type {
   CreateSupplierData,
   PaginatedSupplierOrders,
   PaginatedSuppliers,
+  ScanInvoiceResult,
   SupplierDetail,
   SupplierFilters,
   SupplierOrderRow,
@@ -67,4 +68,14 @@ export async function updateOrderStatus(
   status: SupplierOrderStatus,
 ): Promise<SupplierOrderRow> {
   return api.patch<SupplierOrderRow>(`/suppliers?action=order-status&id=${encodeURIComponent(orderId)}`, { status });
+}
+
+export async function scanInvoice(
+  businessId: string,
+  imageUrl: string,
+): Promise<ScanInvoiceResult> {
+  return api.post<ScanInvoiceResult>("/scan-invoice", {
+    business_id: businessId,
+    image_url: imageUrl,
+  });
 }
