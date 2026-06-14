@@ -22,9 +22,12 @@ import {
   useDeactivateOwnerService,
   useOwnerServices,
   useSaveOwnerService,
+  useServiceProductUsage,
+  type ProductUsageInput,
 } from "@/hooks/useOwnerServices";
 import { extractCategoryNames, groupServicesByCategory } from "@/lib/groupServicesByCategory";
 import { formatCurrency } from "@/lib/format";
+import { useOwnerProducts } from "@/hooks/useOwnerProducts";
 import type { OwnerServiceRow } from "@/types/owner";
 
 function ServiceRow({
@@ -66,8 +69,23 @@ export default function OwnerServicesScreen() {
   const saveService = useSaveOwnerService(businessId);
   const deactivate = useDeactivateOwnerService(businessId);
 
+  // Products for service linking
+  const { data: productsData } = useOwnerProducts(businessId);
+  const allProducts = productsData?.products ?? [];
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<OwnerServiceRow | null>(null);
+
+  // Load existing product usage when editing a service
+  const { data: existingUsage } = useServiceProductUsage(editing?.id ?? null);
+  const initialProductUsage: ProductUsageInput[] = useMemo(
+    () =>
+      (existingUsage ?? []).map((u) => ({
+        productId: u.product_id,
+        quantity: u.quantity_per_service,
+      })),
+    [existingUsage],
+  );
 
   const openAdd = useCallback(() => {
     setEditing(null);
@@ -82,9 +100,10 @@ export default function OwnerServicesScreen() {
     values: ServiceFormValues,
     serviceId: string | null,
     localImageUri?: string | null,
+    productUsage?: ProductUsageInput[],
   ) => {
     saveService.mutate(
-      { values, serviceId, localImageUri },
+      { values, serviceId, localImageUri, productUsage },
       {
         onSuccess: () => {
           setSheetOpen(false);
@@ -168,6 +187,8 @@ export default function OwnerServicesScreen() {
         onSubmit={onSubmit}
         onDeactivate={editing ? onDeactivate : undefined}
         busy={saveService.isPending || deactivate.isPending}
+        products={allProducts}
+        initialProductUsage={initialProductUsage}
       />
     </OwnerStackShell>
   );
