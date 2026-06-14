@@ -80,12 +80,35 @@ export interface PaginatedSupplierOrders {
   total: number;
 }
 
+export interface CreateOrderItemData {
+  product_name: string;
+  sku?: string | null;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface CreateOrderData {
   supplier_id: string;
   reference?: string;
-  total_amount: number;
-  expected_at?: string | null;
   notes?: string | null;
+  ordered_at?: string | null;
+  expected_at?: string | null;
+  items: CreateOrderItemData[];
+}
+
+export interface SupplierOrderFilters {
+  supplierId?: string;
+  status?: SupplierOrderStatus[];
+  page?: number;
+  limit?: number;
+}
+
+export interface ScanInvoiceResult {
+  supplier_hint: string | null;
+  supplier_type_hint?: string;
+  items: CreateOrderItemData[];
+  raw_total: number | null;
+  matched_supplier: { id: string; name: string } | null;
 }
 
 export interface SupplierSpendRow {

@@ -34,7 +34,7 @@ export function WeekCalendarView({ weekStart, byDay, onSelect }: Props) {
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.hScroll}>
-      <View>
+      <View style={styles.calendarRoot}>
         <View style={styles.dayHeaderRow}>
           <View style={styles.timeGutter} />
           {days.map((d) => (
@@ -116,8 +116,9 @@ export function WeekCalendarView({ weekStart, byDay, onSelect }: Props) {
 const DAY_WIDTH = 92;
 
 const styles = StyleSheet.create({
-  hScroll: { flex: 1 },
-  vScroll: { maxHeight: 480 },
+  hScroll: { flex: 1, minHeight: 0 },
+  calendarRoot: { flex: 1, minHeight: 0 },
+  vScroll: { flex: 1, minHeight: 0 },
   dayHeaderRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: ownerColors.border },
   timeGutter: { width: 44 },
   dayHeader: {

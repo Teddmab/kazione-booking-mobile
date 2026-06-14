@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { prepareWebpUri, uriToBlob } from "@/lib/imageUpload";
+import { rewriteStorageUrlForDevice } from "@/lib/storageUrl";
 import type {
   GalleryItem,
   StorefrontPromotion,
@@ -17,13 +18,16 @@ async function getSignedUpload(
     business_id: businessId,
     asset_type: assetType,
   });
-  return api.post<UploadUrlResponse>(`/storefront-upload?${params}`);
+  return api.post<UploadUrlResponse>(`/storefront-upload?${params}`).then((data) => ({
+    upload_url: rewriteStorageUrlForDevice(data.upload_url),
+    public_url: rewriteStorageUrlForDevice(data.public_url),
+  }));
 }
 
 async function putImage(uploadUrl: string, uri: string) {
   const webpUri = await prepareWebpUri(uri);
   const blob = await uriToBlob(webpUri);
-  const res = await fetch(uploadUrl, {
+  const res = await fetch(rewriteStorageUrlForDevice(uploadUrl), {
     method: "PUT",
     body: blob,
     headers: { "Content-Type": "image/webp" },

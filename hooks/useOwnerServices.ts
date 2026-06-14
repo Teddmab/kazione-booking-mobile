@@ -5,12 +5,13 @@ import {
   createService,
   deactivateService,
   getOwnerServices,
+  restoreService,
   updateService,
   uploadAndAttachServiceImage,
 } from "@/services/owner/services";
 
-function parsePrice(price: string): number {
-  return Number(price.replace(",", "."));
+function parseMoney(value: string): number {
+  return Number(value.replace(",", "."));
 }
 
 export function useOwnerServices(businessId: string) {
@@ -36,7 +37,11 @@ export function useSaveOwnerService(businessId: string) {
       const payload = {
         name: values.name.trim(),
         duration_minutes: values.duration_minutes,
-        price: parsePrice(values.price),
+        buffer_minutes: values.buffer_minutes,
+        price: parseMoney(values.price),
+        deposit_amount: values.deposit_amount.trim()
+          ? parseMoney(values.deposit_amount)
+          : null,
         description: values.description.trim() || null,
         category_name: values.category_name.trim() || undefined,
         is_active: values.is_active,
@@ -66,6 +71,16 @@ export function useDeactivateOwnerService(businessId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deactivateService(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["owner-services", businessId] });
+    },
+  });
+}
+
+export function useRestoreOwnerService(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => restoreService(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["owner-services", businessId] });
     },

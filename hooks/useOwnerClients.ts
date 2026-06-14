@@ -4,9 +4,15 @@ import {
   createClient,
   getClient,
   getClients,
+  importClients,
   patchClient,
 } from "@/services/owner/clients";
-import type { ClientFilters, CreateClientInput, UpdateClientInput } from "@/types/owner";
+import type {
+  ClientFilters,
+  CreateClientInput,
+  ImportClientRow,
+  UpdateClientInput,
+} from "@/types/owner";
 
 export function useOwnerClients(businessId: string, filters: ClientFilters = {}) {
   return useQuery({
@@ -44,6 +50,17 @@ export function useUpdateOwnerClient(businessId: string) {
     onSuccess: (_res, vars) => {
       void queryClient.invalidateQueries({ queryKey: ["owner-clients", businessId] });
       void queryClient.invalidateQueries({ queryKey: ["owner-client-detail", vars.clientId] });
+      void queryClient.invalidateQueries({ queryKey: ["owner-client-stats", businessId] });
+    },
+  });
+}
+
+export function useImportOwnerClients(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (rows: ImportClientRow[]) => importClients(businessId, rows),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["owner-clients", businessId] });
       void queryClient.invalidateQueries({ queryKey: ["owner-client-stats", businessId] });
     },
   });

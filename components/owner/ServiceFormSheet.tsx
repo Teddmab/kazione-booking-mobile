@@ -2,7 +2,6 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
   Alert,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -14,16 +13,21 @@ import {
 } from "react-native";
 
 import { CategoryPicker } from "@/components/owner/CategoryPicker";
+import { SafeImage } from "@/components/SafeImage";
 import { ownerColors } from "@/constants/ownerTheme";
+import type { ServiceSuggestion } from "@/services/owner/ai";
 import type { OwnerServiceRow } from "@/types/owner";
 
 const DURATIONS = [15, 30, 45, 60, 75, 90, 120] as const;
+const BUFFER_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60] as const;
 
 export interface ServiceFormValues {
   name: string;
   category_name: string;
   duration_minutes: number;
+  buffer_minutes: number;
   price: string;
+  deposit_amount: string;
   description: string;
   is_active: boolean;
 }
@@ -33,21 +37,46 @@ interface Props {
   service: OwnerServiceRow | null;
   categorySuggestions: string[];
   defaultCurrency?: string;
+  initialStep?: 1 | 2;
+  aiSuggestions?: ServiceSuggestion[];
   onClose: () => void;
   onSubmit: (values: ServiceFormValues, serviceId: string | null, localImageUri?: string | null) => void;
   onDeactivate?: (serviceId: string) => void;
   busy?: boolean;
 }
 
-function emptyForm(currency: string): ServiceFormValues {
+function emptyForm(): ServiceFormValues {
   return {
     name: "",
     category_name: "",
     duration_minutes: 60,
+    buffer_minutes: 0,
     price: "",
+    deposit_amount: "",
     description: "",
     is_active: true,
   };
+}
+
+function renderSuggestion(
+  field: ServiceSuggestion["field"],
+  suggestions: ServiceSuggestion[],
+  onApply: (value: string) => void,
+) {
+  const hint = suggestions.find((s) => s.field === field);
+  if (!hint) return null;
+  return (
+    <View style={styles.aiHint}>
+      <Text style={styles.aiHintText}>
+        {hint.suggested_value ? `IA : ${hint.suggested_value}` : hint.reason}
+      </Text>
+      {hint.suggested_value ? (
+        <Pressable onPress={() => onApply(hint.suggested_value!)}>
+          <Text style={styles.aiApply}>Appliquer</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
 }
 
 export function ServiceFormSheet({
@@ -55,33 +84,44 @@ export function ServiceFormSheet({
   service,
   categorySuggestions,
   defaultCurrency = "EUR",
+  initialStep = 1,
+  aiSuggestions = [],
   onClose,
   onSubmit,
   onDeactivate,
   busy,
 }: Props) {
-  const [form, setForm] = useState<ServiceFormValues>(emptyForm(defaultCurrency));
+  const [step, setStep] = useState<1 | 2>(1);
+  const [form, setForm] = useState<ServiceFormValues>(emptyForm());
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
+    setStep(initialStep);
+    setStepError(null);
     setLocalImageUri(null);
     if (service) {
       setForm({
         name: service.name,
         category_name: service.category_name ?? "",
         duration_minutes: service.duration_minutes,
+        buffer_minutes: service.buffer_minutes ?? 0,
         price: String(service.price),
+        deposit_amount:
+          service.deposit_amount != null && service.deposit_amount > 0
+            ? String(service.deposit_amount)
+            : "",
         description: service.description ?? "",
         is_active: service.is_active,
       });
       setExistingImageUrl(service.image_url ?? null);
     } else {
-      setForm(emptyForm(defaultCurrency));
+      setForm(emptyForm());
       setExistingImageUrl(null);
     }
-  }, [visible, service, defaultCurrency]);
+  }, [visible, service, initialStep]);
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -91,28 +131,54 @@ export function ServiceFormSheet({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      quality: 0.85,
+      aspect: [4, 3],
+      quality: 0.8,
     });
     if (!result.canceled && result.assets[0]?.uri) {
       setLocalImageUri(result.assets[0].uri);
     }
   };
 
-  const validate = (): boolean => {
-    if (!form.name.trim()) {
-      Alert.alert("Champ requis", "Le nom du service est obligatoire.");
-      return false;
+  const validateStep1 = (): string | null => {
+    if (!form.name.trim()) return "Le nom du service est obligatoire.";
+    if (!form.category_name.trim()) return "Choisissez une catégorie.";
+    return null;
+  };
+
+  const validateStep2 = (): string | null => {
+    if (form.duration_minutes < 5 || form.duration_minutes > 480) {
+      return "La durée doit être entre 5 et 480 minutes.";
     }
     const price = Number(form.price.replace(",", "."));
     if (!Number.isFinite(price) || price <= 0) {
-      Alert.alert("Prix invalide", "Indiquez un prix positif.");
-      return false;
+      return "Indiquez un prix positif.";
     }
-    return true;
+    if (form.deposit_amount.trim()) {
+      const deposit = Number(form.deposit_amount.replace(",", "."));
+      if (!Number.isFinite(deposit) || deposit < 0) {
+        return "Le dépôt doit être positif ou nul.";
+      }
+    }
+    return null;
+  };
+
+  const goNext = () => {
+    const err = validateStep1();
+    if (err) {
+      setStepError(err);
+      return;
+    }
+    setStepError(null);
+    setStep(2);
   };
 
   const save = () => {
-    if (!validate()) return;
+    const err = validateStep1() ?? validateStep2();
+    if (err) {
+      setStepError(err);
+      return;
+    }
+    setStepError(null);
     onSubmit(form, service?.id ?? null, localImageUri);
   };
 
@@ -123,103 +189,188 @@ export function ServiceFormSheet({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>{service ? "Modifier le service" : "Nouveau service"}</Text>
+          <Text style={styles.stepLabel}>Étape {step} / 2</Text>
+
           <ScrollView keyboardShouldPersistTaps="handled">
-            <Text style={styles.label}>Nom *</Text>
-            <TextInput
-              style={styles.input}
-              value={form.name}
-              onChangeText={(name) => setForm((f) => ({ ...f, name }))}
-              placeholder="Ex. Box braids"
-            />
+            {step === 1 ? (
+              <>
+                <Text style={styles.label}>Nom *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.name}
+                  onChangeText={(name) => setForm((f) => ({ ...f, name }))}
+                  placeholder="Ex. Box braids"
+                />
+                {renderSuggestion("name", aiSuggestions, (value) =>
+                  setForm((f) => ({ ...f, name: value })),
+                )}
 
-            <CategoryPicker
-              value={form.category_name}
-              onChange={(category_name) => setForm((f) => ({ ...f, category_name }))}
-              suggestions={categorySuggestions}
-            />
+                <CategoryPicker
+                  value={form.category_name}
+                  onChange={(category_name) => setForm((f) => ({ ...f, category_name }))}
+                  suggestions={categorySuggestions}
+                />
 
-            <Text style={styles.label}>Image</Text>
-            {previewUri ? (
-              <Image source={{ uri: previewUri }} style={styles.preview} />
-            ) : null}
-            <Pressable style={styles.imageBtn} onPress={() => void pickImage()}>
-              <Text style={styles.imageBtnText}>
-                {previewUri ? "Changer l'image" : "Ajouter une image"}
-              </Text>
-            </Pressable>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  style={[styles.input, styles.multiline]}
+                  value={form.description}
+                  onChangeText={(description) => setForm((f) => ({ ...f, description }))}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Optionnel"
+                />
+                {renderSuggestion("description", aiSuggestions, (value) =>
+                  setForm((f) => ({ ...f, description: value })),
+                )}
 
-            <Text style={styles.label}>Durée (minutes)</Text>
-            <View style={styles.durationRow}>
-              {DURATIONS.map((d) => (
-                <Pressable
-                  key={d}
-                  style={[styles.chip, form.duration_minutes === d && styles.chipActive]}
-                  onPress={() => setForm((f) => ({ ...f, duration_minutes: d }))}>
-                  <Text
-                    style={[styles.chipText, form.duration_minutes === d && styles.chipTextActive]}>
-                    {d}
+                <Text style={styles.label}>Photo</Text>
+                {previewUri ? (
+                  <SafeImage
+                    uri={localImageUri ?? existingImageUrl}
+                    style={styles.previewThumb}
+                    fallbackLetter={form.name || "?"}
+                  />
+                ) : null}
+                <Pressable style={styles.imageBtn} onPress={() => void pickImage()}>
+                  <Text style={styles.imageBtnText}>
+                    {previewUri ? "Changer la photo" : "Ajouter une photo"}
                   </Text>
                 </Pressable>
-              ))}
-            </View>
+              </>
+            ) : (
+              <>
+                <Pressable onPress={() => setStep(1)} style={styles.backLink}>
+                  <Text style={styles.backLinkText}>← Retour</Text>
+                </Pressable>
 
-            <Text style={styles.label}>Prix ({defaultCurrency}) *</Text>
-            <TextInput
-              style={styles.input}
-              value={form.price}
-              onChangeText={(price) => setForm((f) => ({ ...f, price }))}
-              keyboardType="decimal-pad"
-              placeholder="95"
-            />
-
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.multiline]}
-              value={form.description}
-              onChangeText={(description) => setForm((f) => ({ ...f, description }))}
-              multiline
-              numberOfLines={3}
-              placeholder="Optionnel"
-            />
-
-            {service ? (
-              <View style={styles.switchRow}>
-                <Text style={styles.labelInline}>Service actif</Text>
-                <Switch
-                  value={form.is_active}
-                  onValueChange={(is_active) => setForm((f) => ({ ...f, is_active }))}
-                  trackColor={{ true: ownerColors.primary }}
+                <Text style={styles.label}>Durée (minutes)</Text>
+                <View style={styles.durationRow}>
+                  {DURATIONS.map((d) => (
+                    <Pressable
+                      key={d}
+                      style={[styles.chip, form.duration_minutes === d && styles.chipActive]}
+                      onPress={() => setForm((f) => ({ ...f, duration_minutes: d }))}>
+                      <Text
+                        style={[
+                          styles.chipText,
+                          form.duration_minutes === d && styles.chipTextActive,
+                        ]}>
+                        {d}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={[styles.input, styles.spacedInput]}
+                  value={String(form.duration_minutes)}
+                  onChangeText={(value) => {
+                    const n = Number(value.replace(/\D/g, ""));
+                    if (Number.isFinite(n)) setForm((f) => ({ ...f, duration_minutes: n }));
+                  }}
+                  keyboardType="number-pad"
+                  placeholder="60"
                 />
-              </View>
-            ) : null}
+                {renderSuggestion("duration_minutes", aiSuggestions, (value) => {
+                  const n = Number(value);
+                  if (Number.isFinite(n)) setForm((f) => ({ ...f, duration_minutes: n }));
+                })}
+
+                <Text style={styles.label}>Buffer (minutes)</Text>
+                <View style={styles.durationRow}>
+                  {BUFFER_OPTIONS.map((b) => (
+                    <Pressable
+                      key={b}
+                      style={[styles.chip, form.buffer_minutes === b && styles.chipActive]}
+                      onPress={() => setForm((f) => ({ ...f, buffer_minutes: b }))}>
+                      <Text
+                        style={[
+                          styles.chipText,
+                          form.buffer_minutes === b && styles.chipTextActive,
+                        ]}>
+                        {b}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.label}>Prix ({defaultCurrency}) *</Text>
+                <View style={styles.moneyRow}>
+                  <Text style={styles.moneyPrefix}>€</Text>
+                  <TextInput
+                    style={[styles.input, styles.moneyInput]}
+                    value={form.price}
+                    onChangeText={(price) => setForm((f) => ({ ...f, price }))}
+                    keyboardType="decimal-pad"
+                    placeholder="95"
+                  />
+                </View>
+                {renderSuggestion("price", aiSuggestions, (value) =>
+                  setForm((f) => ({ ...f, price: value })),
+                )}
+
+                <Text style={styles.label}>Dépôt ({defaultCurrency})</Text>
+                <View style={styles.moneyRow}>
+                  <Text style={styles.moneyPrefix}>€</Text>
+                  <TextInput
+                    style={[styles.input, styles.moneyInput]}
+                    value={form.deposit_amount}
+                    onChangeText={(deposit_amount) => setForm((f) => ({ ...f, deposit_amount }))}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                  />
+                </View>
+
+                {service ? (
+                  <View style={styles.switchRow}>
+                    <Text style={styles.labelInline}>Service actif</Text>
+                    <Switch
+                      value={form.is_active}
+                      onValueChange={(is_active) => setForm((f) => ({ ...f, is_active }))}
+                      trackColor={{ true: ownerColors.primary }}
+                    />
+                  </View>
+                ) : null}
+              </>
+            )}
+
+            {stepError ? <Text style={styles.error}>{stepError}</Text> : null}
           </ScrollView>
 
-          <Pressable
-            style={[styles.primaryBtn, busy && styles.disabled]}
-            disabled={busy}
-            onPress={save}>
-            <Text style={styles.primaryBtnText}>{busy ? "Enregistrement…" : "Enregistrer"}</Text>
-          </Pressable>
+          {step === 1 ? (
+            <Pressable style={styles.primaryBtn} onPress={goNext}>
+              <Text style={styles.primaryBtnText}>Suivant →</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[styles.primaryBtn, busy && styles.disabled]}
+              disabled={busy}
+              onPress={save}>
+              <Text style={styles.primaryBtnText}>
+                {busy ? "Enregistrement…" : "Enregistrer"}
+              </Text>
+            </Pressable>
+          )}
 
-          {service && onDeactivate ? (
+          {service && onDeactivate && step === 2 ? (
             <Pressable
               style={styles.dangerBtn}
               disabled={busy}
               onPress={() => {
                 Alert.alert(
-                  "Désactiver le service",
+                  "Archiver le service",
                   "Ce service ne sera plus réservable. Continuer ?",
                   [
                     { text: "Annuler", style: "cancel" },
                     {
-                      text: "Désactiver",
+                      text: "Archiver",
                       style: "destructive",
                       onPress: () => onDeactivate(service.id),
                     },
                   ],
                 );
               }}>
-              <Text style={styles.dangerText}>Désactiver le service</Text>
+              <Text style={styles.dangerText}>Archiver le service</Text>
             </Pressable>
           ) : null}
 
@@ -241,8 +392,15 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "90%",
   },
-  title: { fontSize: 20, fontWeight: "700", color: ownerColors.text, marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: "600", color: ownerColors.textDim, marginTop: 12, marginBottom: 6 },
+  title: { fontSize: 20, fontWeight: "700", color: ownerColors.text },
+  stepLabel: { fontSize: 13, color: ownerColors.textMuted, marginTop: 4, marginBottom: 8 },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: ownerColors.textDim,
+    marginTop: 12,
+    marginBottom: 6,
+  },
   labelInline: { fontSize: 15, color: ownerColors.text, flex: 1 },
   input: {
     borderWidth: 1,
@@ -252,6 +410,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: ownerColors.bg,
   },
+  spacedInput: { marginTop: 8 },
   multiline: { minHeight: 72, textAlignVertical: "top" },
   durationRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
@@ -264,7 +423,13 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: ownerColors.primaryMuted, borderColor: ownerColors.primary },
   chipText: { fontSize: 14, color: ownerColors.textMuted },
   chipTextActive: { color: ownerColors.primary, fontWeight: "600" },
-  preview: { width: "100%", height: 140, borderRadius: 12, marginTop: 6, backgroundColor: ownerColors.bg },
+  previewThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    marginTop: 6,
+    backgroundColor: ownerColors.bg,
+  },
   imageBtn: {
     marginTop: 8,
     paddingVertical: 10,
@@ -274,12 +439,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   imageBtnText: { fontSize: 14, fontWeight: "600", color: ownerColors.primary },
+  moneyRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  moneyPrefix: { fontSize: 16, fontWeight: "600", color: ownerColors.textMuted },
+  moneyInput: { flex: 1 },
+  backLink: { marginTop: 4, marginBottom: 4 },
+  backLinkText: { fontSize: 14, fontWeight: "600", color: ownerColors.primary },
+  aiHint: {
+    marginTop: 6,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#fde68a",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  aiHintText: { flex: 1, fontSize: 12, color: "#92400e", lineHeight: 17 },
+  aiApply: { fontSize: 12, fontWeight: "700", color: ownerColors.primary },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 16,
     gap: 12,
   },
+  error: { fontSize: 13, color: ownerColors.danger, marginTop: 12 },
   primaryBtn: {
     backgroundColor: ownerColors.primary,
     paddingVertical: 14,

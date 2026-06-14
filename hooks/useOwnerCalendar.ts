@@ -9,7 +9,7 @@ import {
 } from "@/lib/ownerCalendar";
 import type { AppointmentWithRelations } from "@/types/owner";
 
-export function useOwnerCalendar(businessId: string) {
+export function useOwnerCalendar(businessId: string, staffId?: string) {
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeekMonday(new Date()));
 
   const weekStart = useMemo(() => startOfWeekMonday(weekAnchor), [weekAnchor]);
@@ -20,8 +20,9 @@ export function useOwnerCalendar(businessId: string) {
       dateFrom: toIsoDateLocal(weekStart),
       dateTo: toIsoDateLocal(weekEnd),
       limit: 200,
+      ...(staffId ? { staffId } : {}),
     }),
-    [weekStart, weekEnd],
+    [weekStart, weekEnd, staffId],
   );
 
   const query = useOwnerAppointments(businessId, filters);

@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  assignAppointmentStaff,
   cancelAppointment,
   getAppointments,
   getDashboardKPIs,
   rescheduleAppointment,
+  sendAppointmentReminder,
   updateAppointmentStatus,
 } from "@/services/owner/appointments";
 import type { AppointmentFilters, AppointmentStatus, DashboardKPIs } from "@/types/owner";
@@ -69,5 +71,26 @@ export function useRescheduleOwnerAppointment(businessId: string) {
       staff_profile_id?: string | null;
     }) => rescheduleAppointment(params),
     onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
+  });
+}
+
+export function useAssignAppointmentStaff(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      staffProfileId,
+    }: {
+      id: string;
+      staffProfileId: string;
+    }) => assignAppointmentStaff(id, businessId, staffProfileId),
+    onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
+  });
+}
+
+export function useSendAppointmentReminder(businessId: string) {
+  return useMutation({
+    mutationFn: (appointmentId: string) =>
+      sendAppointmentReminder(businessId, appointmentId),
   });
 }

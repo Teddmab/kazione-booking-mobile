@@ -52,6 +52,27 @@ export async function cancelAppointment(
   });
 }
 
+export async function assignAppointmentStaff(
+  id: string,
+  businessId: string,
+  staffProfileId: string,
+): Promise<AppointmentWithRelations> {
+  return api.patch<AppointmentWithRelations>(
+    `/appointments?action=assign-staff&id=${encodeURIComponent(id)}`,
+    { business_id: businessId, staff_profile_id: staffProfileId },
+  );
+}
+
+export async function sendAppointmentReminder(
+  businessId: string,
+  appointmentId: string,
+): Promise<{ ok: boolean; reminders: { sent: number } }> {
+  return api.post("/send-reminders", {
+    business_id: businessId,
+    appointment_id: appointmentId,
+  });
+}
+
 export async function rescheduleAppointment(params: {
   appointment_id: string;
   new_date: string;

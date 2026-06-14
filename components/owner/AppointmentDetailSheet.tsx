@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
   Modal,
   Pressable,
   ScrollView,
@@ -11,6 +14,11 @@ import {
 
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useOwnerStaff } from "@/hooks/useOwnerStaff";
+import {
+  useAssignAppointmentStaff,
+  useSendAppointmentReminder,
+} from "@/hooks/useOwnerAppointments";
 import {
   clientDisplayName,
   formatCurrency,
@@ -26,27 +34,52 @@ const CANCEL_REASONS = [
   "Autre",
 ];
 
+type ReminderState = "idle" | "sending" | "sent" | "error";
+
 interface Props {
   appointment: AppointmentWithRelations | null;
+  businessId: string;
   visible: boolean;
   onClose: () => void;
   onConfirmStatus: (id: string, status: AppointmentStatus) => void;
   onCancel: (id: string, reason: string) => void;
   onReschedule: (appt: AppointmentWithRelations) => void;
+  onAssigned?: () => void;
   busy?: boolean;
 }
 
 export function AppointmentDetailSheet({
   appointment,
+  businessId,
   visible,
   onClose,
   onConfirmStatus,
   onCancel,
   onReschedule,
+  onAssigned,
   busy,
 }: Props) {
   const [showReasons, setShowReasons] = useState(false);
   const [customReason, setCustomReason] = useState("");
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [staffPickerOpen, setStaffPickerOpen] = useState(false);
+  const [reminderState, setReminderState] = useState<ReminderState>("idle");
+  const [reminderError, setReminderError] = useState("");
+
+  const { data: staffList = [] } = useOwnerStaff(businessId);
+  const assignStaff = useAssignAppointmentStaff(businessId);
+  const sendReminder = useSendAppointmentReminder(businessId);
+
+  useEffect(() => {
+    if (!visible) {
+      setShowReasons(false);
+      setCustomReason("");
+      setSelectedStaffId(null);
+      setStaffPickerOpen(false);
+      setReminderState("idle");
+      setReminderError("");
+    }
+  }, [visible, appointment?.id]);
 
   if (!appointment) return null;
 
@@ -57,11 +90,53 @@ export function AppointmentDetailSheet({
   const status = appointment.status as AppointmentStatus;
   const readOnly =
     status === "completed" || status === "cancelled" || status === "no_show";
+  const showAssign =
+    !appointment.staff && !readOnly;
+  const showReminder =
+    status === "confirmed" && !!appointment.client.email;
+
+  const activeStaff = staffList.filter((s) => s.is_active && !s.is_pending_invite);
+  const selectedStaffName =
+    activeStaff.find((s) => s.id === selectedStaffId)?.display_name ?? null;
 
   const submitCancel = (reason: string) => {
     onCancel(appointment.id, reason.trim());
     setShowReasons(false);
     setCustomReason("");
+  };
+
+  const onAssign = () => {
+    if (!selectedStaffId) return;
+    assignStaff.mutate(
+      { id: appointment.id, staffProfileId: selectedStaffId },
+      {
+        onSuccess: () => {
+          Alert.alert("Assigné", "Le rendez-vous a été assigné.");
+          onAssigned?.();
+          onClose();
+        },
+        onError: (e) => Alert.alert("Erreur", e.message),
+      },
+    );
+  };
+
+  const onSendReminder = () => {
+    setReminderState("sending");
+    setReminderError("");
+    sendReminder.mutate(appointment.id, {
+      onSuccess: (result) => {
+        if ((result.reminders?.sent ?? 0) > 0) {
+          setReminderState("sent");
+        } else {
+          Alert.alert("Attention", "L'email n'a pas pu être envoyé.");
+          setReminderState("idle");
+        }
+      },
+      onError: (e) => {
+        setReminderState("error");
+        setReminderError(e.message);
+      },
+    });
   };
 
   return (
@@ -98,6 +173,34 @@ export function AppointmentDetailSheet({
             </Text>
 
             <Text style={styles.ref}>Réf. {appointment.booking_reference}</Text>
+
+            {showAssign ? (
+              <View style={styles.assignBox}>
+                <Text style={styles.assignTitle}>
+                  Non assigné — Choisir un membre de l&apos;équipe
+                </Text>
+                <Pressable
+                  style={styles.pickerBtn}
+                  onPress={() => setStaffPickerOpen(true)}>
+                  <Text style={styles.pickerText}>
+                    {selectedStaffName ?? "Sélectionner"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.primaryBtn,
+                    (!selectedStaffId || assignStaff.isPending) && styles.btnDisabled,
+                  ]}
+                  disabled={!selectedStaffId || assignStaff.isPending || busy}
+                  onPress={onAssign}>
+                  {assignStaff.isPending ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.primaryBtnText}>Assigner</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
 
             {!readOnly && !showReasons ? (
               <View style={styles.actions}>
@@ -149,6 +252,39 @@ export function AppointmentDetailSheet({
                     </Pressable>
                   </>
                 ) : null}
+
+                {showReminder ? (
+                  <>
+                    <Pressable
+                      style={[
+                        styles.outlineBtn,
+                        (reminderState === "sent" || reminderState === "sending") &&
+                          styles.btnDisabled,
+                      ]}
+                      disabled={
+                        reminderState === "sent" ||
+                        reminderState === "sending" ||
+                        busy
+                      }
+                      onPress={onSendReminder}>
+                      {reminderState === "sending" ? (
+                        <ActivityIndicator color={ownerColors.primary} />
+                      ) : (
+                        <Text style={styles.outlineText}>
+                          {reminderState === "sent"
+                            ? "Rappel envoyé ✓"
+                            : "🔔 Envoyer un rappel"}
+                        </Text>
+                      )}
+                    </Pressable>
+                    {reminderState === "sent" ? (
+                      <Text style={styles.reminderOk}>Rappel envoyé par email</Text>
+                    ) : null}
+                    {reminderState === "error" ? (
+                      <Text style={styles.reminderErr}>{reminderError}</Text>
+                    ) : null}
+                  </>
+                ) : null}
               </View>
             ) : null}
 
@@ -192,6 +328,32 @@ export function AppointmentDetailSheet({
           </Pressable>
         </Pressable>
       </Pressable>
+
+      <Modal visible={staffPickerOpen} transparent animationType="fade">
+        <Pressable style={styles.pickerBackdrop} onPress={() => setStaffPickerOpen(false)}>
+          <View style={styles.pickerSheet}>
+            <Text style={styles.pickerTitle}>Choisir un membre</Text>
+            <FlatList
+              data={activeStaff}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.pickerRow}
+                  onPress={() => {
+                    setSelectedStaffId(item.id);
+                    setStaffPickerOpen(false);
+                  }}>
+                  <Text style={styles.pickerRowName}>{item.display_name}</Text>
+                  <Text style={styles.pickerRowRole}>{item.role}</Text>
+                </Pressable>
+              )}
+              ListEmptyComponent={
+                <Text style={styles.pickerEmpty}>Aucun membre actif</Text>
+              }
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </Modal>
   );
 }
@@ -237,6 +399,24 @@ const styles = StyleSheet.create({
   },
   line: { fontSize: 15, color: ownerColors.text, lineHeight: 22 },
   ref: { fontSize: 13, color: ownerColors.textMuted, marginTop: 12 },
+  assignBox: {
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    backgroundColor: "#FEF3C7",
+    gap: 10,
+  },
+  assignTitle: { fontSize: 13, fontWeight: "600", color: "#92400E" },
+  pickerBtn: {
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#fff",
+  },
+  pickerText: { fontSize: 15, color: ownerColors.text },
   actions: { gap: 10, marginTop: 20 },
   primaryBtn: {
     backgroundColor: ownerColors.primary,
@@ -245,6 +425,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryBtnText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  btnDisabled: { opacity: 0.55 },
   outlineBtn: {
     borderWidth: 1,
     borderColor: ownerColors.primary,
@@ -261,6 +442,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dangerText: { color: ownerColors.danger, fontWeight: "600" },
+  reminderOk: { fontSize: 13, color: "#10B981", textAlign: "center" },
+  reminderErr: { fontSize: 13, color: ownerColors.danger, textAlign: "center" },
   reasonBox: { marginTop: 12, gap: 8 },
   reasonChip: {
     padding: 12,
@@ -282,4 +465,25 @@ const styles = StyleSheet.create({
   cancelLink: { textAlign: "center", color: ownerColors.textMuted, paddingVertical: 8 },
   closeBtn: { alignItems: "center", paddingTop: 8 },
   closeText: { fontSize: 15, color: ownerColors.primary, fontWeight: "600" },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  pickerSheet: {
+    backgroundColor: ownerColors.card,
+    borderRadius: 16,
+    maxHeight: "60%",
+    padding: 16,
+  },
+  pickerTitle: { fontSize: 17, fontWeight: "700", marginBottom: 12, color: ownerColors.text },
+  pickerRow: {
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: ownerColors.border,
+  },
+  pickerRowName: { fontSize: 15, fontWeight: "600", color: ownerColors.text },
+  pickerRowRole: { fontSize: 13, color: ownerColors.textMuted, marginTop: 2 },
+  pickerEmpty: { textAlign: "center", color: ownerColors.textMuted, padding: 20 },
 });
