@@ -92,3 +92,13 @@ export function useResendStaffInvite(businessId: string) {
     },
   });
 }
+
+export function useActivateStaffInvite(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (staffId: string) => updateStaff(staffId, { is_active: true }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["owner-staff", businessId] });
+    },
+  });
+}

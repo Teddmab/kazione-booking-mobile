@@ -45,14 +45,6 @@ export interface CreateSupplierData {
   notes?: string | null;
 }
 
-export interface ScanInvoiceResult {
-  supplier_hint: string | null;
-  supplier_type_hint: SupplierType;
-  items: OrderLineItem[];
-  raw_total: number | null;
-  matched_supplier: { id: string; name: string } | null;
-}
-
 export interface SupplierDetail extends SupplierRow {
   total_spent: number;
   recent_expenses: {
@@ -104,12 +96,17 @@ export interface PaginatedSupplierOrders {
   total: number;
 }
 
-export interface OrderLineItem {
-  product_id?: string | null;
+/** Line item for creating an order (used by CreateOrderSheet). No product_id link required at creation time. */
+export interface CreateOrderItemData {
   product_name: string;
   sku?: string | null;
   quantity: number;
   unit_price: number;
+}
+
+/** Extended line item that includes an optional product_id link (master version). */
+export interface OrderLineItem extends CreateOrderItemData {
+  product_id?: string | null;
 }
 
 export interface CreateOrderData {
@@ -118,7 +115,22 @@ export interface CreateOrderData {
   ordered_at?: string | null;
   expected_at?: string | null;
   notes?: string | null;
-  items: OrderLineItem[];
+  items: CreateOrderItemData[];
+}
+
+export interface SupplierOrderFilters {
+  supplierId?: string;
+  status?: SupplierOrderStatus[];
+  page?: number;
+  limit?: number;
+}
+
+export interface ScanInvoiceResult {
+  supplier_hint: string | null;
+  supplier_type_hint: SupplierType;
+  items: CreateOrderItemData[];
+  raw_total: number | null;
+  matched_supplier: { id: string; name: string } | null;
 }
 
 export interface SupplierSpendRow {

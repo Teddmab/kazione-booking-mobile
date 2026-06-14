@@ -34,12 +34,19 @@ export interface CreateProductData {
 
 export interface StockMovementRow {
   id: string;
+  business_id: string;
   product_id: string;
   movement_type: "purchase" | "service_use" | "manual_in" | "manual_out" | "wastage";
   quantity: number;
   unit_cost: number | null;
+  reference_id: string | null;
+  reference_type: string | null;
   notes: string | null;
   created_at: string;
+}
+
+export interface ProductDetail extends ProductRow {
+  movements: StockMovementRow[];
 }
 
 export interface AdjustStockData {

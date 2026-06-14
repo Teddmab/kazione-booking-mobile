@@ -7,6 +7,7 @@ import type {
   ScanInvoiceResult,
   SupplierDetail,
   SupplierFilters,
+  SupplierOrderFilters,
   SupplierOrderRow,
   SupplierOrderStatus,
   SupplierRow,
@@ -39,17 +40,31 @@ export async function createSupplier(
   return api.post<SupplierRow>("/suppliers", { ...input, business_id: businessId });
 }
 
+export async function updateSupplier(
+  id: string,
+  input: Partial<CreateSupplierData> & { is_active?: boolean },
+): Promise<SupplierRow> {
+  return api.patch<SupplierRow>(`/suppliers?id=${encodeURIComponent(id)}`, input);
+}
+
+export async function deactivateSupplier(id: string): Promise<void> {
+  await api.patch(`/suppliers?action=deactivate&id=${encodeURIComponent(id)}`);
+}
+
 export async function getSupplierOrders(
   businessId: string,
-  page = 1,
-  limit = 20,
+  filters: SupplierOrderFilters = {},
 ): Promise<PaginatedSupplierOrders> {
+  const { supplierId, status, page = 1, limit = 25 } = filters;
   const params = new URLSearchParams({
     action: "orders",
     business_id: businessId,
     page: String(page),
     limit: String(limit),
   });
+  if (supplierId) params.set("supplier_id", supplierId);
+  if (status?.length) status.forEach((s) => params.append("status", s));
+
   return api.get<PaginatedSupplierOrders>(`/suppliers?${params}`);
 }
 
@@ -67,15 +82,21 @@ export async function updateOrderStatus(
   orderId: string,
   status: SupplierOrderStatus,
 ): Promise<SupplierOrderRow> {
-  return api.patch<SupplierOrderRow>(`/suppliers?action=order-status&id=${encodeURIComponent(orderId)}`, { status });
+  return api.patch<SupplierOrderRow>(
+    `/suppliers?action=order-status&id=${encodeURIComponent(orderId)}`,
+    { status },
+  );
 }
 
 export async function scanInvoice(
   businessId: string,
-  imageUrl: string,
+  imageUrl?: string,
+  imageBase64?: string,
+  mediaType?: string,
 ): Promise<ScanInvoiceResult> {
   return api.post<ScanInvoiceResult>("/scan-invoice", {
     business_id: businessId,
-    image_url: imageUrl,
+    ...(imageUrl ? { image_url: imageUrl } : {}),
+    ...(imageBase64 ? { image_base64: imageBase64, media_type: mediaType ?? "image/jpeg" } : {}),
   });
 }
