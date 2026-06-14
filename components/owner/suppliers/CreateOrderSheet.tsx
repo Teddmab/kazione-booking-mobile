@@ -17,8 +17,7 @@ import { useCreateSupplierOrder, useUpdateOrderStatus, useSuppliers } from "@/ho
 import { useOwnerProducts } from "@/hooks/useOwnerProducts";
 import { uploadInvoiceImage } from "@/lib/storage";
 import { scanInvoice } from "@/services/owner/suppliers";
-import type { OrderLineItem, SupplierOrderRow, SupplierType } from "@/types/suppliers";
-import type { SupplierWithStats } from "@/types/suppliers";
+import type { OrderLineItem, SupplierOrderRow, SupplierType, SupplierWithStats } from "@/types/suppliers";
 
 interface Props {
   visible: boolean;
