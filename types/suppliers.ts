@@ -43,6 +43,7 @@ export interface CreateSupplierData {
 }
 
 export interface SupplierDetail extends SupplierRow {
+  total_spent: number;
   recent_expenses: {
     id: string;
     description: string;
@@ -61,6 +62,17 @@ export interface SupplierDetail extends SupplierRow {
   monthly_spend: { month: string; amount: number }[];
 }
 
+export interface SupplierOrderItemRow {
+  id: string;
+  order_id: string;
+  product_name: string;
+  sku: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  product_id: string | null;
+}
+
 export interface SupplierOrderRow {
   id: string;
   business_id: string;
@@ -73,6 +85,7 @@ export interface SupplierOrderRow {
   notes: string | null;
   created_at: string;
   supplier?: { id: string; name: string };
+  items?: SupplierOrderItemRow[];
 }
 
 export interface PaginatedSupplierOrders {
@@ -80,12 +93,21 @@ export interface PaginatedSupplierOrders {
   total: number;
 }
 
+export interface OrderLineItem {
+  product_id?: string | null;
+  product_name: string;
+  sku?: string | null;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface CreateOrderData {
   supplier_id: string;
   reference?: string;
-  total_amount: number;
+  ordered_at?: string | null;
   expected_at?: string | null;
   notes?: string | null;
+  items: OrderLineItem[];
 }
 
 export interface SupplierSpendRow {

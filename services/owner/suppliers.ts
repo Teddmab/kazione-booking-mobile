@@ -7,6 +7,7 @@ import type {
   SupplierDetail,
   SupplierFilters,
   SupplierOrderRow,
+  SupplierOrderStatus,
   SupplierRow,
 } from "@/types/suppliers";
 
@@ -43,7 +44,7 @@ export async function getSupplierOrders(
   limit = 20,
 ): Promise<PaginatedSupplierOrders> {
   const params = new URLSearchParams({
-    action: "order",
+    action: "orders",
     business_id: businessId,
     page: String(page),
     limit: String(limit),
@@ -55,8 +56,15 @@ export async function createSupplierOrder(
   businessId: string,
   input: CreateOrderData,
 ): Promise<SupplierOrderRow> {
-  return api.post<SupplierOrderRow>(`/suppliers?action=order&business_id=${encodeURIComponent(businessId)}`, {
+  return api.post<SupplierOrderRow>("/suppliers?action=order", {
     business_id: businessId,
     ...input,
   });
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: SupplierOrderStatus,
+): Promise<SupplierOrderRow> {
+  return api.patch<SupplierOrderRow>(`/suppliers?action=order-status&id=${encodeURIComponent(orderId)}`, { status });
 }
