@@ -30,6 +30,7 @@ export function useInviteStaff(businessId: string) {
         email: values.email.trim().toLowerCase(),
         display_name: `${values.first_name.trim()} ${values.last_name.trim()}`.trim(),
         role: values.role,
+        position: values.position.trim() || null,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["owner-staff", businessId] });

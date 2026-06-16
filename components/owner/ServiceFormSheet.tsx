@@ -19,6 +19,8 @@ import type { OwnerServiceRow } from "@/types/owner";
 
 const DURATIONS = [15, 30, 45, 60, 75, 90, 120] as const;
 
+export type StaffCommissionType = "none" | "percentage" | "fixed";
+
 export interface ServiceFormValues {
   name: string;
   category_name: string;
@@ -26,6 +28,8 @@ export interface ServiceFormValues {
   price: string;
   description: string;
   is_active: boolean;
+  staff_commission_type: StaffCommissionType;
+  staff_commission_value: string;
 }
 
 interface Props {
@@ -47,6 +51,8 @@ function emptyForm(currency: string): ServiceFormValues {
     price: "",
     description: "",
     is_active: true,
+    staff_commission_type: "none",
+    staff_commission_value: "",
   };
 }
 
@@ -75,6 +81,10 @@ export function ServiceFormSheet({
         price: String(service.price),
         description: service.description ?? "",
         is_active: service.is_active,
+        staff_commission_type: service.staff_commission_type ?? "none",
+        staff_commission_value: service.staff_commission_value != null
+          ? String(service.staff_commission_value)
+          : "",
       });
       setExistingImageUrl(service.image_url ?? null);
     } else {
@@ -181,6 +191,50 @@ export function ServiceFormSheet({
               numberOfLines={3}
               placeholder="Optionnel"
             />
+
+
+            {/* Staff commission */}
+            <Text style={styles.label}>Commission personnel</Text>
+            <View style={styles.commissionRow}>
+              {(["none", "percentage", "fixed"] as StaffCommissionType[]).map((type) => (
+                <Pressable
+                  key={type}
+                  style={[styles.chip, form.staff_commission_type === type && styles.chipActive]}
+                  onPress={() =>
+                    setForm((f) => ({
+                      ...f,
+                      staff_commission_type: type,
+                      staff_commission_value: type === "none" ? "" : f.staff_commission_value,
+                    }))
+                  }
+                >
+                  <Text style={[styles.chipText, form.staff_commission_type === type && styles.chipTextActive]}>
+                    {type === "none" ? "Aucune" : type === "percentage" ? "% du prix" : "Fixe (EUR)"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {form.staff_commission_type !== "none" && (
+              <>
+                <TextInput
+                  style={[styles.input, { marginTop: 8 }]}
+                  value={form.staff_commission_value}
+                  onChangeText={(staff_commission_value) =>
+                    setForm((f) => ({ ...f, staff_commission_value }))
+                  }
+                  keyboardType="decimal-pad"
+                  placeholder={form.staff_commission_type === "percentage" ? "Ex. 40" : "Ex. 15.00"}
+                />
+                {Number(form.price) > 0 && Number(form.staff_commission_value) > 0 && (
+                  <Text style={styles.commissionPreview}>
+                    Pour un service à EUR {Number(form.price).toFixed(2)} : personnel perçoit EUR{" "}
+                    {form.staff_commission_type === "percentage"
+                      ? (Number(form.price) * Number(form.staff_commission_value) / 100).toFixed(2)
+                      : Number(form.staff_commission_value).toFixed(2)}
+                  </Text>
+                )}
+              </>
+            )}
 
             {service ? (
               <View style={styles.switchRow}>
@@ -293,4 +347,11 @@ const styles = StyleSheet.create({
   dangerText: { color: ownerColors.danger, fontWeight: "600" },
   cancel: { alignItems: "center", paddingVertical: 10 },
   cancelText: { color: ownerColors.textMuted },
+  commissionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  commissionPreview: {
+    fontSize: 12,
+    color: ownerColors.primary,
+    marginTop: 6,
+    fontStyle: "italic",
+  },
 });

@@ -6,6 +6,7 @@ export interface InviteStaffInput {
   email: string;
   display_name: string;
   role: string;
+  position?: string | null;
 }
 
 export interface UpdateStaffInput {

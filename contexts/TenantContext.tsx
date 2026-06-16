@@ -18,7 +18,10 @@ export type MemberRole = "owner" | "manager" | "staff" | "receptionist";
 export interface TenantContextValue {
   businessId: string;
   businessName: string;
+  slug: string;
   role: MemberRole;
+  staffProfileId: string | null;
+  position: string | null;
 }
 
 /** Raw GET /me body (Edge Function). */

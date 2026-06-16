@@ -33,6 +33,9 @@ export function useSaveOwnerService(businessId: string) {
       serviceId: string | null;
       localImageUri?: string | null;
     }) => {
+      const commissionValue = values.staff_commission_value.trim()
+        ? Number(values.staff_commission_value.replace(",", "."))
+        : null;
       const payload = {
         name: values.name.trim(),
         duration_minutes: values.duration_minutes,
@@ -40,6 +43,8 @@ export function useSaveOwnerService(businessId: string) {
         description: values.description.trim() || null,
         category_name: values.category_name.trim() || undefined,
         is_active: values.is_active,
+        staff_commission_type: values.staff_commission_type,
+        staff_commission_value: values.staff_commission_type === "none" ? null : commissionValue,
       };
       let saved;
       if (serviceId) {

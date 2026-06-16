@@ -42,7 +42,7 @@ export default function Index() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, loading: authLoading, role, signOut } = useAuthContext();
-  const { tenant, loading: tenantLoading, error: tenantError } = useTenantContext();
+  const { tenant, businesses, loading: tenantLoading, error: tenantError } = useTenantContext();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -111,6 +111,10 @@ export default function Index() {
         </Pressable>
       </View>
     );
+  }
+
+  if (businesses.length > 1) {
+    return <Redirect href={"/(auth)/role-select" as Href} />;
   }
 
   return <Redirect href={dashboardPathForTenant(tenant.role) as Href} />;

@@ -58,6 +58,7 @@ export interface AppointmentWithRelations {
     method: string;
     paid_at: string | null;
   } | null;
+  commission_earned?: number | null;
 }
 
 export interface UpcomingAppointment {
@@ -125,6 +126,8 @@ export interface ClientStats {
   inactive: number;
 }
 
+export type StaffCommissionType = "none" | "percentage" | "fixed";
+
 export interface OwnerServiceRow {
   id: string;
   name: string;
@@ -135,6 +138,8 @@ export interface OwnerServiceRow {
   is_active: boolean;
   category_name: string | null;
   image_url?: string | null;
+  staff_commission_type?: StaffCommissionType;
+  staff_commission_value?: number | null;
 }
 
 export interface StaffWorkingDay {
@@ -147,6 +152,7 @@ export interface StaffWorkingDay {
 export interface StaffMember {
   id: string;
   display_name: string;
+  position: string | null;
   email: string | null;
   role: string;
   is_active: boolean;

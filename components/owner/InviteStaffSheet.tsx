@@ -20,6 +20,7 @@ export interface InviteStaffValues {
   email: string;
   role: StaffInviteRole;
   phone: string;
+  position: string;
 }
 
 const ROLES: { value: StaffInviteRole; label: string }[] = [
@@ -41,6 +42,7 @@ const empty: InviteStaffValues = {
   email: "",
   role: "staff",
   phone: "",
+  position: "",
 };
 
 export function InviteStaffSheet({ visible, onClose, onSubmit, busy }: Props) {
@@ -104,6 +106,14 @@ export function InviteStaffSheet({ visible, onClose, onSubmit, busy }: Props) {
               value={form.phone}
               onChangeText={(phone) => setForm((f) => ({ ...f, phone }))}
               keyboardType="phone-pad"
+            />
+            <Text style={styles.label}>Position / Titre</Text>
+            <TextInput
+              style={styles.input}
+              value={form.position}
+              onChangeText={(position) => setForm((f) => ({ ...f, position }))}
+              placeholder="Ex. Senior Stylist, Barber"
+              autoCapitalize="words"
             />
             <Text style={styles.label}>Rôle</Text>
             <View style={styles.roleRow}>
