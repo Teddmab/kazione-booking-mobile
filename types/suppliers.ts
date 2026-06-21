@@ -1,9 +1,11 @@
 export type SupplierOrderStatus = "draft" | "ordered" | "received" | "cancelled";
+export type SupplierType = "product" | "rent" | "utility" | "service" | "other";
 
 export interface SupplierRow {
   id: string;
   business_id: string;
   name: string;
+  supplier_type: SupplierType;
   contact_name: string | null;
   email: string | null;
   phone: string | null;
@@ -34,6 +36,7 @@ export interface PaginatedSuppliers {
 
 export interface CreateSupplierData {
   name: string;
+  supplier_type?: SupplierType;
   contact_name?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -42,7 +45,16 @@ export interface CreateSupplierData {
   notes?: string | null;
 }
 
+export interface ScanInvoiceResult {
+  supplier_hint: string | null;
+  supplier_type_hint: SupplierType;
+  items: OrderLineItem[];
+  raw_total: number | null;
+  matched_supplier: { id: string; name: string } | null;
+}
+
 export interface SupplierDetail extends SupplierRow {
+  total_spent: number;
   recent_expenses: {
     id: string;
     description: string;
@@ -61,6 +73,17 @@ export interface SupplierDetail extends SupplierRow {
   monthly_spend: { month: string; amount: number }[];
 }
 
+export interface SupplierOrderItemRow {
+  id: string;
+  order_id: string;
+  product_name: string;
+  sku: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  product_id: string | null;
+}
+
 export interface SupplierOrderRow {
   id: string;
   business_id: string;
@@ -73,6 +96,7 @@ export interface SupplierOrderRow {
   notes: string | null;
   created_at: string;
   supplier?: { id: string; name: string };
+  items?: SupplierOrderItemRow[];
 }
 
 export interface PaginatedSupplierOrders {
@@ -80,12 +104,21 @@ export interface PaginatedSupplierOrders {
   total: number;
 }
 
+export interface OrderLineItem {
+  product_id?: string | null;
+  product_name: string;
+  sku?: string | null;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface CreateOrderData {
   supplier_id: string;
   reference?: string;
-  total_amount: number;
+  ordered_at?: string | null;
   expected_at?: string | null;
   notes?: string | null;
+  items: OrderLineItem[];
 }
 
 export interface SupplierSpendRow {
