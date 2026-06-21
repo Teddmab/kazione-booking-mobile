@@ -33,3 +33,7 @@ export async function adjustStock(
     { ...input, business_id: businessId },
   );
 }
+
+export async function deactivateProduct(id: string): Promise<void> {
+  await api.patch(`/products?action=deactivate&id=${encodeURIComponent(id)}`);
+}

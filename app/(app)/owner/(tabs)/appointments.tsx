@@ -26,6 +26,7 @@ import { useTenantContext } from "@/contexts/TenantContext";
 import { useOwnerCalendar } from "@/hooks/useOwnerCalendar";
 import {
   useCancelOwnerAppointment,
+  useDeleteOwnerAppointment,
   useOwnerAppointments,
   useRescheduleOwnerAppointment,
   useUpdateOwnerAppointmentStatus,
@@ -131,9 +132,10 @@ export default function OwnerAppointmentsScreen() {
   const updateStatus = useUpdateOwnerAppointmentStatus(businessId);
   const cancelAppt = useCancelOwnerAppointment(businessId);
   const rescheduleAppt = useRescheduleOwnerAppointment(businessId);
+  const deleteAppt = useDeleteOwnerAppointment(businessId);
 
   const busy =
-    updateStatus.isPending || cancelAppt.isPending || rescheduleAppt.isPending;
+    updateStatus.isPending || cancelAppt.isPending || rescheduleAppt.isPending || deleteAppt.isPending;
 
   const openDetail = useCallback((appt: AppointmentWithRelations) => {
     setSelected(appt);
@@ -312,6 +314,15 @@ export default function OwnerAppointmentsScreen() {
         onReschedule={(appt) => {
           setRescheduleTarget(appt);
           setSheetOpen(false);
+        }}
+        onDelete={(id) => {
+          deleteAppt.mutate(id, {
+            onSuccess: () => {
+              setSheetOpen(false);
+              void refetch();
+            },
+            onError: (e) => Alert.alert("Erreur", e.message),
+          });
         }}
         onAssigned={refreshAll}
         busy={busy}

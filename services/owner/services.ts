@@ -122,3 +122,40 @@ export async function deactivateService(id: string): Promise<OwnerServiceRow> {
 export async function restoreService(id: string): Promise<OwnerServiceRow> {
   return updateService(id, { is_active: true });
 }
+
+// ---------------------------------------------------------------------------
+// Service → product usage
+// ---------------------------------------------------------------------------
+
+export interface ServiceProductUsageRow {
+  id: string;
+  service_id: string;
+  product_id: string;
+  quantity_per_service: number;
+  product: { id: string; name: string; sku: string | null; unit: string; unit_cost: number | null; current_stock: number };
+}
+
+export async function getServiceProductUsage(serviceId: string): Promise<ServiceProductUsageRow[]> {
+  const res = await api.get<{ items: ServiceProductUsageRow[] }>(
+    `/products?action=service-usage&service_id=${encodeURIComponent(serviceId)}`,
+  );
+  return res.items;
+}
+
+export async function addServiceProduct(
+  businessId: string,
+  serviceId: string,
+  productId: string,
+  quantityPerService: number,
+): Promise<ServiceProductUsageRow> {
+  return api.post<ServiceProductUsageRow>("/products?action=service-usage", {
+    business_id: businessId,
+    service_id: serviceId,
+    product_id: productId,
+    quantity_per_service: quantityPerService,
+  });
+}
+
+export async function removeServiceProduct(usageId: string): Promise<void> {
+  await api.delete(`/products?action=service-usage&id=${encodeURIComponent(usageId)}`);
+}

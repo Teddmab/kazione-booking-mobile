@@ -50,7 +50,7 @@ export interface ProductDetail extends ProductRow {
 }
 
 export interface AdjustStockData {
-  movement_type: "manual_in" | "manual_out" | "wastage";
+  movement_type: "manual_in" | "manual_out" | "wastage" | "service_use";
   quantity: number;
   unit_cost?: number | null;
   notes?: string | null;

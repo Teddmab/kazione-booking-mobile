@@ -85,3 +85,7 @@ export async function rescheduleAppointment(params: {
 }> {
   return api.post("/reschedule-booking", params);
 }
+
+export async function deleteAppointment(id: string): Promise<void> {
+  await api.delete(`/appointments?id=${encodeURIComponent(id)}`);
+}

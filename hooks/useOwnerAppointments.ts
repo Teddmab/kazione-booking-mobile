@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignAppointmentStaff,
   cancelAppointment,
+  deleteAppointment,
   getAppointments,
   getDashboardKPIs,
   rescheduleAppointment,
@@ -70,6 +71,14 @@ export function useRescheduleOwnerAppointment(businessId: string) {
       new_time: string;
       staff_profile_id?: string | null;
     }) => rescheduleAppointment(params),
+    onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
+  });
+}
+
+export function useDeleteOwnerAppointment(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteAppointment(id),
     onSuccess: () => invalidateOwnerAppointmentQueries(queryClient, businessId),
   });
 }

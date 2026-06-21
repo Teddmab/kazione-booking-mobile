@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 
+import { ProductsUsedSheet } from "@/components/owner/appointments/ProductsUsedSheet";
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useOwnerStaff } from "@/hooks/useOwnerStaff";
@@ -44,6 +45,7 @@ interface Props {
   onConfirmStatus: (id: string, status: AppointmentStatus) => void;
   onCancel: (id: string, reason: string) => void;
   onReschedule: (appt: AppointmentWithRelations) => void;
+  onDelete?: (id: string) => void;
   onAssigned?: () => void;
   busy?: boolean;
 }
@@ -56,11 +58,15 @@ export function AppointmentDetailSheet({
   onConfirmStatus,
   onCancel,
   onReschedule,
+  onDelete,
   onAssigned,
   busy,
 }: Props) {
   const [showReasons, setShowReasons] = useState(false);
   const [customReason, setCustomReason] = useState("");
+  const [productsSheetOpen, setProductsSheetOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [staffPickerOpen, setStaffPickerOpen] = useState(false);
   const [reminderState, setReminderState] = useState<ReminderState>("idle");
@@ -78,6 +84,8 @@ export function AppointmentDetailSheet({
       setStaffPickerOpen(false);
       setReminderState("idle");
       setReminderError("");
+      setShowDeleteConfirm(false);
+      setDeleteInput("");
     }
   }, [visible, appointment?.id]);
 
@@ -104,6 +112,11 @@ export function AppointmentDetailSheet({
     setShowReasons(false);
     setCustomReason("");
   };
+
+  function handleCompletePress() {
+    // Show products-used sheet; onConfirm will fire the actual status update
+    setProductsSheetOpen(true);
+  }
 
   const onAssign = () => {
     if (!selectedStaffId) return;
@@ -140,221 +153,270 @@ export function AppointmentDetailSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.handle} />
-          <ScrollView contentContainerStyle={styles.content}>
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>{name}</Text>
-              <StatusBadge status={appointment.status} />
-            </View>
-
-            {appointment.client.phone ? (
-              <Text style={styles.line}>📞 {appointment.client.phone}</Text>
-            ) : null}
-            {appointment.client.email ? (
-              <Text style={styles.line}>✉️ {appointment.client.email}</Text>
-            ) : null}
-
-            <Text style={styles.section}>Prestation</Text>
-            <Text style={styles.line}>
-              {appointment.service.name} · {appointment.service.duration_minutes} min ·{" "}
-              {formatCurrency(appointment.price)}
-            </Text>
-
-            <Text style={styles.section}>Équipe & horaire</Text>
-            <Text style={styles.line}>
-              {appointment.staff?.display_name ?? "Sans préférence"}
-            </Text>
-            <Text style={styles.line}>
-              {formatDate(appointment.starts_at)} · {formatTime(appointment.starts_at)} –{" "}
-              {formatTime(appointment.ends_at)}
-            </Text>
-
-            <Text style={styles.ref}>Réf. {appointment.booking_reference}</Text>
-
-            {showAssign ? (
-              <View style={styles.assignBox}>
-                <Text style={styles.assignTitle}>
-                  Non assigné — Choisir un membre de l&apos;équipe
-                </Text>
-                <Pressable
-                  style={styles.pickerBtn}
-                  onPress={() => setStaffPickerOpen(true)}>
-                  <Text style={styles.pickerText}>
-                    {selectedStaffName ?? "Sélectionner"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.primaryBtn,
-                    (!selectedStaffId || assignStaff.isPending) && styles.btnDisabled,
-                  ]}
-                  disabled={!selectedStaffId || assignStaff.isPending || busy}
-                  onPress={onAssign}>
-                  {assignStaff.isPending ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.primaryBtnText}>Assigner</Text>
-                  )}
-                </Pressable>
+    <>
+      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.handle} />
+            <ScrollView contentContainerStyle={styles.content}>
+              <View style={styles.headerRow}>
+                <Text style={styles.title}>{name}</Text>
+                <StatusBadge status={appointment.status} />
               </View>
-            ) : null}
 
-            {!readOnly && !showReasons ? (
-              <View style={styles.actions}>
-                {status === "pending" ? (
-                  <>
-                    <Pressable
-                      style={styles.primaryBtn}
-                      disabled={busy}
-                      onPress={() => onConfirmStatus(appointment.id, "confirmed")}>
-                      <Text style={styles.primaryBtnText}>Confirmer</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.dangerOutline}
-                      disabled={busy}
-                      onPress={() => setShowReasons(true)}>
-                      <Text style={styles.dangerText}>Annuler</Text>
-                    </Pressable>
-                  </>
-                ) : null}
+              {appointment.client.phone ? (
+                <Text style={styles.line}>📞 {appointment.client.phone}</Text>
+              ) : null}
+              {appointment.client.email ? (
+                <Text style={styles.line}>✉️ {appointment.client.email}</Text>
+              ) : null}
 
-                {status === "confirmed" || status === "in_progress" ? (
-                  <>
+              <Text style={styles.section}>Prestation</Text>
+              <Text style={styles.line}>
+                {appointment.service.name} · {appointment.service.duration_minutes} min ·{" "}
+                {formatCurrency(appointment.price)}
+              </Text>
+
+              <Text style={styles.section}>Équipe & horaire</Text>
+              <Text style={styles.line}>
+                {appointment.staff?.display_name ?? "Sans préférence"}
+              </Text>
+              <Text style={styles.line}>
+                {formatDate(appointment.starts_at)} · {formatTime(appointment.starts_at)} –{" "}
+                {formatTime(appointment.ends_at)}
+              </Text>
+
+              <Text style={styles.ref}>Réf. {appointment.booking_reference}</Text>
+
+              {showAssign ? (
+                <View style={styles.assignBox}>
+                  <Text style={styles.assignTitle}>
+                    Non assigné — Choisir un membre de l&apos;équipe
+                  </Text>
+                  <Pressable
+                    style={styles.pickerBtn}
+                    onPress={() => setStaffPickerOpen(true)}>
+                    <Text style={styles.pickerText}>
+                      {selectedStaffName ?? "Sélectionner"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.primaryBtn,
+                      (!selectedStaffId || assignStaff.isPending) && styles.btnDisabled,
+                    ]}
+                    disabled={!selectedStaffId || assignStaff.isPending || busy}
+                    onPress={onAssign}>
+                    {assignStaff.isPending ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.primaryBtnText}>Assigner</Text>
+                    )}
+                  </Pressable>
+                </View>
+              ) : null}
+
+              {!readOnly && !showReasons ? (
+                <View style={styles.actions}>
+                  {status === "pending" ? (
+                    <>
+                      <Pressable
+                        style={styles.primaryBtn}
+                        disabled={busy}
+                        onPress={() => onConfirmStatus(appointment.id, "confirmed")}>
+                        <Text style={styles.primaryBtnText}>Confirmer</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.dangerOutline}
+                        disabled={busy}
+                        onPress={() => setShowReasons(true)}>
+                        <Text style={styles.dangerText}>Annuler</Text>
+                      </Pressable>
+                    </>
+                  ) : null}
+
+                  {status === "confirmed" || status === "in_progress" ? (
+                    <>
+                      <Pressable
+                        style={styles.primaryBtn}
+                        disabled={busy}
+                        onPress={handleCompletePress}>
+                        <Text style={styles.primaryBtnText}>Terminer</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.outlineBtn}
+                        disabled={busy}
+                        onPress={() => onConfirmStatus(appointment.id, "no_show")}>
+                        <Text style={styles.outlineText}>Absent</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.outlineBtn}
+                        disabled={busy}
+                        onPress={() => {
+                          onClose();
+                          onReschedule(appointment);
+                        }}>
+                        <Text style={styles.outlineText}>Reprogrammer</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.dangerOutline}
+                        disabled={busy}
+                        onPress={() => setShowReasons(true)}>
+                        <Text style={styles.dangerText}>Annuler</Text>
+                      </Pressable>
+                    </>
+                  ) : null}
+
+                  {showReminder ? (
+                    <>
+                      <Pressable
+                        style={[
+                          styles.outlineBtn,
+                          (reminderState === "sent" || reminderState === "sending") &&
+                            styles.btnDisabled,
+                        ]}
+                        disabled={
+                          reminderState === "sent" ||
+                          reminderState === "sending" ||
+                          busy
+                        }
+                        onPress={onSendReminder}>
+                        {reminderState === "sending" ? (
+                          <ActivityIndicator color={ownerColors.primary} />
+                        ) : (
+                          <Text style={styles.outlineText}>
+                            {reminderState === "sent"
+                              ? "Rappel envoyé ✓"
+                              : "🔔 Envoyer un rappel"}
+                          </Text>
+                        )}
+                      </Pressable>
+                      {reminderState === "sent" ? (
+                        <Text style={styles.reminderOk}>Rappel envoyé par email</Text>
+                      ) : null}
+                      {reminderState === "error" ? (
+                        <Text style={styles.reminderErr}>{reminderError}</Text>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {showReasons ? (
+                <View style={styles.reasonBox}>
+                  <Text style={styles.section}>Motif d&apos;annulation</Text>
+                  {CANCEL_REASONS.map((r) => (
                     <Pressable
-                      style={styles.primaryBtn}
-                      disabled={busy}
-                      onPress={() => onConfirmStatus(appointment.id, "completed")}>
-                      <Text style={styles.primaryBtnText}>Terminer</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.outlineBtn}
-                      disabled={busy}
-                      onPress={() => onConfirmStatus(appointment.id, "no_show")}>
-                      <Text style={styles.outlineText}>Absent</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.outlineBtn}
+                      key={r}
+                      style={styles.reasonChip}
                       disabled={busy}
                       onPress={() => {
-                        onClose();
-                        onReschedule(appointment);
+                        if (r === "Autre") return;
+                        submitCancel(r);
                       }}>
-                      <Text style={styles.outlineText}>Reprogrammer</Text>
+                      <Text style={styles.reasonChipText}>{r}</Text>
                     </Pressable>
-                    <Pressable
-                      style={styles.dangerOutline}
-                      disabled={busy}
-                      onPress={() => setShowReasons(true)}>
-                      <Text style={styles.dangerText}>Annuler</Text>
-                    </Pressable>
-                  </>
-                ) : null}
-
-                {showReminder ? (
-                  <>
-                    <Pressable
-                      style={[
-                        styles.outlineBtn,
-                        (reminderState === "sent" || reminderState === "sending") &&
-                          styles.btnDisabled,
-                      ]}
-                      disabled={
-                        reminderState === "sent" ||
-                        reminderState === "sending" ||
-                        busy
-                      }
-                      onPress={onSendReminder}>
-                      {reminderState === "sending" ? (
-                        <ActivityIndicator color={ownerColors.primary} />
-                      ) : (
-                        <Text style={styles.outlineText}>
-                          {reminderState === "sent"
-                            ? "Rappel envoyé ✓"
-                            : "🔔 Envoyer un rappel"}
-                        </Text>
-                      )}
-                    </Pressable>
-                    {reminderState === "sent" ? (
-                      <Text style={styles.reminderOk}>Rappel envoyé par email</Text>
-                    ) : null}
-                    {reminderState === "error" ? (
-                      <Text style={styles.reminderErr}>{reminderError}</Text>
-                    ) : null}
-                  </>
-                ) : null}
-              </View>
-            ) : null}
-
-            {showReasons ? (
-              <View style={styles.reasonBox}>
-                <Text style={styles.section}>Motif d&apos;annulation</Text>
-                {CANCEL_REASONS.map((r) => (
+                  ))}
+                  <TextInput
+                    style={styles.reasonInput}
+                    placeholder="Précisez le motif…"
+                    value={customReason}
+                    onChangeText={setCustomReason}
+                    multiline
+                  />
                   <Pressable
-                    key={r}
-                    style={styles.reasonChip}
-                    disabled={busy}
-                    onPress={() => {
-                      if (r === "Autre") return;
-                      submitCancel(r);
-                    }}>
-                    <Text style={styles.reasonChipText}>{r}</Text>
+                    style={styles.primaryBtn}
+                    disabled={busy || !customReason.trim()}
+                    onPress={() => submitCancel(customReason)}>
+                    <Text style={styles.primaryBtnText}>Confirmer l&apos;annulation</Text>
                   </Pressable>
-                ))}
-                <TextInput
-                  style={styles.reasonInput}
-                  placeholder="Précisez le motif…"
-                  value={customReason}
-                  onChangeText={setCustomReason}
-                  multiline
-                />
-                <Pressable
-                  style={styles.primaryBtn}
-                  disabled={busy || !customReason.trim()}
-                  onPress={() => submitCancel(customReason)}>
-                  <Text style={styles.primaryBtnText}>Confirmer l&apos;annulation</Text>
-                </Pressable>
-                <Pressable onPress={() => setShowReasons(false)}>
-                  <Text style={styles.cancelLink}>Retour</Text>
-                </Pressable>
-              </View>
-            ) : null}
-          </ScrollView>
+                  <Pressable onPress={() => setShowReasons(false)}>
+                    <Text style={styles.cancelLink}>Retour</Text>
+                  </Pressable>
+                </View>
+              ) : null}
 
-          <Pressable style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>Fermer</Text>
+              {/* Delete — only for completed appointments */}
+              {status === "completed" && !showDeleteConfirm ? (
+                <Pressable
+                  style={styles.deleteBtn}
+                  onPress={() => { setShowDeleteConfirm(true); setDeleteInput(""); }}>
+                  <Text style={styles.deleteText}>Supprimer ce rendez-vous</Text>
+                </Pressable>
+              ) : null}
+
+              {showDeleteConfirm ? (
+                <View style={styles.deleteBox}>
+                  <Text style={styles.deleteBoxTitle}>Supprimer le rendez-vous ?</Text>
+                  <Text style={styles.deleteBoxHint}>
+                    Cette action est irréversible. Tapez{" "}
+                    <Text style={styles.deleteWord}>delete</Text> pour confirmer.
+                  </Text>
+                  <TextInput
+                    style={styles.deleteInput}
+                    placeholder="delete"
+                    value={deleteInput}
+                    onChangeText={setDeleteInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <Pressable
+                    style={[styles.deleteConfirmBtn, deleteInput !== "delete" && styles.disabled]}
+                    disabled={deleteInput !== "delete" || busy}
+                    onPress={() => { onDelete?.(appointment.id); setShowDeleteConfirm(false); }}>
+                    <Text style={styles.deleteConfirmText}>Supprimer définitivement</Text>
+                  </Pressable>
+                  <Pressable onPress={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}>
+                    <Text style={styles.cancelLink}>Annuler</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </ScrollView>
+
+            <Pressable style={styles.closeBtn} onPress={onClose}>
+              <Text style={styles.closeText}>Fermer</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
-      </Pressable>
 
-      <Modal visible={staffPickerOpen} transparent animationType="fade">
-        <Pressable style={styles.pickerBackdrop} onPress={() => setStaffPickerOpen(false)}>
-          <View style={styles.pickerSheet}>
-            <Text style={styles.pickerTitle}>Choisir un membre</Text>
-            <FlatList
-              data={activeStaff}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.pickerRow}
-                  onPress={() => {
-                    setSelectedStaffId(item.id);
-                    setStaffPickerOpen(false);
-                  }}>
-                  <Text style={styles.pickerRowName}>{item.display_name}</Text>
-                  <Text style={styles.pickerRowRole}>{item.role}</Text>
-                </Pressable>
-              )}
-              ListEmptyComponent={
-                <Text style={styles.pickerEmpty}>Aucun membre actif</Text>
-              }
-            />
-          </View>
-        </Pressable>
+        <Modal visible={staffPickerOpen} transparent animationType="fade">
+          <Pressable style={styles.pickerBackdrop} onPress={() => setStaffPickerOpen(false)}>
+            <View style={styles.pickerSheet}>
+              <Text style={styles.pickerTitle}>Choisir un membre</Text>
+              <FlatList
+                data={activeStaff}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.pickerRow}
+                    onPress={() => {
+                      setSelectedStaffId(item.id);
+                      setStaffPickerOpen(false);
+                    }}>
+                    <Text style={styles.pickerRowName}>{item.display_name}</Text>
+                    <Text style={styles.pickerRowRole}>{item.role}</Text>
+                  </Pressable>
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.pickerEmpty}>Aucun membre actif</Text>
+                }
+              />
+            </View>
+          </Pressable>
+        </Modal>
       </Modal>
-    </Modal>
+
+      <ProductsUsedSheet
+        visible={productsSheetOpen}
+        onClose={() => setProductsSheetOpen(false)}
+        businessId={businessId}
+        appointmentId={appointment.id}
+        onConfirm={() => {
+          setProductsSheetOpen(false);
+          onConfirmStatus(appointment.id, "completed");
+        }}
+      />
+    </>
   );
 }
 
@@ -465,6 +527,41 @@ const styles = StyleSheet.create({
   cancelLink: { textAlign: "center", color: ownerColors.textMuted, paddingVertical: 8 },
   closeBtn: { alignItems: "center", paddingTop: 8 },
   closeText: { fontSize: 15, color: ownerColors.primary, fontWeight: "600" },
+  deleteBtn: {
+    marginTop: 24,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  deleteText: { fontSize: 14, color: ownerColors.danger, fontWeight: "500" },
+  deleteBox: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ownerColors.danger,
+    backgroundColor: "#fff5f5",
+    gap: 10,
+  },
+  deleteBoxTitle: { fontSize: 16, fontWeight: "700", color: ownerColors.danger },
+  deleteBoxHint: { fontSize: 13, color: ownerColors.textDim, lineHeight: 19 },
+  deleteWord: { fontWeight: "700", color: ownerColors.danger },
+  deleteInput: {
+    borderWidth: 1,
+    borderColor: ownerColors.danger,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: "#fff",
+    color: ownerColors.text,
+  },
+  deleteConfirmBtn: {
+    backgroundColor: ownerColors.danger,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  deleteConfirmText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  disabled: { opacity: 0.4 },
   pickerBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",

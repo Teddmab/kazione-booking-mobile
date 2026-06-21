@@ -17,6 +17,8 @@ import { SafeImage } from "@/components/SafeImage";
 import { ownerColors } from "@/constants/ownerTheme";
 import type { ServiceSuggestion } from "@/services/owner/ai";
 import type { OwnerServiceRow } from "@/types/owner";
+import type { ProductRow } from "@/types/products";
+import type { ProductUsageInput } from "@/hooks/useOwnerServices";
 
 const DURATIONS = [15, 30, 45, 60, 75, 90, 120] as const;
 const BUFFER_OPTIONS = [0, 5, 10, 15, 20, 30, 45, 60] as const;
@@ -40,9 +42,17 @@ interface Props {
   initialStep?: 1 | 2;
   aiSuggestions?: ServiceSuggestion[];
   onClose: () => void;
-  onSubmit: (values: ServiceFormValues, serviceId: string | null, localImageUri?: string | null) => void;
+  onSubmit: (
+    values: ServiceFormValues,
+    serviceId: string | null,
+    localImageUri?: string | null,
+    productUsage?: ProductUsageInput[],
+  ) => void;
   onDeactivate?: (serviceId: string) => void;
   busy?: boolean;
+  // Products for service linking
+  products?: ProductRow[];
+  initialProductUsage?: ProductUsageInput[];
 }
 
 function emptyForm(): ServiceFormValues {
@@ -90,18 +100,22 @@ export function ServiceFormSheet({
   onSubmit,
   onDeactivate,
   busy,
+  products = [],
+  initialProductUsage = [],
 }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<ServiceFormValues>(emptyForm());
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<ProductUsageInput[]>([]);
 
   useEffect(() => {
     if (!visible) return;
     setStep(initialStep);
     setStepError(null);
     setLocalImageUri(null);
+    setSelectedProducts(initialProductUsage);
     if (service) {
       setForm({
         name: service.name,
@@ -122,6 +136,11 @@ export function ServiceFormSheet({
       setExistingImageUrl(null);
     }
   }, [visible, service, initialStep]);
+
+  // Sync when initialProductUsage changes (loaded async)
+  useEffect(() => {
+    if (visible) setSelectedProducts(initialProductUsage);
+  }, [initialProductUsage, visible]);
 
   const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -179,7 +198,25 @@ export function ServiceFormSheet({
       return;
     }
     setStepError(null);
-    onSubmit(form, service?.id ?? null, localImageUri);
+    onSubmit(form, service?.id ?? null, localImageUri, selectedProducts);
+  };
+
+  const toggleProduct = (productId: string) => {
+    setSelectedProducts((prev) => {
+      const exists = prev.find((p) => p.productId === productId);
+      if (exists) return prev.filter((p) => p.productId !== productId);
+      return [...prev, { productId, quantity: 1 }];
+    });
+  };
+
+  const setQty = (productId: string, delta: number) => {
+    setSelectedProducts((prev) =>
+      prev.map((p) =>
+        p.productId === productId
+          ? { ...p, quantity: Math.max(0.01, Math.round((p.quantity + delta) * 100) / 100) }
+          : p,
+      ),
+    );
   };
 
   const previewUri = localImageUri ?? existingImageUrl;
@@ -321,6 +358,53 @@ export function ServiceFormSheet({
                   />
                 </View>
 
+                {/* Products used */}
+                {products.length > 0 ? (
+                  <>
+                    <Text style={styles.label}>Produits utilisés</Text>
+                    <Text style={styles.hint}>
+                      Stock déduit automatiquement à la fin de chaque rendez-vous.
+                    </Text>
+                    {products.map((product) => {
+                      const sel = selectedProducts.find((p) => p.productId === product.id);
+                      const isSelected = !!sel;
+                      return (
+                        <View key={product.id} style={styles.productRow}>
+                          <Pressable
+                            style={[styles.checkbox, isSelected && styles.checkboxActive]}
+                            onPress={() => toggleProduct(product.id)}
+                          />
+                          <Pressable
+                            style={styles.productInfo}
+                            onPress={() => toggleProduct(product.id)}>
+                            <Text style={styles.productName}>{product.name}</Text>
+                            <Text style={styles.productMeta}>
+                              {product.sku ? `${product.sku} · ` : ""}
+                              {product.current_stock} {product.unit} en stock
+                            </Text>
+                          </Pressable>
+                          {isSelected ? (
+                            <View style={styles.qtyRow}>
+                              <Pressable
+                                style={styles.qtyBtn}
+                                onPress={() => setQty(product.id, -1)}>
+                                <Text style={styles.qtyBtnText}>−</Text>
+                              </Pressable>
+                              <Text style={styles.qtyValue}>{sel?.quantity ?? 1}</Text>
+                              <Pressable
+                                style={styles.qtyBtn}
+                                onPress={() => setQty(product.id, 1)}>
+                                <Text style={styles.qtyBtnText}>+</Text>
+                              </Pressable>
+                              <Text style={styles.qtyUnit}>{product.unit}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </>
+                ) : null}
+
                 {service ? (
                   <View style={styles.switchRow}>
                     <Text style={styles.labelInline}>Service actif</Text>
@@ -402,6 +486,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   labelInline: { fontSize: 15, color: ownerColors.text, flex: 1 },
+  hint: { fontSize: 12, color: ownerColors.textMuted, marginBottom: 8, marginTop: -2 },
   input: {
     borderWidth: 1,
     borderColor: ownerColors.border,
@@ -463,6 +548,44 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 12,
   },
+  // Product rows
+  productRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: ownerColors.border,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: ownerColors.border,
+    backgroundColor: ownerColors.bg,
+  },
+  checkboxActive: {
+    backgroundColor: ownerColors.primary,
+    borderColor: ownerColors.primary,
+  },
+  productInfo: { flex: 1 },
+  productName: { fontSize: 14, fontWeight: "600", color: ownerColors.text },
+  productMeta: { fontSize: 11, color: ownerColors.textMuted, marginTop: 1 },
+  qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  qtyBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: ownerColors.bg,
+  },
+  qtyBtnText: { fontSize: 16, color: ownerColors.primary, fontWeight: "600" },
+  qtyValue: { fontSize: 14, fontWeight: "600", color: ownerColors.text, minWidth: 20, textAlign: "center" },
+  qtyUnit: { fontSize: 11, color: ownerColors.textMuted },
   error: { fontSize: 13, color: ownerColors.danger, marginTop: 12 },
   primaryBtn: {
     backgroundColor: ownerColors.primary,

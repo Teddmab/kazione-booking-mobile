@@ -29,7 +29,10 @@ import {
   useOwnerServices,
   useRestoreOwnerService,
   useSaveOwnerService,
+  useServiceProductUsage,
+  type ProductUsageInput,
 } from "@/hooks/useOwnerServices";
+import { useOwnerProducts } from "@/hooks/useOwnerProducts";
 import { extractCategoryNames, groupServicesByCategory } from "@/lib/groupServicesByCategory";
 import { getServiceAnalysis, type ServiceInsight, type ServiceSuggestion } from "@/services/owner/ai";
 import type { OwnerServiceRow } from "@/types/owner";
@@ -43,6 +46,10 @@ export default function OwnerServicesScreen() {
   const saveService = useSaveOwnerService(businessId);
   const deactivate = useDeactivateOwnerService(businessId);
   const restore = useRestoreOwnerService(businessId);
+
+  // Products for service linking
+  const { data: productsData } = useOwnerProducts(businessId);
+  const allProducts = productsData?.products ?? [];
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -71,6 +78,17 @@ export default function OwnerServicesScreen() {
     staleTime: 1000 * 60 * 30,
     retry: 1,
   });
+
+  // Load existing product usage when editing a service
+  const { data: existingUsage } = useServiceProductUsage(editing?.id ?? null);
+  const initialProductUsage: ProductUsageInput[] = useMemo(
+    () =>
+      (existingUsage ?? []).map((u) => ({
+        productId: u.product_id,
+        quantity: u.quantity_per_service,
+      })),
+    [existingUsage],
+  );
 
   const openAdd = useCallback(() => {
     setEditing(null);
@@ -123,9 +141,10 @@ export default function OwnerServicesScreen() {
     values: ServiceFormValues,
     serviceId: string | null,
     localImageUri?: string | null,
+    productUsage?: ProductUsageInput[],
   ) => {
     saveService.mutate(
-      { values, serviceId, localImageUri },
+      { values, serviceId, localImageUri, productUsage },
       {
         onSuccess: () => {
           setSheetOpen(false);
@@ -294,6 +313,8 @@ export default function OwnerServicesScreen() {
         onSubmit={onSubmit}
         onDeactivate={editing ? onDeactivateFromSheet : undefined}
         busy={saveService.isPending || deactivate.isPending}
+        products={allProducts}
+        initialProductUsage={initialProductUsage}
       />
 
       <ServiceAiPanel
