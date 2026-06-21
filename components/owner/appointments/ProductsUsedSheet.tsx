@@ -73,7 +73,7 @@ export function ProductsUsedSheet({
       for (const item of selected) {
         await adjustStock.mutateAsync({
           productId: item.product.id,
-          input: {
+          data: {
             movement_type: "service_use",
             quantity: item.quantity,
             notes: `Appointment ${appointmentId} — manual selection`,

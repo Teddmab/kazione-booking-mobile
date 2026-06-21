@@ -45,7 +45,7 @@ interface Props {
   onConfirmStatus: (id: string, status: AppointmentStatus) => void;
   onCancel: (id: string, reason: string) => void;
   onReschedule: (appt: AppointmentWithRelations) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
   onAssigned?: () => void;
   busy?: boolean;
 }
@@ -363,7 +363,7 @@ export function AppointmentDetailSheet({
                   <Pressable
                     style={[styles.deleteConfirmBtn, deleteInput !== "delete" && styles.disabled]}
                     disabled={deleteInput !== "delete" || busy}
-                    onPress={() => { onDelete(appointment.id); setShowDeleteConfirm(false); }}>
+                    onPress={() => { onDelete?.(appointment.id); setShowDeleteConfirm(false); }}>
                     <Text style={styles.deleteConfirmText}>Supprimer définitivement</Text>
                   </Pressable>
                   <Pressable onPress={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}>
