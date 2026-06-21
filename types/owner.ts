@@ -34,6 +34,7 @@ export interface AppointmentWithRelations {
   price: number;
   deposit_amount: number;
   booking_reference: string;
+  notes?: string | null;
   client: {
     id: string;
     first_name: string;
@@ -130,7 +131,9 @@ export interface OwnerServiceRow {
   name: string;
   description: string | null;
   duration_minutes: number;
+  buffer_minutes?: number;
   price: number;
+  deposit_amount?: number | null;
   currency_code: string;
   is_active: boolean;
   category_name: string | null;
@@ -185,6 +188,7 @@ export interface BusinessSettingsRow {
   max_advance_days: number;
   buffer_minutes: number;
   enabled_payment_methods: string[];
+  reminder_hours_before?: number;
 }
 
 export interface BusinessSettingsResponse {
@@ -215,6 +219,7 @@ export interface UpdateBusinessSettingsInput {
   max_advance_days?: number;
   buffer_minutes?: number;
   enabled_payment_methods?: string[];
+  reminder_hours_before?: number;
 }
 
 export interface ClientDetailRow extends ClientWithStats {
@@ -222,6 +227,43 @@ export interface ClientDetailRow extends ClientWithStats {
   tags?: string[];
   date_of_birth?: string | null;
   preferred_locale?: string | null;
+  recent_appointments?: ClientRecentAppointment[];
+}
+
+export interface ClientRecentAppointment {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  booking_reference: string;
+  price: number;
+  service: {
+    id: string;
+    name: string;
+    duration_minutes: number;
+    price: number;
+  };
+  staff: {
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
+export interface ImportClientsResult {
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: { row: number; reason: string }[];
+}
+
+export interface ImportClientRow {
+  first_name: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  source?: string;
 }
 
 export interface CreateClientInput {
@@ -256,6 +298,10 @@ export interface StorefrontRow {
   marketplace_featured: boolean;
   city: string | null;
   phone: string | null;
+  email?: string | null;
+  address?: string | null;
+  country_code?: string | null;
+  website?: string | null;
 }
 
 export interface UpdateStorefrontData {
@@ -269,6 +315,10 @@ export interface UpdateStorefrontData {
   marketplace_status?: string;
   city?: string | null;
   phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  country_code?: string | null;
+  website?: string | null;
 }
 
 export interface GalleryItem {

@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useRouter, type Href, useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   View,
@@ -24,7 +24,7 @@ import { availabilityToDisplaySlots } from "@/lib/bookingSlots";
 import { startOfToday } from "@/lib/dateUtils";
 import { clientDisplayName, formatCurrency, formatDate, toIsoDate } from "@/lib/format";
 import { createBooking, getAvailability } from "@/services/booking";
-import { getClients } from "@/services/owner/clients";
+import { getClient, getClients } from "@/services/owner/clients";
 import { getOwnerServices } from "@/services/owner/services";
 import { getStaffList } from "@/services/owner/staff";
 import type { ClientWithStats } from "@/types/owner";
@@ -34,6 +34,12 @@ const STEP_COUNT = 5;
 export default function WalkInScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    clientId?: string;
+    clientName?: string;
+    staffId?: string;
+    staffName?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { tenant } = useTenantContext();
@@ -61,6 +67,41 @@ export default function WalkInScreen() {
     message?: string;
     variant: OwnerToastVariant;
   } | null>(null);
+
+  useEffect(() => {
+    const clientId = params.clientId ? String(params.clientId) : null;
+    if (!clientId || !businessId) return;
+
+    let cancelled = false;
+    void getClient(clientId)
+      .then((detail) => {
+        if (cancelled) return;
+        setIsGuest(false);
+        setSelectedClient({
+          id: detail.id,
+          first_name: detail.first_name,
+          last_name: detail.last_name,
+          email: detail.email,
+          phone: detail.phone,
+          appointment_count: detail.appointment_count,
+          total_spent: detail.total_spent,
+          last_visit: detail.last_visit,
+        });
+      })
+      .catch(() => {
+        if (cancelled || !params.clientName) return;
+        setIsGuest(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.clientId, params.clientName, businessId]);
+
+  useEffect(() => {
+    const sid = params.staffId ? String(params.staffId) : null;
+    if (sid) setStaffId(sid);
+  }, [params.staffId]);
 
   const stepLabels = useMemo(
     () => [

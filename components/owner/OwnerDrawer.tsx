@@ -127,7 +127,7 @@ export function OwnerDrawer() {
                       <Ionicons
                         name={item.icon}
                         size={20}
-                        color={active ? ownerDrawerColors.accent : ownerDrawerColors.icon}
+                        color={active ? "#fff" : ownerDrawerColors.icon}
                       />
                       <Text style={[styles.navLabel, active && styles.navLabelActive]}>
                         {t(item.labelKey)}
@@ -230,15 +230,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 2,
-    borderLeftWidth: 3,
-    borderLeftColor: "transparent",
   },
   navRowActive: {
-    backgroundColor: ownerDrawerColors.bgActive,
-    borderLeftColor: ownerDrawerColors.accent,
+    backgroundColor: ownerDrawerColors.accent,
   },
   navLabel: { fontSize: 15, color: ownerDrawerColors.textMuted, fontWeight: "500" },
-  navLabelActive: { color: ownerDrawerColors.accent, fontWeight: "600" },
+  navLabelActive: { color: "#fff", fontWeight: "600" },
   footer: {
     flexDirection: "row",
     alignItems: "center",

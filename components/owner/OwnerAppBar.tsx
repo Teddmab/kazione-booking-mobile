@@ -7,7 +7,6 @@ import { useOwnerShell } from "@/contexts/OwnerShellContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
-import { LanguageFlagPicker } from "@/components/owner/LanguageFlagPicker";
 import { OwnerAvatarMenu } from "@/components/owner/OwnerAvatarMenu";
 import { useUnreadNotificationCount } from "@/hooks/useOwnerNotifications";
 import { useTranslation } from "react-i18next";
@@ -18,9 +17,11 @@ interface Props {
   /** Dashboard uses larger bold title */
   displayTitle?: boolean;
   rightSlot?: React.ReactNode;
+  /** Second row under title (e.g. week navigation) */
+  bottomSlot?: React.ReactNode;
 }
 
-export function OwnerAppBar({ title, subtitle, displayTitle, rightSlot }: Props) {
+export function OwnerAppBar({ title, subtitle, displayTitle, rightSlot, bottomSlot }: Props) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { toggleDrawer } = useOwnerShell();
@@ -57,7 +58,6 @@ export function OwnerAppBar({ title, subtitle, displayTitle, rightSlot }: Props)
 
         <View style={styles.actions}>
           {rightSlot}
-          <LanguageFlagPicker />
           <Pressable
             style={styles.iconBtn}
             onPress={() => router.push("/(app)/owner/notifications" as Href)}
@@ -68,6 +68,7 @@ export function OwnerAppBar({ title, subtitle, displayTitle, rightSlot }: Props)
           <OwnerAvatarMenu initial={initial} />
         </View>
       </View>
+      {bottomSlot ? <View style={styles.bottomSlot}>{bottomSlot}</View> : null}
     </View>
   );
 }
@@ -110,6 +111,7 @@ const styles = StyleSheet.create({
     fontFamily: ownerFonts.regular,
   },
   actions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  bottomSlot: { marginTop: 10, paddingLeft: 50 },
   iconBtn: {
     width: 40,
     height: 40,

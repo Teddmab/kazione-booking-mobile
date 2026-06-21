@@ -25,3 +25,14 @@ export function mergeOperatingHours(
 ): Record<string, DayHours> {
   return { ...DEFAULT_OPERATING_HOURS, ...(saved ?? {}) };
 }
+
+export function validateOperatingHours(hours: Record<string, DayHours>): string | null {
+  for (const day of WEEKDAYS) {
+    const row = hours[day];
+    if (!row?.open) continue;
+    if (row.start >= row.end) {
+      return `L'heure de fermeture doit être après l'heure d'ouverture (${day}).`;
+    }
+  }
+  return null;
+}

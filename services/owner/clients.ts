@@ -8,6 +8,8 @@ import type {
   CreateClientInput,
   PaginatedClients,
   UpdateClientInput,
+  ImportClientRow,
+  ImportClientsResult,
 } from "@/types/owner";
 
 const EMPTY_STATS: ClientStats = {
@@ -75,4 +77,14 @@ export async function patchClient(
   data: UpdateClientInput,
 ): Promise<ClientDetailRow> {
   return api.patch<ClientDetailRow>(`/clients?id=${encodeURIComponent(clientId)}`, data);
+}
+
+export async function importClients(
+  businessId: string,
+  rows: ImportClientRow[],
+): Promise<ImportClientsResult> {
+  return api.post<ImportClientsResult>("/clients?action=import", {
+    business_id: businessId,
+    rows,
+  });
 }
