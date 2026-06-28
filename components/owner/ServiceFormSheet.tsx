@@ -39,6 +39,8 @@ const COMMISSION_TYPES: { value: StaffCommissionType; label: string }[] = [
   { value: "fixed", label: "Montant fixe" },
 ];
 
+export type StaffCommissionType = "none" | "percentage" | "fixed";
+
 export interface ServiceFormValues {
   name: string;
   category_name: string;

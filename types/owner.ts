@@ -60,6 +60,7 @@ export interface AppointmentWithRelations {
     method: string;
     paid_at: string | null;
   } | null;
+  commission_earned?: number | null;
 }
 
 export interface UpcomingAppointment {
