@@ -33,6 +33,7 @@ import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useBusinessSettings, useUpdateBusinessSettings } from "@/hooks/useBusinessSettings";
 import { useCreateBusiness } from "@/hooks/useCreateBusiness";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -107,6 +108,7 @@ function showOptionSheet(title: string, options: string[], onPick: (index: numbe
 
 export default function OwnerSettingsScreen() {
   const { t } = useTranslation();
+  const toast = useToast();
   const router = useRouter();
   const { language, setLanguage } = useLanguage();
   const { user, signOut } = useAuthContext();
@@ -309,7 +311,7 @@ export default function OwnerSettingsScreen() {
         last_name: lastName.trim() || null,
         phone: phone.trim() || null,
       },
-      { onSuccess: () => Alert.alert("Enregistré", "Profil mis à jour.") },
+      { onSuccess: () => toast.success("Enregistré", "Profil mis à jour.") },
     );
   };
 
@@ -331,21 +333,21 @@ export default function OwnerSettingsScreen() {
           website: bizWebsite.trim() || null,
         }),
       ]);
-      Alert.alert("Enregistré", "Profil salon mis à jour.");
+      toast.success("Enregistré", "Profil salon mis à jour.");
     } catch (e) {
-      Alert.alert("Erreur", e instanceof Error ? e.message : "Échec de l'enregistrement.");
+      toast.error("Erreur", e instanceof Error ? e.message : "Échec de l'enregistrement.");
     }
   };
 
   const saveHours = () => {
     const err = validateOperatingHours(hours);
     if (err) {
-      Alert.alert("Horaires invalides", err);
+      toast.warning("Horaires invalides", err);
       return;
     }
     updateSettings.mutate(
       { operating_hours: hours },
-      { onSuccess: () => Alert.alert("Enregistré", "Horaires mis à jour.") },
+      { onSuccess: () => toast.success("Enregistré", "Horaires mis à jour.") },
     );
   };
 
@@ -359,7 +361,7 @@ export default function OwnerSettingsScreen() {
         notify_client_message: notifyMessage,
         reminder_hours_before: reminderHours,
       },
-      { onSuccess: () => Alert.alert("Enregistré", "Notifications mises à jour.") },
+      { onSuccess: () => toast.success("Enregistré", "Notifications mises à jour.") },
     );
   };
 
@@ -374,13 +376,13 @@ export default function OwnerSettingsScreen() {
         allow_pay_later: allowPayLater,
         auto_confirm: autoConfirm,
       },
-      { onSuccess: () => Alert.alert("Enregistré", "Règles de réservation mises à jour.") },
+      { onSuccess: () => toast.success("Enregistré", "Règles de réservation mises à jour.") },
     );
   };
 
   const savePaymentMethods = () => {
     if (enabledMethods.length === 0) {
-      Alert.alert("Méthodes requises", "Au moins une méthode de paiement doit être activée.");
+      toast.warning("Méthodes requises", "Au moins une méthode de paiement doit être activée.");
       return;
     }
     updateSettings.mutate(
@@ -388,7 +390,7 @@ export default function OwnerSettingsScreen() {
         enabled_payment_methods: enabledMethods,
         deposit_percent: Number(depositPercent) || 0,
       },
-      { onSuccess: () => Alert.alert("Enregistré", "Modes de paiement mis à jour.") },
+      { onSuccess: () => toast.success("Enregistré", "Modes de paiement mis à jour.") },
     );
   };
 
@@ -402,26 +404,26 @@ export default function OwnerSettingsScreen() {
           currency_code: currencyCode,
           date_format: dateFormat,
         },
-        { onSuccess: () => Alert.alert("Enregistré", "Préférences enregistrées.") },
+        { onSuccess: () => toast.success("Enregistré", "Préférences enregistrées.") },
       );
     } catch (e) {
-      Alert.alert("Erreur", e instanceof Error ? e.message : "Échec de l'enregistrement.");
+      toast.error("Erreur", e instanceof Error ? e.message : "Échec de l'enregistrement.");
     }
   };
 
   const saveTeamPermissions = () => {
-    Alert.alert("Enregistré", "Permissions enregistrées (session locale, comme sur le web).");
+    toast.success("Enregistré", "Permissions enregistrées (session locale, comme sur le web).");
   };
 
   const togglePaymentMethod = (id: string) => {
     if (id === "full" && !stripeConnected) {
-      Alert.alert("Stripe requis", "Connectez Stripe pour activer le paiement complet en ligne.");
+      toast.warning("Stripe requis", "Connectez Stripe pour activer le paiement complet en ligne.");
       return;
     }
     setEnabledMethods((prev) => {
       if (prev.includes(id)) {
         if (prev.length === 1) {
-          Alert.alert("Méthodes requises", "Au moins une méthode de paiement doit rester activée.");
+          toast.warning("Méthodes requises", "Au moins une méthode de paiement doit rester activée.");
           return prev;
         }
         return prev.filter((m) => m !== id);
@@ -434,14 +436,14 @@ export default function OwnerSettingsScreen() {
     publishStorefront.mutate(checked, {
       onSuccess: () => {
         setStorefrontPublished(checked);
-        Alert.alert(
+        toast.success(
           checked ? "Salon visible" : "Salon masqué",
           checked
             ? "Votre page publique est accessible aux clients."
             : "La page publique est masquée.",
         );
       },
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 
@@ -475,12 +477,12 @@ export default function OwnerSettingsScreen() {
   const connectPaypal = () => {
     const email = paypalEmail.trim();
     if (!email) {
-      Alert.alert("Email requis", "Entrez l'email PayPal du salon.");
+      toast.warning("Email requis", "Entrez l'email PayPal du salon.");
       return;
     }
     paypal.connect.mutate(email, {
-      onSuccess: () => Alert.alert("PayPal", "Connexion enregistrée."),
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onSuccess: () => toast.success("PayPal", "Connexion enregistrée."),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 

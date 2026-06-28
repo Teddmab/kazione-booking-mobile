@@ -1,4 +1,3 @@
-import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -13,7 +12,9 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { useProducts } from "@/hooks/useOwnerProducts";
 import {
   useCreateSupplierOrder,
@@ -22,6 +23,7 @@ import {
   useUpdateOrderStatus,
 } from "@/hooks/useOwnerSuppliers";
 import { formatCurrency } from "@/lib/format";
+import { readLocalFileAsBase64 } from "@/lib/localFile";
 import type { CreateOrderItemData } from "@/types/suppliers";
 
 interface Props {
@@ -39,6 +41,7 @@ const emptyLine = (): CreateOrderItemData => ({
 });
 
 export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSupplier }: Props) {
+  const toast = useToast();
   const suppliers = useSuppliers(businessId, { isActive: true });
   const products = useProducts(businessId);
   const createOrder = useCreateSupplierOrder(businessId);
@@ -115,7 +118,7 @@ export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSuppli
     if (!canSubmit) return;
     const payload = buildPayload();
     if (payload.items.length === 0) {
-      Alert.alert("Lignes requises", "Ajoutez au moins une ligne de produit.");
+      toast.warning("Lignes requises", "Ajoutez au moins une ligne de produit.");
       return;
     }
 
@@ -124,13 +127,13 @@ export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSuppli
         if (markReceived) {
           updateStatus.mutate(
             { orderId: order.id, status: "received" },
-            { onSuccess: () => close(), onError: (e) => Alert.alert("Erreur", (e as Error).message) },
+            { onSuccess: () => close(), onError: (e) => toast.error("Erreur", (e as Error).message) },
           );
         } else {
           close();
         }
       },
-      onError: (e) => Alert.alert("Erreur", (e as Error).message),
+      onError: (e) => toast.error("Erreur", (e as Error).message),
     });
   };
 
@@ -139,7 +142,7 @@ export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSuppli
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission requise", "Autorisez l'accès à la caméra ou à la galerie.");
+      toast.warning("Permission requise", "Autorisez l'accès à la caméra ou à la galerie.");
       return;
     }
 
@@ -152,7 +155,7 @@ export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSuppli
     setScanning(true);
     try {
       const uri = result.assets[0].uri;
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: "base64" });
+      const base64 = await readLocalFileAsBase64(uri);
       const mediaType = result.assets[0].mimeType ?? "image/jpeg";
 
       const parsed = await scan.mutateAsync({ imageBase64: base64, mediaType });
@@ -180,7 +183,7 @@ export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSuppli
         }
       }
     } catch (e) {
-      Alert.alert(
+      toast.error(
         "Analyse impossible",
         e instanceof Error ? e.message : "Vérifiez que l'image de la facture est lisible.",
       );
@@ -201,9 +204,8 @@ export function CreateOrderSheet({ visible, businessId, onClose, onNeedNewSuppli
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <OwnerSheetHeader title="Nouvel achat" onClose={close} />
           <ScrollView keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Nouvel achat</Text>
-
             <Pressable
               style={[styles.scanBtn, scanning && styles.disabled]}
               disabled={scanning}

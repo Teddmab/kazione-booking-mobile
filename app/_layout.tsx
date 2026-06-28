@@ -26,6 +26,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { TenantProvider } from '@/contexts/TenantContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import { initI18n } from '@/i18n';
 import { initSentry } from '@/lib/sentry';
 
@@ -78,11 +79,13 @@ function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TenantProvider>
-            <Suspense fallback={<LoadingSpinner />}>
-              <AuthGate>
-                <RootLayoutNav />
-              </AuthGate>
-            </Suspense>
+            <ToastProvider>
+              <Suspense fallback={<LoadingSpinner />}>
+                <AuthGate>
+                  <RootLayoutNav />
+                </AuthGate>
+              </Suspense>
+            </ToastProvider>
           </TenantProvider>
         </AuthProvider>
       </QueryClientProvider>
@@ -99,6 +102,7 @@ function RootLayoutNav() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(staff)" />
         <Stack.Screen name="(app)" />
         <Stack.Screen name="notifications/index" options={{ title: 'Notifications' }} />
       </Stack>
