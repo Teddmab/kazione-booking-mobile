@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { monthToDateRange } from "@/lib/financePeriod";
 import { exportReportCsv } from "@/lib/exportReport";
@@ -50,7 +51,7 @@ export function ExportReportSheet({ visible, businessId, onClose }: Props) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>{t("owner.exportCsv")}</Text>
+          <OwnerSheetHeader title={t("owner.exportCsv")} onClose={onClose} disabled={loading} />
           <Text style={styles.label}>{t("owner.exportFrom")}</Text>
           <TextInput
             style={styles.input}

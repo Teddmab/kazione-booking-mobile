@@ -18,13 +18,30 @@ export type MemberRole = "owner" | "manager" | "staff" | "receptionist";
 export interface TenantContextValue {
   businessId: string;
   businessName: string;
+  slug: string;
+  businessType: string | null;
   role: MemberRole;
+  position: string | null;
+  staffProfileId: string | null;
+  commissionRate: number;
+}
+
+/** Raw GET /me business row (Edge Function). */
+interface MeBusinessRow {
+  businessId: string;
+  businessName: string;
+  slug?: string;
+  businessType?: string | null;
+  role: string;
+  position?: string | null;
+  staffProfileId?: string | null;
+  commissionRate?: number | null;
 }
 
 /** Raw GET /me body (Edge Function). */
 interface MeApiResponse {
-  tenant?: TenantContextValue | null;
-  businesses?: TenantContextValue[];
+  tenant?: MeBusinessRow | null;
+  businesses?: MeBusinessRow[];
 }
 
 /** Normalised workspace list for the provider. */
@@ -36,21 +53,45 @@ interface TenantBootstrap {
 interface TenantState {
   tenant: TenantContextValue | null;
   businesses: TenantContextValue[];
+  needsRoleSelection: boolean;
+  selectMembership: (membership: TenantContextValue) => Promise<void>;
   setActiveBusiness: (businessId: string) => Promise<void>;
+  clearActiveBusiness: () => Promise<void>;
   loading: boolean;
   error: Error | null;
 }
 
 const STORAGE_KEY = "kazione_active_business_id";
 
+function normalizeRole(role: string): MemberRole {
+  if (role === "owner" || role === "manager" || role === "staff" || role === "receptionist") {
+    return role;
+  }
+  return "staff";
+}
+
+function normalizeMembership(row: MeBusinessRow): TenantContextValue {
+  return {
+    businessId: row.businessId,
+    businessName: row.businessName,
+    slug: row.slug ?? "",
+    businessType: row.businessType ?? null,
+    role: normalizeRole(row.role),
+    position: row.position ?? null,
+    staffProfileId: row.staffProfileId ?? null,
+    commissionRate: row.commissionRate ?? 0,
+  };
+}
+
 /** Shared with login-team prefetch and TanStack Query. */
 export async function fetchTenantBootstrap(): Promise<TenantBootstrap> {
   const result = await api.get<MeApiResponse>("/me");
   const rawBusinesses = result.businesses?.length ? result.businesses : null;
   const single = result.tenant ?? null;
-  const businesses = rawBusinesses ?? (single ? [single] : []);
+  const rows = rawBusinesses ?? (single ? [single] : []);
+  const businesses = rows.map(normalizeMembership);
   return {
-    tenant: single,
+    tenant: businesses[0] ?? null,
     businesses,
   };
 }
@@ -75,34 +116,55 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   const businesses = useMemo(() => data?.businesses ?? [], [data]);
 
-  const resolveActive = useCallback(
-    (storedId: string | null): TenantContextValue | null => {
-      if (!businesses.length) return null;
-      const match = storedId
-        ? businesses.find((b) => b.businessId === storedId)
-        : undefined;
-      return match ?? businesses[0];
-    },
-    [businesses],
-  );
-
-  const [overrideId, setOverrideId] = useState<string | null>(null);
+  const [storedId, setStoredId] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
     AsyncStorage.getItem(STORAGE_KEY).then((v) => {
-      if (!cancelled) setOverrideId(v);
+      if (!cancelled) setStoredId(v);
     });
     return () => {
       cancelled = true;
     };
+  }, [user?.id]);
+
+  const resolveActive = useCallback(
+    (activeId: string | null | undefined): TenantContextValue | null => {
+      if (!businesses.length) return null;
+      if (businesses.length === 1) return businesses[0];
+      if (!activeId) return null;
+      return businesses.find((b) => b.businessId === activeId) ?? null;
+    },
+    [businesses],
+  );
+
+  const tenant = useMemo(() => {
+    if (storedId === undefined) return null;
+    return resolveActive(storedId);
+  }, [resolveActive, storedId]);
+
+  const needsRoleSelection = useMemo(() => {
+    if (storedId === undefined) return false;
+    return businesses.length > 1 && tenant === null;
+  }, [businesses.length, storedId, tenant]);
+
+  const selectMembership = useCallback(async (membership: TenantContextValue) => {
+    await AsyncStorage.setItem(STORAGE_KEY, membership.businessId);
+    setStoredId(membership.businessId);
   }, []);
 
-  const tenant = useMemo(() => resolveActive(overrideId), [resolveActive, overrideId]);
+  const setActiveBusiness = useCallback(
+    async (businessId: string) => {
+      const match = businesses.find((b) => b.businessId === businessId);
+      if (!match) return;
+      await selectMembership(match);
+    },
+    [businesses, selectMembership],
+  );
 
-  const setActiveBusiness = useCallback(async (businessId: string) => {
-    await AsyncStorage.setItem(STORAGE_KEY, businessId);
-    setOverrideId(businessId);
+  const clearActiveBusiness = useCallback(async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    setStoredId(null);
   }, []);
 
   return (
@@ -110,8 +172,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       value={{
         tenant,
         businesses,
+        needsRoleSelection,
+        selectMembership,
         setActiveBusiness,
-        loading: !!(user?.id && isPending),
+        clearActiveBusiness,
+        loading: !!(user?.id && (isPending || storedId === undefined)),
         error: error as Error | null,
       }}
     >

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -11,7 +10,9 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { useAdjustStock, useOwnerProducts } from "@/hooks/useOwnerProducts";
 import type { ProductRow } from "@/types/products";
 
@@ -38,6 +39,7 @@ export function ProductsUsedSheet({
 }: Props) {
   const [selected, setSelected] = useState<ProductUsed[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
   const productsQuery = useOwnerProducts(businessId);
   const adjustStock = useAdjustStock(businessId);
 
@@ -82,8 +84,8 @@ export function ProductsUsedSheet({
       }
       reset();
       onConfirm();
-    } catch (e) {
-      Alert.alert("Error", "Could not record stock usage. Please try again.");
+    } catch {
+      toast.error("Error", "Could not record stock usage. Please try again.");
       setSubmitting(false);
     }
   }
@@ -98,7 +100,7 @@ export function ProductsUsedSheet({
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Products Used</Text>
+          <OwnerSheetHeader title="Produits utilisés" onClose={onClose} disabled={submitting} />
           <Text style={styles.subtitle}>
             Select any products consumed during this service. Stock will be deducted automatically.
           </Text>

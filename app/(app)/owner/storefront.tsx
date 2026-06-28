@@ -20,6 +20,7 @@ import { QueryState } from "@/components/owner/QueryState";
 import { StorefrontGalleryGrid } from "@/components/owner/StorefrontGalleryGrid";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import {
   useAddPromotion,
   useDeleteGalleryImage,
@@ -46,6 +47,7 @@ function EditorForm({
   onRefresh: () => void;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const router = useRouter();
   const [tagline, setTagline] = useState(data.tagline ?? "");
   const [about, setAbout] = useState(data.extended_description ?? data.description ?? "");
@@ -85,7 +87,11 @@ function EditorForm({
   };
 
   const openPreview = () => {
-    if (data.slug) void openStorefrontPreview(data.slug);
+    if (data.slug) {
+      void openStorefrontPreview(data.slug, {
+        onOpenFailed: (title, message) => toast.warning(title, message),
+      });
+    }
   };
 
   const changeCover = async () => {
@@ -95,7 +101,7 @@ function EditorForm({
       if (!uri) return;
       await uploadCover.mutateAsync(uri);
     } catch (err) {
-      Alert.alert(t("owner.uploadFailed"), err instanceof Error ? err.message : "");
+      toast.error(t("owner.uploadFailed"), err instanceof Error ? err.message : "");
     }
   };
 

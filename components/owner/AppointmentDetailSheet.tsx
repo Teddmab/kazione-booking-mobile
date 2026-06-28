@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -12,9 +11,11 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ProductsUsedSheet } from "@/components/owner/appointments/ProductsUsedSheet";
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { useOwnerStaff } from "@/hooks/useOwnerStaff";
 import {
   useAssignAppointmentStaff,
@@ -62,6 +63,7 @@ export function AppointmentDetailSheet({
   onAssigned,
   busy,
 }: Props) {
+  const toast = useToast();
   const [showReasons, setShowReasons] = useState(false);
   const [customReason, setCustomReason] = useState("");
   const [productsSheetOpen, setProductsSheetOpen] = useState(false);
@@ -124,11 +126,11 @@ export function AppointmentDetailSheet({
       { id: appointment.id, staffProfileId: selectedStaffId },
       {
         onSuccess: () => {
-          Alert.alert("Assigné", "Le rendez-vous a été assigné.");
+          toast.success("Assigné", "Le rendez-vous a été assigné.");
           onAssigned?.();
           onClose();
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -141,7 +143,7 @@ export function AppointmentDetailSheet({
         if ((result.reminders?.sent ?? 0) > 0) {
           setReminderState("sent");
         } else {
-          Alert.alert("Attention", "L'email n'a pas pu être envoyé.");
+          toast.warning("Attention", "L'email n'a pas pu être envoyé.");
           setReminderState("idle");
         }
       },
@@ -158,9 +160,9 @@ export function AppointmentDetailSheet({
         <Pressable style={styles.backdrop} onPress={onClose}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.handle} />
+            <OwnerSheetHeader title={name} onClose={onClose} style={styles.sheetHeader} />
             <ScrollView contentContainerStyle={styles.content}>
               <View style={styles.headerRow}>
-                <Text style={styles.title}>{name}</Text>
                 <StatusBadge status={appointment.status} />
               </View>
 
@@ -372,10 +374,6 @@ export function AppointmentDetailSheet({
                 </View>
               ) : null}
             </ScrollView>
-
-            <Pressable style={styles.closeBtn} onPress={onClose}>
-              <Text style={styles.closeText}>Fermer</Text>
-            </Pressable>
           </Pressable>
         </Pressable>
 
@@ -442,15 +440,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
+  sheetHeader: { paddingHorizontal: 20, marginBottom: 4 },
   content: { paddingHorizontal: 20, paddingBottom: 12 },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: 12,
     marginBottom: 8,
   },
-  title: { flex: 1, fontSize: 20, fontWeight: "700", color: ownerColors.text },
   section: {
     fontSize: 12,
     fontWeight: "600",
@@ -525,8 +521,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   cancelLink: { textAlign: "center", color: ownerColors.textMuted, paddingVertical: 8 },
-  closeBtn: { alignItems: "center", paddingTop: 8 },
-  closeText: { fontSize: 15, color: ownerColors.primary, fontWeight: "600" },
   deleteBtn: {
     marginTop: 24,
     paddingVertical: 10,

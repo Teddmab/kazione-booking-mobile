@@ -24,12 +24,14 @@ import {
 import { ServiceRow } from "@/components/owner/ServiceRow";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import {
   useDeactivateOwnerService,
   useOwnerServices,
   useRestoreOwnerService,
   useSaveOwnerService,
   useServiceProductUsage,
+  useSyncServiceProducts,
   type ProductUsageInput,
 } from "@/hooks/useOwnerServices";
 import { useOwnerProducts } from "@/hooks/useOwnerProducts";
@@ -39,11 +41,13 @@ import type { OwnerServiceRow } from "@/types/owner";
 
 export default function OwnerServicesScreen() {
   const { tenant } = useTenantContext();
+  const toast = useToast();
   const businessId = tenant?.businessId ?? "";
 
   const { data, isLoading, isError, error, refetch, isRefetching } =
     useOwnerServices(businessId);
   const saveService = useSaveOwnerService(businessId);
+  const syncProducts = useSyncServiceProducts(businessId);
   const deactivate = useDeactivateOwnerService(businessId);
   const restore = useRestoreOwnerService(businessId);
 
@@ -55,7 +59,7 @@ export default function OwnerServicesScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<OwnerServiceRow | null>(null);
-  const [formStep, setFormStep] = useState<1 | 2>(1);
+  const [formStep, setFormStep] = useState<1 | 2 | 3 | 4>(1);
   const [aiSuggestions, setAiSuggestions] = useState<ServiceSuggestion[]>([]);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [analysisEnabled, setAnalysisEnabled] = useState(false);
@@ -137,22 +141,27 @@ export default function OwnerServicesScreen() {
     ).length;
   }, [analysisData, dismissedNames]);
 
-  const onSubmit = (
-    values: ServiceFormValues,
-    serviceId: string | null,
-    localImageUri?: string | null,
-    productUsage?: ProductUsageInput[],
-  ) => {
-    saveService.mutate(
-      { values, serviceId, localImageUri, productUsage },
+  const onSaveService = async (values: ServiceFormValues, serviceId: string | null) => {
+    const saved = await saveService.mutateAsync({
+      values,
+      serviceId,
+      skipProductSync: true,
+    });
+    setEditing(saved);
+    return saved.id;
+  };
+
+  const onFinishProducts = (serviceId: string, productUsage: ProductUsageInput[]) => {
+    syncProducts.mutate(
+      { serviceId, productUsage },
       {
         onSuccess: () => {
           setSheetOpen(false);
           setEditing(null);
           setAiSuggestions([]);
-          Alert.alert("Enregistré", serviceId ? "Service mis à jour." : "Service créé.");
+          toast.success("Enregistré", "Service et produits mis à jour.");
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -168,8 +177,8 @@ export default function OwnerServicesScreen() {
           style: "destructive",
           onPress: () => {
             deactivate.mutate(item.id, {
-              onSuccess: () => Alert.alert("Archivé", "Le service a été archivé."),
-              onError: (e) => Alert.alert("Erreur", e.message),
+              onSuccess: () => toast.success("Archivé", "Le service a été archivé."),
+              onError: (e) => toast.error("Erreur", e.message),
             });
           },
         },
@@ -179,8 +188,8 @@ export default function OwnerServicesScreen() {
 
   const onRestore = (item: OwnerServiceRow) => {
     restore.mutate(item.id, {
-      onSuccess: () => Alert.alert("Restauré", "Le service est de nouveau actif."),
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onSuccess: () => toast.success("Restauré", "Le service est de nouveau actif."),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 
@@ -189,9 +198,9 @@ export default function OwnerServicesScreen() {
       onSuccess: () => {
         setSheetOpen(false);
         setEditing(null);
-        Alert.alert("Archivé", "Le service a été archivé.");
+        toast.success("Archivé", "Le service a été archivé.");
       },
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 
@@ -300,6 +309,7 @@ export default function OwnerServicesScreen() {
 
       <ServiceFormSheet
         visible={sheetOpen}
+        businessId={businessId}
         service={editing}
         categorySuggestions={categories}
         defaultCurrency={services[0]?.currency_code ?? "EUR"}
@@ -310,9 +320,11 @@ export default function OwnerServicesScreen() {
           setEditing(null);
           setAiSuggestions([]);
         }}
-        onSubmit={onSubmit}
+        onSaveService={onSaveService}
+        onFinishProducts={onFinishProducts}
         onDeactivate={editing ? onDeactivateFromSheet : undefined}
-        busy={saveService.isPending || deactivate.isPending}
+        saving={saveService.isPending}
+        syncingProducts={syncProducts.isPending}
         products={allProducts}
         initialProductUsage={initialProductUsage}
       />

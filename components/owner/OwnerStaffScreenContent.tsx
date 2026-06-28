@@ -4,7 +4,6 @@ import { useRouter, type Href } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -25,6 +24,7 @@ import { StaffServicesSheet } from "@/components/owner/StaffServicesSheet";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useOwnerServices } from "@/hooks/useOwnerServices";
 import {
   useActivateStaffInvite,
@@ -100,6 +100,7 @@ function StaffRow({
         </View>
       </View>
       <Text style={styles.role}>{item.role}</Text>
+      {item.position ? <Text style={styles.position}>{item.position}</Text> : null}
       {item.email ? <Text style={styles.meta}>{item.email}</Text> : null}
       <Text style={styles.perfLine}>
         {formatCurrency(perf?.revenue ?? 0)} · {perf?.bookings ?? 0} RDV ·{" "}
@@ -116,6 +117,7 @@ interface Props {
 export function OwnerStaffScreenContent({ variant }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
 
@@ -212,10 +214,10 @@ export function OwnerStaffScreenContent({ variant }: Props) {
     invite.mutate(values, {
       onSuccess: (res) => {
         setInviteOpen(false);
-        Alert.alert("Invitation envoyée", `Un email a été envoyé à ${res.email}.`);
+        toast.success("Invitation envoyée", `Un email a été envoyé à ${res.email}.`);
         void refetch();
       },
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 
@@ -225,9 +227,9 @@ export function OwnerStaffScreenContent({ variant }: Props) {
       {
         onSuccess: () => {
           setDetailOpen(false);
-          Alert.alert("Enregistré", "Membre mis à jour.");
+          toast.success("Enregistré", "Membre mis à jour.");
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -239,9 +241,9 @@ export function OwnerStaffScreenContent({ variant }: Props) {
       {
         onSuccess: () => {
           setScheduleOpen(false);
-          Alert.alert("Enregistré", "Horaires mis à jour.");
+          toast.success("Enregistré", "Horaires mis à jour.");
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -253,9 +255,9 @@ export function OwnerStaffScreenContent({ variant }: Props) {
       {
         onSuccess: () => {
           setServicesOpen(false);
-          Alert.alert("Enregistré", "Services assignés.");
+          toast.success("Enregistré", "Services assignés.");
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -265,16 +267,15 @@ export function OwnerStaffScreenContent({ variant }: Props) {
     resendInvite.mutate(member.id, {
       onSuccess: (res) => {
         setPendingActionId(null);
-        Alert.alert(
-          res.invite_sent ? "Invitation renvoyée" : "Échec envoi",
-          res.invite_sent
-            ? `Email envoyé à ${res.email}`
-            : (res.email_error ?? "Erreur email"),
-        );
+        if (res.invite_sent) {
+          toast.success("Invitation renvoyée", `Email envoyé à ${res.email}`);
+        } else {
+          toast.warning("Échec envoi", res.email_error ?? "Erreur email");
+        }
       },
       onError: (e) => {
         setPendingActionId(null);
-        Alert.alert("Erreur", e.message);
+        toast.error("Erreur", e.message);
       },
     });
   };
@@ -284,11 +285,11 @@ export function OwnerStaffScreenContent({ variant }: Props) {
     activateInvite.mutate(member.id, {
       onSuccess: () => {
         setPendingActionId(null);
-        Alert.alert("Membre activé", `${member.display_name} est maintenant actif.`);
+        toast.success("Membre activé", `${member.display_name} est maintenant actif.`);
       },
       onError: (e) => {
         setPendingActionId(null);
-        Alert.alert("Erreur", e.message);
+        toast.error("Erreur", e.message);
       },
     });
   };
@@ -630,6 +631,7 @@ const styles = StyleSheet.create({
     backgroundColor: ownerColors.bg,
   },
   role: { fontSize: 14, color: ownerColors.primary, marginTop: 6, textTransform: "capitalize" },
+  position: { fontSize: 13, fontWeight: "600", color: ownerColors.text, marginTop: 4 },
   meta: { fontSize: 13, color: ownerColors.textMuted, marginTop: 4 },
   perfLine: { fontSize: 12, color: ownerColors.textDim, marginTop: 8 },
   badge: {

@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
 import type { StaffMember, StaffWorkingDay } from "@/types/owner";
 
@@ -63,7 +64,12 @@ export function StaffScheduleSheet({ member, visible, onClose, onSave, busy }: P
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Horaires — {member.display_name}</Text>
+          <OwnerSheetHeader
+            title={`Horaires — ${member.display_name}`}
+            onClose={onClose}
+            disabled={busy}
+            style={styles.sheetHeader}
+          />
           <ScrollView>
             {schedule.map((row) => (
               <View key={row.day} style={styles.row}>
@@ -114,7 +120,8 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "85%",
   },
-  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text, marginBottom: 12 },
+  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text },
+  sheetHeader: { marginBottom: 0 },
   row: {
     borderWidth: 1,
     borderColor: ownerColors.border,

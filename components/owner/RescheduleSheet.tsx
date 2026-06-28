@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -11,7 +10,9 @@ import {
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { availabilityToDisplaySlots } from "@/lib/bookingSlots";
 import { toIsoDate } from "@/lib/format";
 import { getAvailability } from "@/services/booking";
@@ -51,6 +52,7 @@ export function RescheduleSheet({
   onConfirm,
   busy,
 }: Props) {
+  const toast = useToast();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
@@ -86,7 +88,7 @@ export function RescheduleSheet({
 
   const handleConfirm = () => {
     if (!appointment || !date || !selectedTime) {
-      Alert.alert("Créneau requis", "Choisissez une date et une heure.");
+      toast.warning("Créneau requis", "Choisissez une date et une heure.");
       return;
     }
     onConfirm({
@@ -103,7 +105,7 @@ export function RescheduleSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Reprogrammer</Text>
+          <OwnerSheetHeader title="Reprogrammer" onClose={onClose} />
           <Text style={styles.sub}>{appointment.booking_reference}</Text>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayStrip}>
@@ -156,9 +158,6 @@ export function RescheduleSheet({
             <Text style={styles.primaryBtnText}>
               {busy ? "En cours…" : "Confirmer le nouveau créneau"}
             </Text>
-          </Pressable>
-          <Pressable onPress={onClose} style={styles.cancel}>
-            <Text style={styles.cancelText}>Annuler</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -220,6 +219,4 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.5 },
   primaryBtnText: { color: "#fff", fontWeight: "600" },
-  cancel: { alignItems: "center", paddingVertical: 12 },
-  cancelText: { color: ownerColors.textMuted },
 });

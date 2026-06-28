@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import { prepareWebpUri, uriToBlob } from "@/lib/imageUpload";
 import { rewriteStorageUrlForDevice } from "@/lib/storageUrl";
-import type { OwnerServiceRow } from "@/types/owner";
+import type { OwnerServiceRow, StaffCommissionType } from "@/types/owner";
 
 export interface CreateServiceInput {
   business_id: string;
@@ -14,6 +14,11 @@ export interface CreateServiceInput {
   category_name?: string | null;
   currency_code?: string;
   is_active?: boolean;
+  staff_commission_type?: StaffCommissionType;
+  staff_commission_value?: number | null;
+  image_url?: string | null;
+  image_url_2?: string | null;
+  image_url_3?: string | null;
 }
 
 export interface UpdateServiceInput {
@@ -26,9 +31,13 @@ export interface UpdateServiceInput {
   category_name?: string | null;
   is_active?: boolean;
   image_url?: string | null;
+  image_url_2?: string | null;
+  image_url_3?: string | null;
+  staff_commission_type?: StaffCommissionType;
+  staff_commission_value?: number | null;
 }
 
-async function uploadServiceImage(businessId: string, localUri: string): Promise<string> {
+export async function uploadServiceImage(businessId: string, localUri: string): Promise<string> {
   const params = new URLSearchParams({
     business_id: businessId,
     asset_type: "gallery",
@@ -76,9 +85,13 @@ export async function uploadAndAttachServiceImage(
 }
 
 function withDeviceStorageUrls(service: OwnerServiceRow): OwnerServiceRow {
+  const rewrite = (url?: string | null) =>
+    url ? rewriteStorageUrlForDevice(url) : url;
   return {
     ...service,
-    image_url: service.image_url ? rewriteStorageUrlForDevice(service.image_url) : service.image_url,
+    image_url: rewrite(service.image_url),
+    image_url_2: rewrite(service.image_url_2),
+    image_url_3: rewrite(service.image_url_3),
   };
 }
 
@@ -102,6 +115,14 @@ export async function createService(input: CreateServiceInput): Promise<OwnerSer
     currency_code: input.currency_code ?? "EUR",
     is_active: input.is_active ?? true,
     is_public: true,
+    staff_commission_type: input.staff_commission_type ?? "none",
+    staff_commission_value:
+      input.staff_commission_type && input.staff_commission_type !== "none"
+        ? (input.staff_commission_value ?? null)
+        : null,
+    image_url: input.image_url ?? null,
+    image_url_2: input.image_url_2 ?? null,
+    image_url_3: input.image_url_3 ?? null,
   });
   return withDeviceStorageUrls(row);
 }

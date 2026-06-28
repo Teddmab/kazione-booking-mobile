@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 
 type Props = {
@@ -33,7 +34,7 @@ export function PromotionFormSheet({ visible, onClose, onSubmit, loading }: Prop
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>{t("owner.promoAdd")}</Text>
+          <OwnerSheetHeader title={t("owner.promoAdd")} onClose={onClose} disabled={loading} />
           <TextInput
             style={styles.input}
             value={title}
