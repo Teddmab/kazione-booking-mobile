@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,9 +9,11 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { useOwnerClientDetail } from "@/hooks/useOwnerClients";
 import { clientDisplayName, formatCurrency, formatDate } from "@/lib/format";
 import type {
@@ -123,6 +124,7 @@ export function ClientDetailSheet({
   onAppointmentPress,
   busy,
 }: Props) {
+  const toast = useToast();
   const [tab, setTab] = useState<DetailTab>("profile");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -150,7 +152,7 @@ export function ClientDetailSheet({
   const save = () => {
     if (!onSave) return;
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert("Champs requis", "Prénom et nom sont obligatoires.");
+      toast.warning("Champs requis", "Prénom et nom sont obligatoires.");
       return;
     }
     onSave(client.id, {
@@ -172,7 +174,7 @@ export function ClientDetailSheet({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.header}>
-            <Text style={styles.title}>{name}</Text>
+            <OwnerSheetHeader title={name} onClose={onClose} disabled={busy} style={styles.sheetHeader} />
             <TabChipSelector value={tab} chips={tabChips} onChange={setTab} />
           </View>
 
@@ -284,9 +286,6 @@ export function ClientDetailSheet({
               </View>
             )}
 
-            <Pressable onPress={onClose} style={styles.close}>
-              <Text style={styles.closeText}>Fermer</Text>
-            </Pressable>
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -304,7 +303,8 @@ const styles = StyleSheet.create({
     height: "88%",
   },
   header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8, flexShrink: 0 },
-  title: { fontSize: 22, fontWeight: "700", color: ownerColors.text, marginBottom: 12 },
+  sheetHeader: { marginBottom: 8 },
+  title: { fontSize: 22, fontWeight: "700", color: ownerColors.text },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 28 },
   statsRow: {
@@ -395,6 +395,4 @@ const styles = StyleSheet.create({
     backgroundColor: ownerColors.border,
     opacity: 0.35,
   },
-  close: { alignItems: "center", marginTop: 20, paddingVertical: 10 },
-  closeText: { fontSize: 15, color: ownerColors.primary, fontWeight: "600" },
 });

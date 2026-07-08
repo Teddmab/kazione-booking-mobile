@@ -1,9 +1,7 @@
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -12,8 +10,11 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { parseClientCsv } from "@/lib/parseClientCsv";
+import { readLocalFileAsText } from "@/lib/localFile";
 import { clientDisplayName } from "@/lib/format";
 import type { ImportClientRow } from "@/types/owner";
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function ImportClientsSheet({ visible, busy, onClose, onConfirm }: Props) {
+  const toast = useToast();
   const [rows, setRows] = useState<ImportClientRow[]>([]);
   const [picking, setPicking] = useState(false);
 
@@ -40,15 +42,15 @@ export function ImportClientsSheet({ visible, busy, onClose, onConfirm }: Props)
       if (result.canceled || !result.assets[0]) return;
 
       const uri = result.assets[0].uri;
-      const text = await FileSystem.readAsStringAsync(uri);
+      const text = await readLocalFileAsText(uri);
       const parsed = parseClientCsv(text);
       if (parsed.length === 0) {
-        Alert.alert("Fichier vide", "Aucun client valide trouvé dans ce CSV.");
+        toast.warning("Fichier vide", "Aucun client valide trouvé dans ce CSV.");
         return;
       }
       setRows(parsed);
     } catch (e) {
-      Alert.alert("Erreur", e instanceof Error ? e.message : "Impossible de lire le fichier.");
+      toast.error("Erreur", e instanceof Error ? e.message : "Impossible de lire le fichier.");
     } finally {
       setPicking(false);
     }
@@ -65,7 +67,7 @@ export function ImportClientsSheet({ visible, busy, onClose, onConfirm }: Props)
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Importer des clients</Text>
+          <OwnerSheetHeader title="Importer des clients" onClose={close} disabled={busy} />
           <Text style={styles.hint}>
             CSV avec colonnes : first_name, last_name, email, phone
           </Text>
@@ -117,10 +119,6 @@ export function ImportClientsSheet({ visible, busy, onClose, onConfirm }: Props)
               </Pressable>
             </>
           )}
-
-          <Pressable onPress={close} style={styles.cancelWrap}>
-            <Text style={styles.cancel}>Annuler</Text>
-          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -165,7 +163,5 @@ const styles = StyleSheet.create({
   },
   primaryText: { color: "#fff", fontWeight: "600" },
   link: { textAlign: "center", color: ownerColors.primary, marginTop: 12, fontWeight: "600" },
-  cancelWrap: { alignItems: "center", marginTop: 16 },
-  cancel: { color: ownerColors.textMuted, fontSize: 15 },
   disabled: { opacity: 0.6 },
 });

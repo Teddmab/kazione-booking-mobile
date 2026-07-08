@@ -10,7 +10,9 @@ import {
   TextInput,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import {
   useCreateSupplier,
   useDeactivateSupplier,
@@ -44,6 +46,7 @@ export function AddSupplierSheet({
   onClose,
   onSaved,
 }: Props) {
+  const toast = useToast();
   const isEdit = !!supplier;
   const create = useCreateSupplier(businessId);
   const update = useUpdateSupplier(businessId);
@@ -80,7 +83,7 @@ export function AddSupplierSheet({
   const submit = () => {
     const name = form.name.trim();
     if (!name) {
-      Alert.alert("Champ requis", "Le nom du fournisseur est obligatoire.");
+      toast.warning("Champ requis", "Le nom du fournisseur est obligatoire.");
       return;
     }
 
@@ -101,7 +104,7 @@ export function AddSupplierSheet({
             onSaved?.();
             close();
           },
-          onError: (e) => Alert.alert("Erreur", (e as Error).message),
+          onError: (e) => toast.error("Erreur", (e as Error).message),
         },
       );
       return;
@@ -112,7 +115,7 @@ export function AddSupplierSheet({
         onSaved?.();
         close();
       },
-      onError: (e) => Alert.alert("Erreur", (e as Error).message),
+      onError: (e) => toast.error("Erreur", (e as Error).message),
     });
   };
 
@@ -132,7 +135,7 @@ export function AddSupplierSheet({
                 onSaved?.();
                 close();
               },
-              onError: (e) => Alert.alert("Erreur", (e as Error).message),
+              onError: (e) => toast.error("Erreur", (e as Error).message),
             }),
         },
       ],
@@ -143,11 +146,12 @@ export function AddSupplierSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <OwnerSheetHeader
+            title={isEdit ? "Modifier le fournisseur" : "Nouveau fournisseur"}
+            onClose={close}
+            disabled={busy}
+          />
           <ScrollView keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>
-              {isEdit ? "Modifier le fournisseur" : "Nouveau fournisseur"}
-            </Text>
-
             <Text style={styles.label}>Nom *</Text>
             <TextInput style={styles.input} value={form.name} onChangeText={(v) => setField("name", v)} />
 

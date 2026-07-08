@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,7 +9,9 @@ import {
   TextInput,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { useCreateProduct } from "@/hooks/useOwnerProducts";
 import { useSuppliers } from "@/hooks/useOwnerSuppliers";
 import type { CreateProductData } from "@/types/products";
@@ -33,6 +34,7 @@ const emptyForm: CreateProductData = {
 };
 
 export function AddProductSheet({ visible, businessId, onClose }: Props) {
+  const toast = useToast();
   const create = useCreateProduct(businessId);
   const suppliers = useSuppliers(businessId, { isActive: true });
   const supplierList = suppliers.data?.suppliers ?? [];
@@ -55,7 +57,7 @@ export function AddProductSheet({ visible, businessId, onClose }: Props) {
   const submit = () => {
     const name = form.name.trim();
     if (!name) {
-      Alert.alert("Champ requis", "Le nom du produit est obligatoire.");
+      toast.warning("Champ requis", "Le nom du produit est obligatoire.");
       return;
     }
 
@@ -77,7 +79,7 @@ export function AddProductSheet({ visible, businessId, onClose }: Props) {
 
     create.mutate(payload, {
       onSuccess: () => close(),
-      onError: (e) => Alert.alert("Erreur", (e as Error).message),
+      onError: (e) => toast.error("Erreur", (e as Error).message),
     });
   };
 
@@ -85,9 +87,8 @@ export function AddProductSheet({ visible, businessId, onClose }: Props) {
     <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
       <Pressable style={styles.backdrop} onPress={close}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <OwnerSheetHeader title="Nouveau produit" onClose={close} disabled={create.isPending} />
           <ScrollView keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Nouveau produit</Text>
-
             <Text style={styles.label}>Nom *</Text>
             <TextInput style={styles.input} value={form.name} onChangeText={(v) => setField("name", v)} />
 

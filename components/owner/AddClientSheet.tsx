@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   StyleSheet,
@@ -8,7 +7,9 @@ import {
   TextInput,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 
 export interface AddClientValues {
   first_name: string;
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function AddClientSheet({ visible, onClose, onSubmit, busy }: Props) {
+  const toast = useToast();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,7 +44,7 @@ export function AddClientSheet({ visible, onClose, onSubmit, busy }: Props) {
 
   const submit = () => {
     if (!firstName.trim() || !lastName.trim()) {
-      Alert.alert("Champs requis", "Prénom et nom sont obligatoires.");
+      toast.warning("Champs requis", "Prénom et nom sont obligatoires.");
       return;
     }
     onSubmit({
@@ -59,7 +61,7 @@ export function AddClientSheet({ visible, onClose, onSubmit, busy }: Props) {
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Nouveau client</Text>
+          <OwnerSheetHeader title="Nouveau client" onClose={onClose} />
           <Text style={styles.label}>Prénom</Text>
           <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} />
           <Text style={styles.label}>Nom</Text>
@@ -106,7 +108,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 20,
   },
-  title: { fontSize: 20, fontWeight: "700", color: ownerColors.text, marginBottom: 12 },
+  title: { fontSize: 20, fontWeight: "700", color: ownerColors.text },
   label: { fontSize: 13, color: ownerColors.textDim, marginTop: 8, marginBottom: 4 },
   input: {
     borderWidth: 1,

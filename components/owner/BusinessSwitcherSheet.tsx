@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useCreateBusiness } from "@/hooks/useCreateBusiness";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { roleLabel } from "@/lib/workspaceRouting";
 
 interface Props {
   visible: boolean;
@@ -69,7 +71,16 @@ export function BusinessSwitcherSheet({ visible, onClose, startOnCreate = false 
 
         {createMode ? (
           <View style={styles.createCard}>
-            <Text style={styles.title}>{t("owner.addBusiness")}</Text>
+            <OwnerSheetHeader
+              title={t("owner.addBusiness")}
+              onClose={() => {
+                if (!startOnCreate) setCreateMode(false);
+                else close();
+              }}
+              closeLabel={t("owner.cancel")}
+              disabled={createBusiness.isPending}
+              style={styles.sheetHeader}
+            />
             <TextInput
               style={styles.input}
               value={newName}
@@ -85,13 +96,15 @@ export function BusinessSwitcherSheet({ visible, onClose, startOnCreate = false 
               onPress={submitCreate}>
               <Text style={styles.primaryBtnText}>{t("owner.createBusiness")}</Text>
             </Pressable>
-            <Pressable onPress={() => setCreateMode(false)} style={styles.linkBtn}>
-              <Text style={styles.linkText}>{t("owner.cancel")}</Text>
-            </Pressable>
           </View>
         ) : (
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
-            <Text style={styles.title}>{t("owner.myBusinesses")}</Text>
+            <OwnerSheetHeader
+              title={t("owner.myBusinesses")}
+              onClose={close}
+              closeLabel={t("owner.cancel")}
+              style={styles.sheetHeader}
+            />
             {businesses.map((b) => (
               <Pressable
                 key={b.businessId}
@@ -100,7 +113,10 @@ export function BusinessSwitcherSheet({ visible, onClose, startOnCreate = false 
                   void setActiveBusiness(b.businessId);
                   close();
                 }}>
-                <Text style={styles.rowText}>{b.businessName}</Text>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowText}>{b.businessName}</Text>
+                  <Text style={styles.rowSub}>{roleLabel(b.role, b.position)}</Text>
+                </View>
                 {b.businessId === tenant?.businessId ? (
                   <Text style={styles.activeMark}>✓</Text>
                 ) : null}
@@ -140,6 +156,7 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 8,
   },
+  sheetHeader: { marginBottom: 0 },
   title: { fontSize: 18, fontWeight: "700", color: ownerColors.text, marginBottom: 14 },
   row: {
     flexDirection: "row",
@@ -148,8 +165,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: ownerColors.border,
+    gap: 8,
   },
   rowText: { fontSize: 16, color: ownerColors.text },
+  rowBody: { flex: 1, minWidth: 0 },
+  rowSub: { fontSize: 12, color: ownerColors.textMuted, marginTop: 2 },
   activeMark: { color: ownerColors.primary, fontWeight: "700", fontSize: 16 },
   addRow: { marginTop: 16, paddingVertical: 12 },
   addText: { fontSize: 15, fontWeight: "600", color: ownerColors.primary },
@@ -171,6 +191,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.7 },
   primaryBtnText: { color: "#fff", fontWeight: "600" },
-  linkBtn: { alignItems: "center", marginTop: 12 },
-  linkText: { color: ownerColors.textMuted, fontSize: 15 },
 });

@@ -8,6 +8,7 @@ import {
   Text,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
 import type { OwnerServiceRow, StaffMember } from "@/types/owner";
 
@@ -52,7 +53,12 @@ export function StaffServicesSheet({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Services — {member.display_name}</Text>
+          <OwnerSheetHeader
+            title={`Services — ${member.display_name}`}
+            onClose={onClose}
+            disabled={busy}
+            style={styles.sheetHeader}
+          />
           {loading ? (
             <ActivityIndicator color={ownerColors.primary} style={styles.loader} />
           ) : (
@@ -92,7 +98,8 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "80%",
   },
-  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text, marginBottom: 12 },
+  title: { fontSize: 18, fontWeight: "700", color: ownerColors.text },
+  sheetHeader: { marginBottom: 0 },
   loader: { marginVertical: 24 },
   row: {
     flexDirection: "row",

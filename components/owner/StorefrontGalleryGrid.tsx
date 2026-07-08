@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { SafeImage } from "@/components/SafeImage";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { pickImage } from "@/lib/imageUpload";
 import type { GalleryItem } from "@/types/owner";
 
@@ -17,10 +18,11 @@ type Props = {
 
 export function StorefrontGalleryGrid({ images, uploading, onAdd, onRemove }: Props) {
   const { t } = useTranslation();
+  const toast = useToast();
 
   const pick = async () => {
     if (images.length >= MAX_GALLERY) {
-      Alert.alert(t("owner.galleryMax"));
+      toast.warning(t("owner.galleryMax"));
       return;
     }
     try {
@@ -29,7 +31,7 @@ export function StorefrontGalleryGrid({ images, uploading, onAdd, onRemove }: Pr
       const remaining = MAX_GALLERY - images.length;
       onAdd(assets.slice(0, remaining).map((a) => a.uri));
     } catch (err) {
-      Alert.alert(t("owner.uploadFailed"), err instanceof Error ? err.message : "");
+      toast.error(t("owner.uploadFailed"), err instanceof Error ? err.message : "");
     }
   };
 

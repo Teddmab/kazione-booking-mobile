@@ -6,7 +6,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +22,7 @@ import { UpcomingStrip } from "@/components/owner/UpcomingStrip";
 import { WeekCalendarView } from "@/components/owner/WeekCalendarView";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import { useOwnerCalendar } from "@/hooks/useOwnerCalendar";
 import {
   useCancelOwnerAppointment,
@@ -49,6 +49,7 @@ export default function OwnerAppointmentsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { tenant } = useTenantContext();
+  const toast = useToast();
   const businessId = tenant?.businessId ?? "";
   useOwnerAppointmentsRealtime(businessId);
 
@@ -155,7 +156,7 @@ export default function OwnerAppointmentsScreen() {
           setSheetOpen(false);
           refreshAll();
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -166,10 +167,10 @@ export default function OwnerAppointmentsScreen() {
       {
         onSuccess: () => {
           setSheetOpen(false);
-          Alert.alert("Annulé", "Le rendez-vous a été annulé.");
+          toast.success("Annulé", "Le rendez-vous a été annulé.");
           refreshAll();
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -184,10 +185,10 @@ export default function OwnerAppointmentsScreen() {
       onSuccess: () => {
         setRescheduleTarget(null);
         setSheetOpen(false);
-        Alert.alert("Reprogrammé", "Le rendez-vous a été déplacé.");
+        toast.success("Reprogrammé", "Le rendez-vous a été déplacé.");
         refreshAll();
       },
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 
@@ -321,7 +322,7 @@ export default function OwnerAppointmentsScreen() {
               setSheetOpen(false);
               void refetch();
             },
-            onError: (e) => Alert.alert("Erreur", e.message),
+            onError: (e) => toast.error("Erreur", e.message),
           });
         }}
         onAssigned={refreshAll}

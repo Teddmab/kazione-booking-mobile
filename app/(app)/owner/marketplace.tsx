@@ -19,6 +19,7 @@ import { SwitchRow } from "@/components/owner/SwitchRow";
 import { TabChipSelector } from "@/components/owner/TabChipSelector";
 import { ownerColors, ownerStyles } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import { openStorefrontPreview } from "@/lib/openStorefrontPreview";
 import {
   useOwnerStorefront,
@@ -30,6 +31,7 @@ type Tab = "overview" | "visibility" | "listing" | "preview";
 
 export default function OwnerMarketplaceScreen() {
   const { t } = useTranslation();
+  const toast = useToast();
   const router = useRouter();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
@@ -74,7 +76,11 @@ export default function OwnerMarketplaceScreen() {
   };
 
   const openPreview = () => {
-    if (data?.slug) void openStorefrontPreview(data.slug);
+    if (data?.slug) {
+      void openStorefrontPreview(data.slug, {
+        onOpenFailed: (title, message) => toast.warning(title, message),
+      });
+    }
   };
 
   return (

@@ -15,10 +15,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { MonthCalendar } from "@/components/booking/MonthCalendar";
 import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
-import { OwnerToast, type OwnerToastVariant } from "@/components/owner/OwnerToast";
 import { WalkInStepBar } from "@/components/owner/WalkInStepBar";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import { invalidateOwnerClientQueries } from "@/lib/ownerClientQueries";
 import { availabilityToDisplaySlots } from "@/lib/bookingSlots";
 import { startOfToday } from "@/lib/dateUtils";
@@ -34,6 +34,7 @@ const STEP_COUNT = 5;
 export default function WalkInScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const params = useLocalSearchParams<{
     clientId?: string;
     clientName?: string;
@@ -62,11 +63,6 @@ export default function WalkInScreen() {
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
   const [time, setTime] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    title: string;
-    message?: string;
-    variant: OwnerToastVariant;
-  } | null>(null);
 
   useEffect(() => {
     const clientId = params.clientId ? String(params.clientId) : null;
@@ -172,18 +168,12 @@ export default function WalkInScreen() {
       void queryClient.invalidateQueries({ queryKey: ["owner-appointments", businessId] });
       void queryClient.invalidateQueries({ queryKey: ["owner-dashboard-kpis", businessId] });
       invalidateOwnerClientQueries(queryClient, businessId);
-      setToast({
-        title: t("owner.walkInSuccessTitle"),
-        message: t("owner.walkInSuccessMessage"),
-        variant: "success",
+      toast.success(t("owner.walkInSuccessTitle"), t("owner.walkInSuccessMessage"), {
+        onDismiss: () => router.back(),
       });
     },
     onError: (e: Error) => {
-      setToast({
-        title: t("owner.walkInErrorTitle"),
-        message: e.message,
-        variant: "error",
-      });
+      toast.error(t("owner.walkInErrorTitle"), e.message);
     },
   });
 
@@ -473,18 +463,6 @@ export default function WalkInScreen() {
           </Pressable>
         </View>
       </View>
-
-      <OwnerToast
-        visible={!!toast}
-        title={toast?.title ?? ""}
-        message={toast?.message}
-        variant={toast?.variant}
-        onDismiss={() => {
-          const wasSuccess = toast?.variant === "success";
-          setToast(null);
-          if (wasSuccess) router.back();
-        }}
-      />
     </OwnerStackShell>
   );
 }

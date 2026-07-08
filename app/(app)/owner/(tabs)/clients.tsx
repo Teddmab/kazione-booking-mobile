@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useFocusEffect } from "@react-navigation/native";
 import {
-  Alert,
   View,
   Text,
   FlatList,
@@ -22,6 +21,7 @@ import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import {
   useCreateOwnerClient,
   useImportOwnerClients,
@@ -87,6 +87,7 @@ function sortClients(list: ClientWithStats[], sortBy: SortBy): ClientWithStats[]
 
 export default function OwnerClientsScreen() {
   const { t } = useTranslation();
+  const toast = useToast();
   const router = useRouter();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
@@ -180,9 +181,9 @@ export default function OwnerClientsScreen() {
       {
         onSuccess: () => {
           setAddOpen(false);
-          Alert.alert("Client créé", `${values.first_name} ${values.last_name} a été ajouté.`);
+          toast.success("Client créé", `${values.first_name} ${values.last_name} a été ajouté.`);
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -191,12 +192,12 @@ export default function OwnerClientsScreen() {
     importClients.mutate(rows, {
       onSuccess: (result) => {
         setImportOpen(false);
-        Alert.alert(
+        toast.success(
           "Import terminé",
           `${result.imported} client(s) importé(s)${result.updated ? `, ${result.updated} mis à jour` : ""}.`,
         );
       },
-      onError: (e) => Alert.alert("Erreur", e.message),
+      onError: (e) => toast.error("Erreur", e.message),
     });
   };
 
@@ -215,9 +216,9 @@ export default function OwnerClientsScreen() {
       {
         onSuccess: () => {
           setSheetOpen(false);
-          Alert.alert("Enregistré", "Client mis à jour.");
+          toast.success("Enregistré", "Client mis à jour.");
         },
-        onError: (e) => Alert.alert("Erreur", e.message),
+        onError: (e) => toast.error("Erreur", e.message),
       },
     );
   };
@@ -327,7 +328,7 @@ export default function OwnerClientsScreen() {
                 setApptSheetOpen(false);
                 refreshAll();
               },
-              onError: (e) => Alert.alert("Erreur", e.message),
+              onError: (e) => toast.error("Erreur", e.message),
             },
           );
         }}
@@ -339,7 +340,7 @@ export default function OwnerClientsScreen() {
                 setApptSheetOpen(false);
                 refreshAll();
               },
-              onError: (e) => Alert.alert("Erreur", e.message),
+              onError: (e) => toast.error("Erreur", e.message),
             },
           );
         }}

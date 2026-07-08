@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -15,7 +14,9 @@ import {
 
 import { DashboardStatCard } from "@/components/owner/DashboardStatCard";
 import { StatusBadge } from "@/components/owner/StatusBadge";
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getAppointments } from "@/services/owner/appointments";
 import type { DateRange } from "@/types/finance";
@@ -31,6 +32,7 @@ const ROLES: { value: EditableRole; label: string }[] = [
 
 export interface StaffUpdateValues {
   display_name: string;
+  position: string;
   role: EditableRole;
   is_active: boolean;
 }
@@ -73,7 +75,9 @@ export function StaffDetailSheet({
   busy,
   resendBusy,
 }: Props) {
+  const toast = useToast();
   const [displayName, setDisplayName] = useState("");
+  const [position, setPosition] = useState("");
   const [role, setRole] = useState<EditableRole>("staff");
   const [isActive, setIsActive] = useState(true);
 
@@ -102,6 +106,7 @@ export function StaffDetailSheet({
   useEffect(() => {
     if (!member || !visible) return;
     setDisplayName(member.display_name);
+    setPosition(member.position ?? "");
     const r = member.role as EditableRole;
     setRole(r === "manager" || r === "receptionist" ? r : "staff");
     setIsActive(member.is_active);
@@ -111,17 +116,22 @@ export function StaffDetailSheet({
 
   const save = () => {
     if (!displayName.trim()) {
-      Alert.alert("Nom requis", "Le nom affiché ne peut pas être vide.");
+      toast.warning("Nom requis", "Le nom affiché ne peut pas être vide.");
       return;
     }
-    onSave(member.id, { display_name: displayName.trim(), role, is_active: isActive });
+    onSave(member.id, {
+      display_name: displayName.trim(),
+      position: position.trim(),
+      role,
+      is_active: isActive,
+    });
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Membre de l&apos;équipe</Text>
+          <OwnerSheetHeader title="Membre de l&apos;équipe" onClose={onClose} disabled={busy} />
           <ScrollView showsVerticalScrollIndicator={false}>
             {member.email ? <Text style={styles.email}>{member.email}</Text> : null}
 
@@ -176,6 +186,14 @@ export function StaffDetailSheet({
 
             <Text style={styles.label}>Nom affiché</Text>
             <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} />
+
+            <Text style={styles.label}>Position</Text>
+            <TextInput
+              style={styles.input}
+              value={position}
+              onChangeText={setPosition}
+              placeholder="ex. Senior Stylist, Barber"
+            />
 
             <Text style={styles.label}>Rôle</Text>
             <View style={styles.roleRow}>
@@ -237,9 +255,6 @@ export function StaffDetailSheet({
             disabled={busy}
             onPress={save}>
             <Text style={styles.primaryBtnText}>{busy ? "Enregistrement…" : "Enregistrer"}</Text>
-          </Pressable>
-          <Pressable onPress={onClose} style={styles.cancel}>
-            <Text style={styles.cancelText}>Fermer</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -353,6 +368,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.6 },
   primaryBtnText: { color: ownerColors.primary, fontWeight: "600" },
-  cancel: { alignItems: "center", paddingVertical: 10 },
-  cancelText: { color: ownerColors.textMuted },
 });

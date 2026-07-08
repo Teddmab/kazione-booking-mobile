@@ -6,10 +6,12 @@ export interface InviteStaffInput {
   email: string;
   display_name: string;
   role: string;
+  position?: string | null;
 }
 
 export interface UpdateStaffInput {
   display_name?: string;
+  position?: string | null;
   role?: string;
   is_active?: boolean;
 }

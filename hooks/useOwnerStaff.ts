@@ -30,6 +30,7 @@ export function useInviteStaff(businessId: string) {
         email: values.email.trim().toLowerCase(),
         display_name: `${values.first_name.trim()} ${values.last_name.trim()}`.trim(),
         role: values.role,
+        position: values.position.trim() || null,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["owner-staff", businessId] });
@@ -43,6 +44,7 @@ export function useUpdateStaffMember(businessId: string) {
     mutationFn: ({ id, values }: { id: string; values: StaffUpdateValues }) =>
       updateStaff(id, {
         display_name: values.display_name,
+        position: values.position.trim() || null,
         role: values.role,
         is_active: values.is_active,
       }),

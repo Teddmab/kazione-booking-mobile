@@ -1,4 +1,4 @@
-import { readAsStringAsync } from "expo-file-system";
+import { readLocalFileAsBase64 } from "@/lib/localFile";
 import { getSupabase } from "@/lib/supabase";
 
 /**
@@ -9,7 +9,7 @@ export async function uploadInvoiceImage(
   businessId: string,
   localUri: string,
 ): Promise<string> {
-  const base64 = await readAsStringAsync(localUri, { encoding: "base64" });
+  const base64 = await readLocalFileAsBase64(localUri);
 
   // Decode base64 to Uint8Array
   const binaryStr = atob(base64);

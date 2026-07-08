@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,7 +9,9 @@ import {
   View,
 } from "react-native";
 
+import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 
 export type StaffInviteRole = "manager" | "staff" | "receptionist";
 
@@ -20,6 +21,7 @@ export interface InviteStaffValues {
   email: string;
   role: StaffInviteRole;
   phone: string;
+  position: string;
 }
 
 const ROLES: { value: StaffInviteRole; label: string }[] = [
@@ -41,20 +43,22 @@ const empty: InviteStaffValues = {
   email: "",
   role: "staff",
   phone: "",
+  position: "",
 };
 
 export function InviteStaffSheet({ visible, onClose, onSubmit, busy }: Props) {
+  const toast = useToast();
   const [form, setForm] = useState<InviteStaffValues>(empty);
 
   const reset = () => setForm(empty);
 
   const validate = (): boolean => {
     if (!form.first_name.trim() || !form.last_name.trim()) {
-      Alert.alert("Champs requis", "Prénom et nom sont obligatoires.");
+      toast.warning("Champs requis", "Prénom et nom sont obligatoires.");
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      Alert.alert("Email invalide", "Vérifiez l'adresse email.");
+      toast.warning("Email invalide", "Vérifiez l'adresse email.");
       return false;
     }
     return true;
@@ -74,7 +78,14 @@ export function InviteStaffSheet({ visible, onClose, onSubmit, busy }: Props) {
           onClose();
         }}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Inviter un membre</Text>
+          <OwnerSheetHeader
+            title="Inviter un membre"
+            onClose={() => {
+              reset();
+              onClose();
+            }}
+            disabled={busy}
+          />
           <ScrollView keyboardShouldPersistTaps="handled">
             <Text style={styles.label}>Prénom *</Text>
             <TextInput
@@ -105,6 +116,13 @@ export function InviteStaffSheet({ visible, onClose, onSubmit, busy }: Props) {
               onChangeText={(phone) => setForm((f) => ({ ...f, phone }))}
               keyboardType="phone-pad"
             />
+            <Text style={styles.label}>Position</Text>
+            <TextInput
+              style={styles.input}
+              value={form.position}
+              onChangeText={(position) => setForm((f) => ({ ...f, position }))}
+              placeholder="ex. Senior Stylist, Barber"
+            />
             <Text style={styles.label}>Rôle</Text>
             <View style={styles.roleRow}>
               {ROLES.map((r) => (
@@ -125,14 +143,6 @@ export function InviteStaffSheet({ visible, onClose, onSubmit, busy }: Props) {
             onPress={submit}>
             <Text style={styles.primaryBtnText}>{busy ? "Envoi…" : "Envoyer l'invitation"}</Text>
           </Pressable>
-          <Pressable
-            onPress={() => {
-              reset();
-              onClose();
-            }}
-            style={styles.cancel}>
-            <Text style={styles.cancelText}>Annuler</Text>
-          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -148,7 +158,7 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: "88%",
   },
-  title: { fontSize: 20, fontWeight: "700", color: ownerColors.text, marginBottom: 12 },
+  title: { fontSize: 20, fontWeight: "700", color: ownerColors.text },
   label: { fontSize: 13, fontWeight: "600", color: ownerColors.textDim, marginTop: 10, marginBottom: 6 },
   input: {
     borderWidth: 1,
@@ -178,6 +188,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.6 },
   primaryBtnText: { color: "#fff", fontWeight: "600" },
-  cancel: { alignItems: "center", paddingVertical: 10 },
-  cancelText: { color: ownerColors.textMuted },
 });

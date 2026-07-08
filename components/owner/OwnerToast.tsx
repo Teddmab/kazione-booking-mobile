@@ -3,9 +3,33 @@ import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ownerColors } from "@/constants/ownerTheme";
+import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 
-export type OwnerToastVariant = "success" | "error";
+export type OwnerToastVariant = "success" | "error" | "warning";
+
+interface VariantStyle {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  surface: string;
+}
+
+const VARIANT_STYLES: Record<OwnerToastVariant, VariantStyle> = {
+  success: {
+    icon: "checkmark-circle",
+    iconColor: ownerColors.success,
+    surface: ownerColors.successMuted,
+  },
+  error: {
+    icon: "alert-circle",
+    iconColor: ownerColors.danger,
+    surface: ownerColors.dangerMuted,
+  },
+  warning: {
+    icon: "warning",
+    iconColor: ownerColors.warning,
+    surface: ownerColors.warningMuted,
+  },
+};
 
 interface Props {
   visible: boolean;
@@ -26,23 +50,24 @@ export function OwnerToast({
 }: Props) {
   const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(16)).current;
+  const translateY = useRef(new Animated.Value(-10)).current;
+  const variantStyle = VARIANT_STYLES[variant];
 
   useEffect(() => {
     if (!visible) return;
 
     opacity.setValue(0);
-    translateY.setValue(16);
+    translateY.setValue(-10);
 
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 9, tension: 80 }),
+      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
     ]).start();
 
     const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 0, duration: 220, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 8, duration: 220, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: -8, duration: 180, useNativeDriver: true }),
       ]).start(({ finished }) => {
         if (finished) onDismiss();
       });
@@ -53,25 +78,28 @@ export function OwnerToast({
 
   if (!visible) return null;
 
-  const isSuccess = variant === "success";
-  const accent = isSuccess ? ownerColors.success : ownerColors.danger;
-  const surface = isSuccess ? ownerColors.successMuted : ownerColors.dangerMuted;
-  const icon = isSuccess ? "checkmark-circle" : "alert-circle";
-
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents="box-none"
       style={[
         styles.wrap,
-        { bottom: insets.bottom + 88, opacity, transform: [{ translateY }] },
+        {
+          top: insets.top + 8,
+          opacity,
+          transform: [{ translateY }],
+        },
       ]}>
-      <View style={[styles.card, { backgroundColor: surface, borderColor: accent }]}>
-        <View style={[styles.iconWrap, { backgroundColor: ownerColors.card }]}>
-          <Ionicons name={icon} size={22} color={accent} />
-        </View>
+      <View style={[styles.card, { backgroundColor: variantStyle.surface }]}>
+        <Ionicons name={variantStyle.icon} size={20} color={variantStyle.iconColor} />
         <View style={styles.textBlock}>
-          <Text style={styles.title}>{title}</Text>
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+          <Text style={styles.title} numberOfLines={2}>
+            {title}
+          </Text>
+          {message ? (
+            <Text style={styles.message} numberOfLines={3}>
+              {message}
+            </Text>
+          ) : null}
         </View>
       </View>
     </Animated.View>
@@ -83,38 +111,35 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    zIndex: 100,
+    zIndex: 9999,
     elevation: 8,
   },
   card: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    alignItems: "flex-start",
+    gap: 10,
     borderRadius: 14,
     borderWidth: 1,
+    borderColor: ownerColors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     shadowColor: "#1A0F0A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  textBlock: { flex: 1 },
+  textBlock: { flex: 1, minWidth: 0, paddingTop: 1 },
   title: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: ownerColors.text,
+    fontFamily: ownerFonts.semiBold,
+    lineHeight: 20,
   },
   message: {
     fontSize: 13,
     color: ownerColors.textMuted,
+    fontFamily: ownerFonts.regular,
     marginTop: 2,
     lineHeight: 18,
   },

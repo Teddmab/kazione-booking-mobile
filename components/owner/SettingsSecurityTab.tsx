@@ -3,8 +3,10 @@ import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 import { ownerColors } from "@/constants/ownerTheme";
+import { useToast } from "@/contexts/ToastContext";
 
 export function SettingsSecurityTab() {
+  const toast = useToast();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [expanded, setExpanded] = useState<"2fa" | "sessions" | "api" | null>(null);
 
@@ -20,7 +22,7 @@ export function SettingsSecurityTab() {
           text: "Confirmer",
           onPress: () => {
             setTwoFactorEnabled(checked);
-            Alert.alert(
+            toast.success(
               checked ? "2FA activée" : "2FA désactivée",
               "Fonctionnalité en préparation — même comportement que le web.",
             );
@@ -83,7 +85,7 @@ export function SettingsSecurityTab() {
             <Pressable
               style={styles.outlineDanger}
               onPress={() =>
-                Alert.alert("Sessions révoquées", "Les autres sessions ont été déconnectées.")
+                toast.success("Sessions révoquées", "Les autres sessions ont été déconnectées.")
               }>
               <Text style={styles.outlineDangerText}>Révoquer les autres sessions</Text>
             </Pressable>
@@ -107,14 +109,16 @@ export function SettingsSecurityTab() {
             <View style={styles.apiKeyRow}>
               <Text style={styles.apiKeyValue}>kz_live_••••••••••••••••</Text>
               <Pressable
-                onPress={() => Alert.alert("Copié", "Clé exemple copiée (démo, comme sur le web).")}>
+                onPress={() =>
+                  toast.success("Copié", "Clé exemple copiée (démo, comme sur le web).")
+                }>
                 <Text style={styles.copyText}>Copier</Text>
               </Pressable>
             </View>
             <Pressable
               style={styles.outlineDanger}
               onPress={() =>
-                Alert.alert("Nouvelle clé", "Une nouvelle clé a été générée (démo, comme sur le web).")
+                toast.success("Nouvelle clé", "Une nouvelle clé a été générée (démo, comme sur le web).")
               }>
               <Text style={styles.outlineDangerText}>Régénérer la clé</Text>
             </Pressable>

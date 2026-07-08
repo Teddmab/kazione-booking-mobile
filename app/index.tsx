@@ -11,14 +11,7 @@ import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { tenantQueryKey, useTenantContext } from "@/contexts/TenantContext";
 import { ApiError } from "@/lib/api";
-
-function dashboardPathForTenant(
-  role: string,
-): "/(app)/owner/(tabs)" | "/(app)/staff/home" | "/(app)/receptionist/home" {
-  if (role === "owner" || role === "manager") return "/(app)/owner/(tabs)";
-  if (role === "receptionist") return "/(app)/receptionist/home";
-  return "/(app)/staff/home";
-}
+import { workspaceRouteForTenant } from "@/lib/workspaceRouting";
 
 function workspaceErrorHint(err: Error): string {
   if (err instanceof ApiError && err.code === "NETWORK_ERROR") {
@@ -42,7 +35,8 @@ export default function Index() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, loading: authLoading, role, signOut } = useAuthContext();
-  const { tenant, loading: tenantLoading, error: tenantError } = useTenantContext();
+  const { tenant, loading: tenantLoading, error: tenantError, needsRoleSelection } =
+    useTenantContext();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -86,6 +80,10 @@ export default function Index() {
     );
   }
 
+  if (needsRoleSelection) {
+    return <Redirect href={'/(auth)/role-select' as Href} />;
+  }
+
   if (!tenant) {
     if (role === "client" || role === null) {
       return (
@@ -113,7 +111,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={dashboardPathForTenant(tenant.role) as Href} />;
+  return <Redirect href={workspaceRouteForTenant(tenant) as Href} />;
 }
 
 const styles = StyleSheet.create({
