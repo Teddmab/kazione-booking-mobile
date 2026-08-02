@@ -17,6 +17,7 @@ export default function AppGroupLayout() {
   return (
     <Stack>
       <Stack.Screen name="owner" options={{ headerShown: false }} />
+      <Stack.Screen name="staff" options={{ headerShown: false }} />
       <Stack.Screen name="receptionist/home" options={{ title: "Reception" }} />
     </Stack>
   );

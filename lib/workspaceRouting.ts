@@ -2,7 +2,7 @@ import type { MemberRole, TenantContextValue } from "@/contexts/TenantContext";
 
 export type WorkspaceRoute =
   | "/(app)/owner/(tabs)"
-  | "/(staff)"
+  | "/(app)/staff/(tabs)/today"
   | "/(app)/receptionist/home";
 
 export function workspaceRouteForMembership(
@@ -10,7 +10,7 @@ export function workspaceRouteForMembership(
 ): WorkspaceRoute {
   if (role === "owner" || role === "manager") return "/(app)/owner/(tabs)";
   if (role === "receptionist") return "/(app)/receptionist/home";
-  return "/(staff)";
+  return "/(app)/staff/(tabs)/today";
 }
 
 export function workspaceRouteForTenant(
