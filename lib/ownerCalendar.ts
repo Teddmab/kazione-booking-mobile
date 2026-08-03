@@ -109,10 +109,12 @@ export function currentTimeLineTopPx(): number | null {
 }
 
 export const APPOINTMENT_BLOCK_COLORS: Record<string, { bg: string; border: string }> = {
+  offered: { bg: "#eef2ff", border: "#6366f1" },
   pending: { bg: "#fff8e1", border: "#f9a825" },
   pending_payment: { bg: "#fff3e0", border: "#fb8c00" },
   confirmed: { bg: "#e8f5e9", border: "#43a047" },
   in_progress: { bg: "#e3f2fd", border: "#1e88e5" },
+  pending_completion: { bg: "#fff7ed", border: "#d97706" },
   completed: { bg: "#f5f5f5", border: "#9e9e9e" },
   cancelled: { bg: "#ffebee", border: "#e53935" },
   no_show: { bg: "#fce4ec", border: "#ad1457" },

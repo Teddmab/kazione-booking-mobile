@@ -3,16 +3,17 @@ import { StyleSheet, Text, View } from "react-native";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
 import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
 
-export default function StaffHistoryScreen() {
+/** Placeholder — implémenté en MS4 */
+export default function StaffServicesScreen() {
   return (
     <View style={ownerStyles.screen}>
-      <StaffAppBar title="Historique" subtitle="Bientôt disponible" displayTitle />
+      <StaffAppBar title="Services" subtitle="Bientôt disponible" displayTitle />
       <View style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Historique client</Text>
+          <Text style={styles.title}>Mes services & offres</Text>
           <Text style={styles.sub}>
-            L'historique des rendez-vous passés et le détail client arriveront dans un
-            prochain sprint.
+            La liste de vos prestations, les offres du salon et le partage de lien
+            arriveront dans le sprint MS4.
           </Text>
         </View>
       </View>
@@ -21,11 +22,7 @@ export default function StaffHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 16,
-  },
+  container: { flex: 1, justifyContent: "center", padding: 16 },
   card: {
     ...ownerStyles.card,
     backgroundColor: ownerColors.primarySurface,

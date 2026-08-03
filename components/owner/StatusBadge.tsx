@@ -1,10 +1,12 @@
 import { Text, View, StyleSheet } from "react-native";
 
 const STATUS_FR: Record<string, string> = {
+  offered: "Offre",
   pending: "En attente",
   pending_payment: "Paiement",
   confirmed: "Confirmé",
   in_progress: "En cours",
+  pending_completion: "À valider",
   completed: "Terminé",
   cancelled: "Annulé",
   no_show: "Absent",
@@ -21,7 +23,10 @@ export function StatusBadge({ status }: Props) {
         ? "completed"
         : status === "cancelled" || status === "no_show"
           ? "cancelled"
-          : status === "pending" || status === "pending_payment"
+          : status === "pending" ||
+              status === "pending_payment" ||
+              status === "pending_completion" ||
+              status === "offered"
             ? "pending"
             : "neutral";
 

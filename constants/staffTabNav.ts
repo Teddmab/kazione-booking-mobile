@@ -24,10 +24,16 @@ export const STAFF_BOTTOM_TABS: StaffTabRoute[] = [
     iconFocused: "calendar",
   },
   {
-    name: "history",
-    title: "Historique",
-    icon: "time-outline",
-    iconFocused: "time",
+    name: "services",
+    title: "Services",
+    icon: "cut-outline",
+    iconFocused: "cut",
+  },
+  {
+    name: "performance",
+    title: "Perf.",
+    icon: "bar-chart-outline",
+    iconFocused: "bar-chart",
   },
   {
     name: "profile",

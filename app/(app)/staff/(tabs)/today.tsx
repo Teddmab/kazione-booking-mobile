@@ -48,15 +48,19 @@ export default function StaffTodayScreen() {
   const appointments = [...(data ?? [])].sort(
     (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
   );
+  const offered = appointments.filter((a) => a.status === "offered");
   const upcoming = appointments.filter((a) =>
     ["pending", "confirmed"].includes(a.status),
   );
   const active = appointments.filter((a) => a.status === "in_progress");
+  const awaitingOwner = appointments.filter(
+    (a) => a.status === "pending_completion",
+  );
   const done = appointments.filter((a) =>
     ["completed", "no_show", "cancelled"].includes(a.status),
   );
 
-  const remaining = upcoming.length + active.length;
+  const remaining = offered.length + upcoming.length + active.length;
 
   return (
     <View style={ownerStyles.screen}>
@@ -84,7 +88,9 @@ export default function StaffTodayScreen() {
             <Text style={styles.summaryLabel}>Restants</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{done.length}</Text>
+            <Text style={styles.summaryValue}>
+              {done.length + awaitingOwner.length}
+            </Text>
             <Text style={styles.summaryLabel}>Terminés</Text>
           </View>
         </View>
@@ -95,8 +101,14 @@ export default function StaffTodayScreen() {
           empty={!isLoading && appointments.length === 0}
           emptyMessage="Aucun rendez-vous prévu aujourd'hui"
           onRetry={() => void refetch()}>
+          <Section title="Offres" appointments={offered} onPress={setSelected} />
           <Section title="En cours" appointments={active} onPress={setSelected} />
           <Section title="À venir" appointments={upcoming} onPress={setSelected} />
+          <Section
+            title="En attente validation"
+            appointments={awaitingOwner}
+            onPress={setSelected}
+          />
           <Section title="Terminés" appointments={done} onPress={setSelected} />
         </QueryState>
       </ScrollView>
