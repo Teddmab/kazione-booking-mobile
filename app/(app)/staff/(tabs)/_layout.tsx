@@ -13,7 +13,8 @@ export default function StaffTabsLayout() {
       }}>
       <Tabs.Screen name="today" options={{ title: "Aujourd'hui" }} />
       <Tabs.Screen name="calendar" options={{ title: "Agenda" }} />
-      <Tabs.Screen name="history" options={{ title: "Historique" }} />
+      <Tabs.Screen name="services" options={{ title: "Services" }} />
+      <Tabs.Screen name="performance" options={{ title: "Performance" }} />
       <Tabs.Screen name="profile" options={{ title: "Profil" }} />
     </Tabs>
   );

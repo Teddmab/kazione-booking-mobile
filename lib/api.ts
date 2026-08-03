@@ -78,6 +78,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   const requestUrl = `${BASE_URL}${path}`;
+  if (__DEV__) {
+    console.log(`[api] → ${method} ${path}`, body !== undefined ? body : "");
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -93,6 +97,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     const timedOut =
       networkErr instanceof Error &&
       (networkErr.name === "AbortError" || networkErr.message.includes("aborted"));
+    if (__DEV__) {
+      console.warn(`[api] ✖ ${method} ${path} network`, networkErr);
+    }
     throw new ApiError(
       "NETWORK_ERROR",
       timedOut
@@ -106,10 +113,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   if (response.status === 401) {
+    if (__DEV__) console.warn(`[api] ← ${method} ${path} 401`);
     throw new ApiError("UNAUTHORIZED", "Unauthorized", 401);
   }
 
   if (response.status === 502 || response.status === 503) {
+    if (__DEV__) console.warn(`[api] ← ${method} ${path} ${response.status}`);
     throw new ApiError(
       "NETWORK_ERROR",
       "Edge Functions indisponibles. Lancez `npm run dev` dans kazione-booking-backend.",
@@ -121,6 +130,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   try {
     json = await response.json();
   } catch {
+    if (__DEV__) {
+      console.warn(`[api] ← ${method} ${path} non-JSON ${response.status}`);
+    }
     throw new ApiError(
       "INVALID_RESPONSE",
       `Server returned a non-JSON response (${response.status})`,
@@ -132,11 +144,18 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     const err = (json as { error?: { code?: string; message?: string; details?: unknown } })?.error;
     const code = err?.code ?? "UNKNOWN_ERROR";
     const message = err?.message ?? "An unexpected error occurred";
+    if (__DEV__) {
+      console.warn(`[api] ← ${method} ${path} ${response.status}`, err ?? json);
+    }
     const apiError = new ApiError(code, message, response.status, err?.details);
     if (response.status >= 500) {
       Sentry.captureException(apiError);
     }
     throw apiError;
+  }
+
+  if (__DEV__) {
+    console.log(`[api] ← ${method} ${path} ${response.status}`, json);
   }
 
   const payload = json as Record<string, unknown>;

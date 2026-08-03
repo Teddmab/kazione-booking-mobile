@@ -13,33 +13,47 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useToast } from "@/contexts/ToastContext";
 import { clientDisplayName, formatTime } from "@/lib/format";
 import {
+  respondToAppointmentOffer,
   updateAppointmentStatus,
   type AppointmentStatus,
+  type PaymentMethod,
   type StaffAppointment,
 } from "@/services/staff/appointments";
 
-const TRANSITIONS: Record<
-  AppointmentStatus,
-  { label: string; status: AppointmentStatus }[]
-> = {
-  pending: [
-    { label: "Confirmer", status: "confirmed" },
-    { label: "Annuler", status: "cancelled" },
-  ],
-  confirmed: [
-    { label: "Démarrer", status: "in_progress" },
-    { label: "Annuler", status: "cancelled" },
-  ],
-  in_progress: [
-    { label: "Terminer", status: "completed" },
-    { label: "Absent", status: "no_show" },
-  ],
-  completed: [],
-  no_show: [],
-  cancelled: [],
-};
+const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+  { value: "cash", label: "Espèces" },
+  { value: "card", label: "Carte" },
+  { value: "bank_transfer", label: "Virement" },
+  { value: "voucher", label: "Bon / voucher" },
+  { value: "online", label: "En ligne" },
+];
+
+type SheetAction =
+  | { kind: "status"; label: string; status: AppointmentStatus; destructive?: boolean }
+  | { kind: "offer"; label: string; response: "accept" | "decline"; destructive?: boolean }
+  | { kind: "complete"; label: string; destructive?: boolean };
+
+function actionsFor(status: AppointmentStatus): SheetAction[] {
+  switch (status) {
+    case "offered":
+      return [
+        { kind: "offer", label: "Accepter", response: "accept" },
+        { kind: "offer", label: "Refuser", response: "decline", destructive: true },
+      ];
+    case "confirmed":
+      return [
+        { kind: "status", label: "Démarrer", status: "in_progress" },
+        { kind: "status", label: "Absent", status: "no_show", destructive: true },
+      ];
+    case "in_progress":
+      return [{ kind: "complete", label: "Terminer" }];
+    default:
+      return [];
+  }
+}
 
 interface Props {
   appointment: StaffAppointment | null;
@@ -52,25 +66,84 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [error, setError] = useState<string | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
 
   useEffect(() => {
-    if (!visible) setError(null);
+    if (!visible) {
+      setError(null);
+      setShowPayment(false);
+      setPaymentMethod("cash");
+    }
   }, [visible, appointment?.id]);
 
-  const mutation = useMutation({
-    mutationFn: (status: AppointmentStatus) => {
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["staff-appointments", businessId],
+    });
+  };
+
+  const statusMutation = useMutation({
+    mutationFn: async (status: AppointmentStatus) => {
       if (!appointment) throw new Error("No appointment selected");
-      return updateAppointmentStatus(appointment.id, status);
+      return updateAppointmentStatus(businessId, appointment.id, status);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["staff-appointments", businessId],
-      });
+      await invalidate();
+      toast.success("Rendez-vous", "Statut mis à jour.");
       onClose();
     },
     onError: (err: Error) => {
-      setError(err.message || "Échec de la mise à jour");
+      const msg = err.message || "Échec de la mise à jour";
+      setError(msg);
+      toast.error("Erreur", msg);
+    },
+  });
+
+  const offerMutation = useMutation({
+    mutationFn: async (response: "accept" | "decline") => {
+      if (!appointment) throw new Error("No appointment selected");
+      return respondToAppointmentOffer(businessId, appointment.id, response);
+    },
+    onSuccess: async (_data, response) => {
+      await invalidate();
+      toast.success(
+        "Offre",
+        response === "accept" ? "Offre acceptée." : "Offre refusée.",
+      );
+      onClose();
+    },
+    onError: (err: Error) => {
+      const msg = err.message || "Échec de la réponse à l'offre";
+      setError(msg);
+      toast.error("Erreur", msg);
+    },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: async (method: PaymentMethod) => {
+      if (!appointment) throw new Error("No appointment selected");
+      return updateAppointmentStatus(
+        businessId,
+        appointment.id,
+        "pending_completion",
+        method,
+      );
+    },
+    onSuccess: async () => {
+      await invalidate();
+      toast.success(
+        "Rendez-vous",
+        "Terminé — en attente de validation du salon.",
+      );
+      onClose();
+    },
+    onError: (err: Error) => {
+      const msg = err.message || "Échec de la finalisation";
+      setError(msg);
+      toast.error("Erreur", msg);
     },
   });
 
@@ -80,7 +153,15 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
     appointment.client.first_name,
     appointment.client.last_name,
   );
-  const actions = TRANSITIONS[appointment.status] ?? [];
+  const actions = actionsFor(appointment.status);
+  const busy =
+    statusMutation.isPending || offerMutation.isPending || completeMutation.isPending;
+  const readonlyHint =
+    appointment.status === "pending"
+      ? "En attente de confirmation par le salon."
+      : appointment.status === "pending_completion"
+        ? "En attente de validation du propriétaire."
+        : "Aucune action disponible pour ce statut.";
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -94,29 +175,92 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
         </Text>
         <View style={styles.badgeRow}>
           <StatusBadge status={appointment.status} />
+          {appointment.referral_staff_id ? (
+            <View style={styles.referralBadge}>
+              <Text style={styles.referralText}>Via parrainage</Text>
+            </View>
+          ) : null}
         </View>
 
-        {actions.length === 0 ? (
-          <Text style={styles.readonly}>Aucune action disponible pour ce statut.</Text>
+        {showPayment ? (
+          <View style={styles.paymentBlock}>
+            <Text style={styles.paymentTitle}>Moyen de paiement</Text>
+            <View style={styles.paymentGrid}>
+              {PAYMENT_METHODS.map((method) => {
+                const active = paymentMethod === method.value;
+                return (
+                  <Pressable
+                    key={method.value}
+                    style={[styles.paymentChip, active && styles.paymentChipActive]}
+                    onPress={() => setPaymentMethod(method.value)}
+                    disabled={busy}>
+                    <Text
+                      style={[
+                        styles.paymentChipText,
+                        active && styles.paymentChipTextActive,
+                      ]}>
+                      {method.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
+              disabled={busy}
+              onPress={() => {
+                setError(null);
+                completeMutation.mutate(paymentMethod);
+              }}>
+              {completeMutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.actionText}>Confirmer la fin</Text>
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.closeBtn}
+              onPress={() => setShowPayment(false)}
+              disabled={busy}>
+              <Text style={styles.closeText}>Retour</Text>
+            </Pressable>
+          </View>
+        ) : actions.length === 0 ? (
+          <Text style={styles.readonly}>{readonlyHint}</Text>
         ) : (
           <View style={styles.actions}>
             {actions.map((action) => {
-              const destructive =
-                action.status === "cancelled" || action.status === "no_show";
+              const key =
+                action.kind === "offer"
+                  ? `offer-${action.response}`
+                  : action.kind === "complete"
+                    ? "complete"
+                    : action.status;
+              const destructive = !!action.destructive;
               return (
                 <Pressable
-                  key={action.status}
+                  key={key}
                   style={[
                     styles.actionBtn,
                     destructive ? styles.actionDanger : styles.actionPrimary,
-                    mutation.isPending && styles.actionDisabled,
+                    busy && styles.actionDisabled,
                   ]}
-                  disabled={mutation.isPending}
+                  disabled={busy}
                   onPress={() => {
                     setError(null);
-                    mutation.mutate(action.status);
+                    if (action.kind === "offer") {
+                      offerMutation.mutate(action.response);
+                    } else if (action.kind === "complete") {
+                      setShowPayment(true);
+                    } else {
+                      statusMutation.mutate(action.status);
+                    }
                   }}>
-                  {mutation.isPending && mutation.variables === action.status ? (
+                  {busy &&
+                  ((action.kind === "offer" &&
+                    offerMutation.variables === action.response) ||
+                    (action.kind === "status" &&
+                      statusMutation.variables === action.status)) ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={styles.actionText}>{action.label}</Text>
@@ -129,9 +273,11 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable style={styles.closeBtn} onPress={onClose} disabled={mutation.isPending}>
-          <Text style={styles.closeText}>Fermer</Text>
-        </Pressable>
+        {!showPayment ? (
+          <Pressable style={styles.closeBtn} onPress={onClose} disabled={busy}>
+            <Text style={styles.closeText}>Fermer</Text>
+          </Pressable>
+        ) : null}
       </View>
     </Modal>
   );
@@ -181,7 +327,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: ownerFonts.medium,
   },
-  badgeRow: { marginTop: 12, marginBottom: 8 },
+  badgeRow: {
+    marginTop: 12,
+    marginBottom: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
+  referralBadge: {
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  referralText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#4338CA",
+    fontFamily: ownerFonts.semiBold,
+  },
   readonly: {
     fontSize: 14,
     color: ownerColors.textDim,
@@ -203,6 +368,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontFamily: ownerFonts.semiBold,
+  },
+  paymentBlock: { marginTop: 8, gap: 12 },
+  paymentTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: ownerColors.text,
+    fontFamily: ownerFonts.semiBold,
+  },
+  paymentGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  paymentChip: {
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: ownerColors.bg,
+  },
+  paymentChipActive: {
+    borderColor: ownerColors.primary,
+    backgroundColor: ownerColors.primarySurface,
+  },
+  paymentChipText: {
+    fontSize: 13,
+    color: ownerColors.textMuted,
+    fontFamily: ownerFonts.medium,
+  },
+  paymentChipTextActive: {
+    color: ownerColors.primary,
+    fontWeight: "600",
   },
   error: {
     color: ownerColors.danger,

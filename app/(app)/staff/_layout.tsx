@@ -9,8 +9,8 @@ export default function StaffLayout() {
   if (loading) return <LoadingScreen />;
   if (!tenant) return <Redirect href={"/" as Href} />;
 
-  const role = tenant.role;
-  if (role !== "staff" && role !== "receptionist") {
+  // Receptionist has its own portal — keep staff routes staff-only
+  if (tenant.role !== "staff") {
     return <Redirect href={"/" as Href} />;
   }
 

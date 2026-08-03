@@ -6,9 +6,11 @@ import { clientDisplayName, formatCurrency, formatTime } from "@/lib/format";
 import type { StaffAppointment } from "@/services/staff/appointments";
 
 const STRIP: Record<string, string> = {
+  offered: "#6366F1",
   pending: ownerColors.warning,
   confirmed: ownerColors.primary,
   in_progress: ownerColors.primaryLight,
+  pending_completion: "#D97706",
   completed: ownerColors.success,
   no_show: ownerColors.danger,
   cancelled: ownerColors.textDim,
@@ -40,9 +42,14 @@ export function TodayAppointmentCard({ appointment, onPress }: Props) {
         </View>
         <Text style={styles.client}>{name}</Text>
         <Text style={styles.service}>{appointment.service.name}</Text>
-        <Text style={styles.meta}>
-          {duration} min · {formatCurrency(price)}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={styles.meta}>
+            {duration} min · {formatCurrency(price)}
+          </Text>
+          {appointment.referral_staff_id ? (
+            <Text style={styles.referral}>Via parrainage</Text>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -82,10 +89,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ownerFonts.regular,
   },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 8,
+  },
   meta: {
     fontSize: 12,
     color: ownerColors.textDim,
-    marginTop: 4,
     fontFamily: ownerFonts.regular,
+  },
+  referral: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#4338CA",
+    fontFamily: ownerFonts.semiBold,
   },
 });
