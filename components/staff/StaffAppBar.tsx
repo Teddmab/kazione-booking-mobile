@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useStaffShell } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
 import { roleLabel } from "@/lib/workspaceRouting";
@@ -15,18 +16,27 @@ interface Props {
   subtitle?: string;
   displayTitle?: boolean;
   bottomSlot?: React.ReactNode;
+  rightSlot?: React.ReactNode;
 }
 
-export function StaffAppBar({ title, subtitle, displayTitle, bottomSlot }: Props) {
+export function StaffAppBar({
+  title,
+  subtitle,
+  displayTitle,
+  bottomSlot,
+  rightSlot,
+}: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { toggleDrawer } = useStaffShell();
   const { signOut, user } = useAuthContext();
   const { tenant, clearActiveBusiness } = useTenantContext();
   const { data: staff } = useStaffSelf();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const staffName = staff
-    ? `${staff.first_name} ${staff.last_name}`.trim()
+    ? (staff.display_name?.trim() ||
+        `${staff.first_name} ${staff.last_name}`.trim())
     : null;
 
   const resolvedTitle = title ?? tenant?.businessName ?? "KaziOne";
@@ -73,9 +83,13 @@ export function StaffAppBar({ title, subtitle, displayTitle, bottomSlot }: Props
   return (
     <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
       <View style={styles.row}>
-        <View style={styles.logoMark}>
-          <Ionicons name="cut-outline" size={20} color={ownerColors.primary} />
-        </View>
+        <Pressable
+          style={styles.menuBtn}
+          onPress={toggleDrawer}
+          accessibilityLabel="Ouvrir le menu"
+          accessibilityRole="button">
+          <Ionicons name="menu" size={22} color={ownerColors.primary} />
+        </Pressable>
 
         <View style={styles.titleBlock}>
           <Text
@@ -90,13 +104,16 @@ export function StaffAppBar({ title, subtitle, displayTitle, bottomSlot }: Props
           ) : null}
         </View>
 
-        <Pressable
-          style={styles.avatar}
-          onPress={() => setMenuOpen(true)}
-          accessibilityLabel="Menu profil"
-          accessibilityRole="button">
-          <Text style={styles.avatarText}>{initials}</Text>
-        </Pressable>
+        <View style={styles.actions}>
+          {rightSlot}
+          <Pressable
+            style={styles.avatar}
+            onPress={() => setMenuOpen(true)}
+            accessibilityLabel="Menu profil"
+            accessibilityRole="button">
+            <Text style={styles.avatarText}>{initials}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {bottomSlot ? <View style={styles.bottomSlot}>{bottomSlot}</View> : null}
@@ -111,9 +128,18 @@ export function StaffAppBar({ title, subtitle, displayTitle, bottomSlot }: Props
             <Text style={styles.menuName}>{staffName || "Staff"}</Text>
             <Text style={styles.menuEmail}>{staff?.email ?? user?.email ?? ""}</Text>
 
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("/(app)/staff/profile" as Href);
+              }}>
+              <Ionicons name="person-outline" size={18} color={ownerColors.text} />
+              <Text style={styles.menuItemText}>Mon compte</Text>
+            </Pressable>
             <Pressable style={styles.menuItem} onPress={switchWorkspace}>
               <Ionicons name="swap-horizontal-outline" size={18} color={ownerColors.text} />
-            <Text style={styles.menuItemText}>{"Changer d'espace"}</Text>
+              <Text style={styles.menuItemText}>{"Changer d'espace"}</Text>
             </Pressable>
             <Pressable style={styles.menuItem} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={18} color={ownerColors.danger} />
@@ -135,7 +161,7 @@ const styles = StyleSheet.create({
     borderBottomColor: ownerColors.border,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  logoMark: {
+  menuBtn: {
     width: 40,
     height: 40,
     borderRadius: 10,
@@ -153,7 +179,7 @@ const styles = StyleSheet.create({
     fontFamily: ownerFonts.bold,
   },
   titleDisplay: {
-    fontSize: 26,
+    fontSize: 22,
     fontFamily: ownerFonts.bold,
   },
   subtitle: {
@@ -162,6 +188,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ownerFonts.regular,
   },
+  actions: { flexDirection: "row", alignItems: "center", gap: 8 },
   avatar: {
     width: 40,
     height: 40,

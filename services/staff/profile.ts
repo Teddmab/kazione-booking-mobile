@@ -78,3 +78,29 @@ export async function deleteSelfOverride(date: string): Promise<void> {
     `/staff?action=self-override&date=${encodeURIComponent(date)}`,
   );
 }
+
+export interface StaffPerformance {
+  staff_profile_id: string;
+  display_name: string;
+  bookings: number;
+  revenue: number;
+  commission_amount: number;
+  unique_clients: number;
+  /** Fraction 0–1 from the API */
+  completion_rate: number;
+  avg_rating: number;
+  referrals_initiated: number;
+  referral_conversions: number;
+  referral_revenue: number;
+}
+
+export async function fetchMyPerformance(
+  businessId: string,
+  from: string,
+  to: string,
+): Promise<StaffPerformance | null> {
+  const data = await api.get<{ performance: StaffPerformance | null }>(
+    `/staff?action=my-performance&business_id=${encodeURIComponent(businessId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  );
+  return data.performance;
+}

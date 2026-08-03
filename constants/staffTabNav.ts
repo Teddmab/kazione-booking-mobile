@@ -10,12 +10,13 @@ export type StaffTabRoute = {
   iconFocused: StaffTabIcon;
 };
 
+/** Bottom tabs — profile lives in the sidebar */
 export const STAFF_BOTTOM_TABS: StaffTabRoute[] = [
   {
     name: "today",
     title: "Aujourd'hui",
-    icon: "today-outline",
-    iconFocused: "today",
+    icon: "grid-outline",
+    iconFocused: "grid",
   },
   {
     name: "calendar",
@@ -34,11 +35,5 @@ export const STAFF_BOTTOM_TABS: StaffTabRoute[] = [
     title: "Perf.",
     icon: "bar-chart-outline",
     iconFocused: "bar-chart",
-  },
-  {
-    name: "profile",
-    title: "Profil",
-    icon: "person-outline",
-    iconFocused: "person",
   },
 ];
