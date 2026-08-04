@@ -1,6 +1,9 @@
 import { Redirect, Stack, type Href } from "expo-router";
+import { StyleSheet, View } from "react-native";
 
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { StaffDrawer } from "@/components/staff/StaffDrawer";
+import { StaffShellProvider } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 
 export default function StaffLayout() {
@@ -15,8 +18,20 @@ export default function StaffLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <StaffShellProvider>
+      <View style={styles.flex}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="profile" />
+          <Stack.Screen name="clients" />
+          <Stack.Screen name="reviews" />
+        </Stack>
+        <StaffDrawer />
+      </View>
+    </StaffShellProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+});
