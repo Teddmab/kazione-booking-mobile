@@ -58,6 +58,12 @@ export const STAFF_DRAWER_SECTIONS: StaffDrawerSection[] = [
         icon: "star-outline",
       },
       {
+        key: "notifications",
+        label: "Notifications",
+        href: "/(app)/staff/notifications" as Href,
+        icon: "notifications-outline",
+      },
+      {
         key: "account",
         label: "Mon compte",
         href: "/(app)/staff/profile" as Href,

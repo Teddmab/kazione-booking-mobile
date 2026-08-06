@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { StaffNotificationBell } from "@/components/staff/StaffNotificationBell";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useStaffShell } from "@/contexts/StaffShellContext";
@@ -106,6 +107,7 @@ export function StaffAppBar({
 
         <View style={styles.actions}>
           {rightSlot}
+          <StaffNotificationBell />
           <Pressable
             style={styles.avatar}
             onPress={() => setMenuOpen(true)}
