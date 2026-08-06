@@ -3,6 +3,7 @@ import type { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'KaziOne Booking',
   slug: 'kazione-booking-mobile',
+  owner: 'afrotouch-ou',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/logos/logo-square-orange.png',

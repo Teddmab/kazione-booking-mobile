@@ -32,6 +32,7 @@ function isDrawerItemActive(key: string, pathname: string): boolean {
   if (key === "services") return pathname.includes("/services");
   if (key === "reports") return pathname.includes("/performance");
   if (key === "reviews") return pathname.includes("/reviews");
+  if (key === "notifications") return pathname.includes("/notifications");
   if (key === "account") return pathname.includes("/profile");
   return false;
 }

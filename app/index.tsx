@@ -1,12 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
-import { Redirect, useRouter, type Href } from 'expo-router';
+import { Redirect, useRouter, type Href } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 
 import { ClientNotAllowed } from "@/components/ClientNotAllowed";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { ONBOARDING_STORAGE_KEY } from "@/constants/onboarding";
+import { staffWelcomeStorageKey } from "@/constants/staffWelcome";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { tenantQueryKey, useTenantContext } from "@/contexts/TenantContext";
@@ -37,24 +37,25 @@ export default function Index() {
   const { user, loading: authLoading, role, signOut } = useAuthContext();
   const { tenant, loading: tenantLoading, error: tenantError, needsRoleSelection } =
     useTenantContext();
-  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+  const [staffWelcomeDone, setStaffWelcomeDone] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_STORAGE_KEY).then((v) => {
-      setOnboardingDone(v === "1");
+    if (!user?.id || tenant?.role !== "staff") {
+      setStaffWelcomeDone(true);
+      return;
+    }
+    setStaffWelcomeDone(null);
+    AsyncStorage.getItem(staffWelcomeStorageKey(user.id)).then((v) => {
+      setStaffWelcomeDone(v === "1");
     });
-  }, []);
+  }, [user?.id, tenant?.role]);
 
-  if (authLoading || onboardingDone === null) {
+  if (authLoading) {
     return <LoadingScreen message="Chargement…" />;
   }
 
-  if (!onboardingDone) {
-    return <Redirect href="/onboarding" />;
-  }
-
   if (!user) {
-    return <Redirect href={'/(auth)/login' as Href} />;
+    return <Redirect href={"/(auth)/login" as Href} />;
   }
 
   if (tenantLoading) {
@@ -81,7 +82,7 @@ export default function Index() {
   }
 
   if (needsRoleSelection) {
-    return <Redirect href={'/(auth)/role-select' as Href} />;
+    return <Redirect href={"/(auth)/role-select" as Href} />;
   }
 
   if (!tenant) {
@@ -111,6 +112,15 @@ export default function Index() {
     );
   }
 
+  if (tenant.role === "staff") {
+    if (staffWelcomeDone === null) {
+      return <LoadingScreen message="Chargement…" />;
+    }
+    if (!staffWelcomeDone) {
+      return <Redirect href={"/(app)/staff/welcome" as Href} />;
+    }
+  }
+
   return <Redirect href={workspaceRouteForTenant(tenant) as Href} />;
 }
 
@@ -121,8 +131,18 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: ownerColors.bg,
   },
-  errorTitle: { fontSize: 20, fontWeight: "700", color: ownerColors.text, marginBottom: 8 },
-  errorMsg: { fontSize: 15, lineHeight: 22, color: ownerColors.textMuted, marginBottom: 16 },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: ownerColors.text,
+    marginBottom: 8,
+  },
+  errorMsg: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: ownerColors.textMuted,
+    marginBottom: 16,
+  },
   retryBtn: {
     backgroundColor: ownerColors.primary,
     paddingVertical: 12,
