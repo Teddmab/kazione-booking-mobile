@@ -1,5 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AuthBrandMark } from '@/components/auth/AuthBrandMark';
@@ -9,10 +9,10 @@ import { AUTH_THEME } from '@/constants/authTheme';
 import { TYPOGRAPHY } from '@/constants/tokens';
 
 const FEATURE_KEYS = [
-  'auth.featureBooking',
-  'auth.featureStaff',
-  'auth.featurePayments',
-  'auth.featureReports',
+  'auth.featureStaffToday',
+  'auth.featureStaffSchedule',
+  'auth.featureStaffServices',
+  'auth.featureStaffPerf',
 ] as const;
 
 export default function WelcomeScreen() {
@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
     >
       <AuthBrandMark />
 
-      <Text style={styles.tagline}>{t('auth.welcomeOwnerTagline')}</Text>
+      <Text style={styles.tagline}>{t('auth.welcomeStaffTagline')}</Text>
 
       <View style={styles.features}>
         {FEATURE_KEYS.map((key) => (
@@ -41,10 +41,6 @@ export default function WelcomeScreen() {
         label={t('auth.signIn')}
         onPress={() => router.push('/(auth)/login' as Href)}
       />
-
-      <Pressable onPress={() => router.push('/(auth)/signup')}>
-        <Text style={styles.signupLink}>{t('auth.createBusinessAccount')}</Text>
-      </Pressable>
     </AuthScreenLayout>
   );
 }
@@ -75,13 +71,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AUTH_THEME.textSecondary,
     flex: 1,
-  },
-  signupLink: {
-    ...TYPOGRAPHY.body,
-    fontSize: 15,
-    color: AUTH_THEME.primary,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 8,
   },
 });

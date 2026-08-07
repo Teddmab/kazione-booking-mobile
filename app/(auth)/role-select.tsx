@@ -1,24 +1,53 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
+import { useEffect, useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ClientNotAllowed } from "@/components/ClientNotAllowed";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useTenantContext, type TenantContextValue } from "@/contexts/TenantContext";
-import { roleLabel, workspaceRouteForMembership } from "@/lib/workspaceRouting";
+import {
+  isStaffMembership,
+  roleLabel,
+  workspaceRouteForMembership,
+} from "@/lib/workspaceRouting";
 
 export default function RoleSelectScreen() {
   const router = useRouter();
   const { signOut } = useAuthContext();
-  const { businesses, selectMembership, loading, needsRoleSelection } = useTenantContext();
+  const { businesses, selectMembership, loading } = useTenantContext();
+
+  const staffMemberships = useMemo(
+    () => businesses.filter((b) => isStaffMembership(b.role)),
+    [businesses],
+  );
+
+  useEffect(() => {
+    if (loading || staffMemberships.length !== 1) return;
+    const only = staffMemberships[0];
+    void selectMembership(only).then(() => {
+      router.replace(workspaceRouteForMembership(only.role) as Href);
+    });
+  }, [loading, staffMemberships, selectMembership, router]);
 
   if (loading) {
     return <LoadingScreen message="Loading workspaces…" />;
   }
 
-  if (!needsRoleSelection && businesses.length <= 1) {
+  if (staffMemberships.length === 0) {
+    return (
+      <ClientNotAllowed
+        onSignOut={() => {
+          void signOut().then(() => router.replace("/(auth)/login" as Href));
+        }}
+      />
+    );
+  }
+
+  if (staffMemberships.length === 1) {
     return <LoadingScreen message="Redirecting…" />;
   }
 
@@ -31,11 +60,11 @@ export default function RoleSelectScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Select your workspace</Text>
-        <Text style={styles.subtitle}>Choose where you want to work today.</Text>
+        <Text style={styles.subtitle}>Choose the salon you work at today.</Text>
       </View>
 
       <FlatList
-        data={businesses}
+        data={staffMemberships}
         keyExtractor={(item) => item.businessId}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (

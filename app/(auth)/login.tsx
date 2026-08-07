@@ -25,60 +25,60 @@ export default function LoginScreen() {
     >
       <View style={styles.formBody}>
         <View style={styles.badge}>
-        <Text style={styles.badgeText}>{t('auth.businessPortal')}</Text>
-      </View>
-
-      <View style={styles.heading}>
-        <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
-        <Text style={styles.subtitle}>{t('auth.signInOwnerSubtitle')}</Text>
-      </View>
-
-      <Text style={styles.hint}>{t('auth.tabHintBusiness')}</Text>
-
-      {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.badgeText}>{t('auth.staffPortal')}</Text>
         </View>
-      ) : null}
 
-      <AuthTextField
-        label={t('auth.email')}
-        placeholder="owner@salon.com"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoComplete="email"
-      />
+        <View style={styles.heading}>
+          <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+          <Text style={styles.subtitle}>{t('auth.signInStaffSubtitle')}</Text>
+        </View>
 
-      <AuthTextField
-        label={t('auth.password')}
-        placeholder="••••••••"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={!showPassword}
-        autoComplete="password"
-        labelRight={
-          <Link href={'/(auth)/forgot-password' as Href} asChild>
-            <Pressable hitSlop={8}>
-              <Text style={styles.forgotLink}>{t('auth.forgotPassword')}</Text>
+        <Text style={styles.hint}>{t('auth.tabHintStaff')}</Text>
+
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        <AuthTextField
+          label={t('auth.email')}
+          placeholder="staff@salon.com"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoComplete="email"
+        />
+
+        <AuthTextField
+          label={t('auth.password')}
+          placeholder="••••••••"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoComplete="password"
+          labelRight={
+            <Link href={'/(auth)/forgot-password' as Href} asChild>
+              <Pressable hitSlop={8}>
+                <Text style={styles.forgotLink}>{t('auth.forgotPassword')}</Text>
+              </Pressable>
+            </Link>
+          }
+          rightAccessory={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={AUTH_THEME.textMuted}
+              />
             </Pressable>
-          </Link>
-        }
-        rightAccessory={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-            onPress={() => setShowPassword((v) => !v)}
-            hitSlop={8}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={20}
-              color={AUTH_THEME.textMuted}
-            />
-          </Pressable>
-        }
-      />
+          }
+        />
       </View>
 
       <View style={styles.ctaBlock}>
@@ -87,15 +87,6 @@ export default function LoginScreen() {
           onPress={() => void submit(email, password)}
           loading={loading}
         />
-
-        <Text style={styles.signupFooter}>
-          {t('auth.newToKazione')}{' '}
-          <Link href={'/(auth)/signup' as Href} asChild>
-            <Pressable hitSlop={8}>
-              <Text style={styles.signupLink}>{t('auth.createBusinessAccount')}</Text>
-            </Pressable>
-          </Link>
-        </Text>
       </View>
     </AuthScreenLayout>
   );
@@ -164,17 +155,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 16,
     maxWidth: 400,
-  },
-  signupFooter: {
-    ...TYPOGRAPHY.body,
-    fontSize: 14,
-    color: AUTH_THEME.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  signupLink: {
-    color: AUTH_THEME.primary,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
   },
 });

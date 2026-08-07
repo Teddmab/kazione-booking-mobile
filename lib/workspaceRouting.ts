@@ -1,22 +1,22 @@
 import type { MemberRole, TenantContextValue } from "@/contexts/TenantContext";
 
-export type WorkspaceRoute =
-  | "/(app)/owner/(tabs)"
-  | "/(app)/staff/(tabs)/today"
-  | "/(app)/receptionist/home";
+export type WorkspaceRoute = "/(app)/staff/(tabs)/today";
+
+/** Mobile app is staff-only — owner / manager / receptionist use the web app. */
+export function isStaffMembership(role: MemberRole): boolean {
+  return role === "staff";
+}
 
 export function workspaceRouteForMembership(
-  role: MemberRole,
+  _role: MemberRole,
 ): WorkspaceRoute {
-  if (role === "owner" || role === "manager") return "/(app)/owner/(tabs)";
-  if (role === "receptionist") return "/(app)/receptionist/home";
   return "/(app)/staff/(tabs)/today";
 }
 
 export function workspaceRouteForTenant(
-  tenant: TenantContextValue,
+  _tenant: TenantContextValue,
 ): WorkspaceRoute {
-  return workspaceRouteForMembership(tenant.role);
+  return "/(app)/staff/(tabs)/today";
 }
 
 export function roleLabel(role: MemberRole, position?: string | null): string {

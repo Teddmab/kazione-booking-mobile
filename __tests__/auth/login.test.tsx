@@ -14,12 +14,12 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) =>
       ({
-        'auth.heroTitle': 'Your salon, elevated.',
-        'auth.heroSubtitle': 'Built for beauty businesses.',
-        'auth.businessPortal': 'Business portal',
+        'auth.heroTitle': 'Your day, on the floor.',
+        'auth.heroSubtitle': 'Built for salon staff.',
+        'auth.staffPortal': 'Staff portal',
         'auth.welcomeBack': 'Welcome back',
-        'auth.signInOwnerSubtitle': 'Sign in to your salon dashboard',
-        'auth.tabHintBusiness': 'For owners, managers, staff',
+        'auth.signInStaffSubtitle': 'Sign in with your staff account',
+        'auth.tabHintStaff': 'For salon staff only',
         'auth.email': 'Email',
         'auth.password': 'Password',
         'auth.forgotPassword': 'Forgot password?',
@@ -27,8 +27,6 @@ jest.mock('react-i18next', () => ({
         'auth.hidePassword': 'Hide',
         'auth.signIn': 'Sign in',
         'auth.signingIn': 'Signing in…',
-        'auth.newToKazione': 'New to KaziOne?',
-        'auth.createBusinessAccount': 'Create a business account',
       })[key] ?? key,
   }),
 }));
@@ -47,21 +45,21 @@ describe('LoginScreen', () => {
     mockSubmit.mockReset();
   });
 
-  it('renders owner login form', () => {
+  it('renders staff login form', () => {
     const { getByText, getByPlaceholderText } = render(<LoginScreen />);
-    expect(getByPlaceholderText('owner@salon.com')).toBeTruthy();
+    expect(getByPlaceholderText('staff@salon.com')).toBeTruthy();
     expect(getByPlaceholderText('••••••••')).toBeTruthy();
     expect(getByText('Sign in')).toBeTruthy();
-    expect(getByText('Business portal')).toBeTruthy();
+    expect(getByText('Staff portal')).toBeTruthy();
   });
 
   it('calls submit on sign in', async () => {
     const { getByText, getByPlaceholderText } = render(<LoginScreen />);
-    fireEvent.changeText(getByPlaceholderText('owner@salon.com'), 'owner@afrotouch.ee');
+    fireEvent.changeText(getByPlaceholderText('staff@salon.com'), 'staff@afrotouch.ee');
     fireEvent.changeText(getByPlaceholderText('••••••••'), 'Test1234!');
     fireEvent.press(getByText('Sign in'));
     await waitFor(() => {
-      expect(mockSubmit).toHaveBeenCalledWith('owner@afrotouch.ee', 'Test1234!');
+      expect(mockSubmit).toHaveBeenCalledWith('staff@afrotouch.ee', 'Test1234!');
     });
   });
 });

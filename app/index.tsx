@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import { Redirect, useRouter, type Href } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, View, Text, StyleSheet } from "react-native";
 
 import { ClientNotAllowed } from "@/components/ClientNotAllowed";
@@ -11,7 +11,10 @@ import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { tenantQueryKey, useTenantContext } from "@/contexts/TenantContext";
 import { ApiError } from "@/lib/api";
-import { workspaceRouteForTenant } from "@/lib/workspaceRouting";
+import {
+  isStaffMembership,
+  workspaceRouteForTenant,
+} from "@/lib/workspaceRouting";
 
 function workspaceErrorHint(err: Error): string {
   if (err instanceof ApiError && err.code === "NETWORK_ERROR") {
@@ -34,10 +37,23 @@ function workspaceErrorHint(err: Error): string {
 export default function Index() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, loading: authLoading, role, signOut } = useAuthContext();
-  const { tenant, loading: tenantLoading, error: tenantError, needsRoleSelection } =
-    useTenantContext();
+  const { user, loading: authLoading, signOut } = useAuthContext();
+  const {
+    tenant,
+    businesses,
+    loading: tenantLoading,
+    error: tenantError,
+  } = useTenantContext();
   const [staffWelcomeDone, setStaffWelcomeDone] = useState<boolean | null>(null);
+
+  const staffMemberships = useMemo(
+    () => businesses.filter((b) => isStaffMembership(b.role)),
+    [businesses],
+  );
+
+  const goLogin = () => {
+    void signOut().then(() => router.replace("/(auth)/login" as Href));
+  };
 
   useEffect(() => {
     if (!user?.id || tenant?.role !== "staff") {
@@ -64,7 +80,7 @@ export default function Index() {
 
   if (tenantError) {
     if (tenantError instanceof ApiError && tenantError.code === "UNAUTHORIZED") {
-      return <Redirect href="/(auth)/welcome" />;
+      return <Redirect href={"/(auth)/login" as Href} />;
     }
     return (
       <View style={styles.errorBox}>
@@ -81,44 +97,23 @@ export default function Index() {
     );
   }
 
-  if (needsRoleSelection) {
+  if (staffMemberships.length === 0) {
+    return <ClientNotAllowed onSignOut={goLogin} />;
+  }
+
+  if (staffMemberships.length > 1 && (!tenant || !isStaffMembership(tenant.role))) {
     return <Redirect href={"/(auth)/role-select" as Href} />;
   }
 
-  if (!tenant) {
-    if (role === "client" || role === null) {
-      return (
-        <ClientNotAllowed
-          onSignOut={() => {
-            void signOut().then(() => router.replace("/(auth)/login" as Href));
-          }}
-        />
-      );
-    }
-    return (
-      <View style={styles.errorBox}>
-        <Text style={styles.errorTitle}>Aucun salon associé</Text>
-        <Text style={styles.errorMsg}>
-          Ce compte n&apos;est lié à aucun établissement. Connectez-vous avec un compte owner ou staff.
-        </Text>
-        <Pressable
-          style={styles.retryBtn}
-          onPress={() => {
-            void signOut().then(() => router.replace("/(auth)/welcome" as Href));
-          }}>
-          <Text style={styles.retryText}>Retour à la connexion</Text>
-        </Pressable>
-      </View>
-    );
+  if (!tenant || !isStaffMembership(tenant.role)) {
+    return <ClientNotAllowed onSignOut={goLogin} />;
   }
 
-  if (tenant.role === "staff") {
-    if (staffWelcomeDone === null) {
-      return <LoadingScreen message="Chargement…" />;
-    }
-    if (!staffWelcomeDone) {
-      return <Redirect href={"/(app)/staff/welcome" as Href} />;
-    }
+  if (staffWelcomeDone === null) {
+    return <LoadingScreen message="Chargement…" />;
+  }
+  if (!staffWelcomeDone) {
+    return <Redirect href={"/(app)/staff/welcome" as Href} />;
   }
 
   return <Redirect href={workspaceRouteForTenant(tenant) as Href} />;

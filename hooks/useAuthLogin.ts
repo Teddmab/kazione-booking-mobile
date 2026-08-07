@@ -42,11 +42,17 @@ export function useAuthLogin() {
         const userId = sessionData.session?.user?.id;
         if (userId) {
           try {
-            await queryClient.fetchQuery({
+            const bootstrap = await queryClient.fetchQuery({
               queryKey: tenantQueryKey(userId),
               queryFn: fetchTenantBootstrap,
               staleTime: 0,
             });
+            const hasStaff = bootstrap.businesses.some((b) => b.role === 'staff');
+            if (!hasStaff) {
+              await authClient.signOut();
+              setError(t('auth.staffOnlyError'));
+              return;
+            }
           } catch (err) {
             const msg =
               err instanceof ApiError && err.code === 'NETWORK_ERROR'
