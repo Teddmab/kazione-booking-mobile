@@ -5,7 +5,7 @@ export type StaffTabIcon = ComponentProps<typeof Ionicons>["name"];
 
 export type StaffTabRoute = {
   name: string;
-  title: string;
+  titleKey: string;
   icon: StaffTabIcon;
   iconFocused: StaffTabIcon;
 };
@@ -14,25 +14,25 @@ export type StaffTabRoute = {
 export const STAFF_BOTTOM_TABS: StaffTabRoute[] = [
   {
     name: "today",
-    title: "Aujourd'hui",
+    titleKey: "staffNav.today",
     icon: "grid-outline",
     iconFocused: "grid",
   },
   {
     name: "calendar",
-    title: "Agenda",
+    titleKey: "staffNav.calendar",
     icon: "calendar-outline",
     iconFocused: "calendar",
   },
   {
     name: "services",
-    title: "Services",
+    titleKey: "sidebar.services",
     icon: "cut-outline",
     iconFocused: "cut",
   },
   {
     name: "performance",
-    title: "Perf.",
+    titleKey: "staffNav.performance",
     icon: "bar-chart-outline",
     iconFocused: "bar-chart",
   },

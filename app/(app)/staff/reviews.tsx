@@ -12,7 +12,8 @@ import {
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useStaffReviews } from "@/hooks/useStaffReviews";
 import {
@@ -20,7 +21,19 @@ import {
   type StaffReviewRow,
 } from "@/services/staff/reviews";
 
-function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
+type ReviewStyles = ReturnType<typeof makeStyles>;
+
+function Stars({
+  rating,
+  size = 13,
+  styles,
+  colors,
+}: {
+  rating: number;
+  size?: number;
+  styles: ReviewStyles;
+  colors: ThemeColors;
+}) {
   return (
     <View style={styles.stars}>
       {[1, 2, 3, 4, 5].map((n) => (
@@ -28,7 +41,7 @@ function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
           key={n}
           style={{
             fontSize: size,
-            color: n <= rating ? "#F59E0B" : ownerColors.border,
+            color: n <= rating ? "#F59E0B" : colors.border,
           }}>
           ★
         </Text>
@@ -40,9 +53,13 @@ function Stars({ rating, size = 13 }: { rating: number; size?: number }) {
 function ReviewCard({
   review,
   onCopy,
+  styles,
+  colors,
 }: {
   review: StaffReviewRow;
   onCopy: (url: string) => void;
+  styles: ReviewStyles;
+  colors: ThemeColors;
 }) {
   const displayName =
     review.reviewer_name ??
@@ -85,7 +102,7 @@ function ReviewCard({
         </View>
       </View>
 
-      <Stars rating={review.rating} />
+      <Stars rating={review.rating} styles={styles} colors={colors} />
 
       {review.comment ? (
         <Text style={styles.comment}>{review.comment}</Text>
@@ -113,6 +130,8 @@ function ReviewCard({
 }
 
 export default function StaffReviewsScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const toast = useToast();
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error, refetch, isRefetching } =
@@ -143,19 +162,20 @@ export default function StaffReviewsScreen() {
   }
 
   return (
-    <View style={ownerStyles.screen}>
+    <View style={styles.screen}>
       <StaffAppBar
         title="Avis"
         subtitle="Retours clients sur le salon"
         displayTitle
       />
       <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={() => void refetch()}
-            tintColor={ownerColors.primary}
+            tintColor={colors.primary}
           />
         }>
         {reviews.length > 0 || total > 0 ? (
@@ -164,7 +184,12 @@ export default function StaffReviewsScreen() {
               <Text style={styles.summaryValue}>
                 {avg > 0 ? avg.toFixed(1) : "—"}
               </Text>
-              <Stars rating={Math.round(avg)} size={16} />
+              <Stars
+                rating={Math.round(avg)}
+                size={16}
+                styles={styles}
+                colors={colors}
+              />
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryBlock}>
@@ -183,7 +208,13 @@ export default function StaffReviewsScreen() {
           emptyMessage="Aucun avis pour le moment."
           onRetry={() => void refetch()}>
           {reviews.map((r) => (
-            <ReviewCard key={r.id} review={r} onCopy={(url) => void copyLink(url)} />
+            <ReviewCard
+              key={r.id}
+              review={r}
+              onCopy={(url) => void copyLink(url)}
+              styles={styles}
+              colors={colors}
+            />
           ))}
         </QueryState>
 
@@ -211,156 +242,167 @@ export default function StaffReviewsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40 },
-  summary: {
-    ...ownerStyles.card,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  summaryBlock: { flex: 1, alignItems: "center" },
-  summaryValue: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    marginTop: 4,
-    fontFamily: ownerFonts.medium,
-  },
-  summaryDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: ownerColors.border,
-  },
-  stars: { flexDirection: "row", gap: 2, marginTop: 4 },
-  card: {
-    ...ownerStyles.card,
-    marginBottom: 10,
-  },
-  cardHeader: { flexDirection: "row", gap: 10, marginBottom: 8 },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: ownerColors.primarySurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarImg: { width: 36, height: 36, borderRadius: 18 },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.bold,
-  },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  name: {
-    flexShrink: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  pendingBadge: {
-    borderRadius: 999,
-    backgroundColor: ownerColors.bg,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  pendingText: {
-    fontSize: 10,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  date: {
-    fontSize: 11,
-    color: ownerColors.textDim,
-    marginTop: 2,
-    fontFamily: ownerFonts.regular,
-  },
-  comment: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: ownerColors.textMuted,
-    marginTop: 8,
-    fontFamily: ownerFonts.regular,
-  },
-  replyBox: {
-    marginTop: 10,
-    paddingLeft: 10,
-    borderLeftWidth: 2,
-    borderLeftColor: ownerColors.primary + "55",
-  },
-  replyLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: ownerColors.primary,
-    marginBottom: 2,
-    fontFamily: ownerFonts.semiBold,
-  },
-  replyText: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.regular,
-  },
-  inviteBox: {
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: ownerColors.bg,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  inviteHint: {
-    flex: 1,
-    fontSize: 12,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.regular,
-  },
-  copyBtn: {
-    borderRadius: 8,
-    backgroundColor: ownerColors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  copyText: {
-    fontSize: 12,
-    color: "#fff",
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  pager: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  pageBtn: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: ownerColors.card,
-  },
-  pageBtnText: {
-    fontSize: 13,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.medium,
-  },
-  pageLabel: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  disabled: { opacity: 0.45 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: 16, paddingBottom: 40 },
+    summary: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 14,
+    },
+    summaryBlock: { flex: 1, alignItems: "center" },
+    summaryValue: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    summaryLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+      marginTop: 4,
+      fontFamily: ownerFonts.medium,
+    },
+    summaryDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: colors.border,
+    },
+    stars: { flexDirection: "row", gap: 2, marginTop: 4 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 10,
+    },
+    cardHeader: { flexDirection: "row", gap: 10, marginBottom: 8 },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.primarySurface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarImg: { width: 36, height: 36, borderRadius: 18 },
+    avatarText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.primary,
+      fontFamily: ownerFonts.bold,
+    },
+    nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    name: {
+      flexShrink: 1,
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    pendingBadge: {
+      borderRadius: 999,
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    pendingText: {
+      fontSize: 10,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    date: {
+      fontSize: 11,
+      color: colors.textDim,
+      marginTop: 2,
+      fontFamily: ownerFonts.regular,
+    },
+    comment: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: colors.textMuted,
+      marginTop: 8,
+      fontFamily: ownerFonts.regular,
+    },
+    replyBox: {
+      marginTop: 10,
+      paddingLeft: 10,
+      borderLeftWidth: 2,
+      borderLeftColor: colors.primary + "55",
+    },
+    replyLabel: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.primary,
+      marginBottom: 2,
+      fontFamily: ownerFonts.semiBold,
+    },
+    replyText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    inviteBox: {
+      marginTop: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.bg,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    inviteHint: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    copyBtn: {
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    copyText: {
+      fontSize: 12,
+      color: "#fff",
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    pager: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+    pageBtn: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.card,
+    },
+    pageBtnText: {
+      fontSize: 13,
+      color: colors.text,
+      fontFamily: ownerFonts.medium,
+    },
+    pageLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    disabled: { opacity: 0.45 },
+  });
+}

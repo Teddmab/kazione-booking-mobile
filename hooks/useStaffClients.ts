@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { useTenantContext } from "@/contexts/TenantContext";
-import { getClient, getClients } from "@/services/owner/clients";
+import { getClient, getClients, patchClient } from "@/services/owner/clients";
 
 export function useDebouncedValue<T>(value: T, delayMs = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -37,5 +37,20 @@ export function useStaffClientDetail(clientId: string | null) {
     queryFn: () => getClient(clientId!),
     enabled: !!clientId,
     staleTime: 60_000,
+  });
+}
+
+export function useUpdateStaffClientNotes() {
+  const { tenant } = useTenantContext();
+  const businessId = tenant?.businessId ?? "";
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ clientId, notes }: { clientId: string; notes: string }) =>
+      patchClient(clientId, { business_id: businessId, notes }),
+    onSuccess: (data, vars) => {
+      qc.setQueryData(["staff-client-detail", vars.clientId], data);
+      void qc.invalidateQueries({ queryKey: ["staff-clients", businessId] });
+    },
   });
 }

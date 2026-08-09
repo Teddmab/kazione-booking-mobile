@@ -26,6 +26,7 @@ export interface StaffAppointment {
   notes?: string | null;
   referral_staff_id?: string | null;
   payment_method?: string | null;
+  intake_answers?: Record<string, { label: string; value: unknown }> | null;
   price: number;
   duration_minutes: number;
   client: {
@@ -47,6 +48,7 @@ export interface StaffAppointment {
 type AppointmentRow = AppointmentWithRelations & {
   referral_staff_id?: string | null;
   payment_method?: string | null;
+  intake_answers?: Record<string, { label: string; value: unknown }> | null;
 };
 
 function mapAppointment(row: AppointmentRow): StaffAppointment {
@@ -58,6 +60,7 @@ function mapAppointment(row: AppointmentRow): StaffAppointment {
     notes: row.notes ?? null,
     referral_staff_id: row.referral_staff_id ?? null,
     payment_method: row.payment_method ?? row.payment?.method ?? null,
+    intake_answers: row.intake_answers ?? null,
     price: row.price,
     duration_minutes: row.duration_minutes,
     client: {

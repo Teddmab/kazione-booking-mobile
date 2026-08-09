@@ -1,5 +1,4 @@
-import { StyleSheet } from "react-native";
-
+/** Mutable palette — updated by AppThemeProvider so ownerStyles getters stay live. */
 export const ownerColors = {
   bg: "#FFFFFF",
   card: "#FFFFFF",
@@ -26,6 +25,11 @@ export const ownerColors = {
   tabBarInactive: "#9B7B72",
 };
 
+export function syncOwnerColors(next: typeof ownerColors) {
+  Object.assign(ownerColors, next);
+  ownerDrawerColors.accent = next.primary;
+}
+
 /** Dark sidebar (owner shell drawer) */
 export const ownerDrawerColors = {
   bg: "#1A0F0A",
@@ -47,74 +51,99 @@ export const ownerFonts = {
   extraBold: "PlusJakartaSans_800ExtraBold",
 };
 
-export const ownerStyles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: ownerColors.bg,
+/**
+ * Theme-aware base styles (getters re-read ownerColors on each access).
+ * Call useThemeColors() in the screen so React re-renders when theme changes.
+ */
+export const ownerStyles = {
+  get screen() {
+    return {
+      flex: 1 as const,
+      backgroundColor: ownerColors.bg,
+    };
   },
-  card: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    padding: 16,
+  get card() {
+    return {
+      backgroundColor: ownerColors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: ownerColors.border,
+      padding: 16,
+    };
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: ownerColors.textDim,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 10,
-    marginTop: 8,
-    fontFamily: ownerFonts.semiBold,
+  get sectionTitle() {
+    return {
+      fontSize: 13,
+      fontWeight: "600" as const,
+      color: ownerColors.textDim,
+      textTransform: "uppercase" as const,
+      letterSpacing: 1,
+      marginBottom: 10,
+      marginTop: 8,
+      fontFamily: ownerFonts.semiBold,
+    };
   },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
+  get rowTitle() {
+    return {
+      fontSize: 16,
+      fontWeight: "600" as const,
+      color: ownerColors.text,
+      fontFamily: ownerFonts.semiBold,
+    };
   },
-  rowSub: {
-    fontSize: 14,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.regular,
+  get rowSub() {
+    return {
+      fontSize: 14,
+      color: ownerColors.textMuted,
+      marginTop: 2,
+      fontFamily: ownerFonts.regular,
+    };
   },
-  primaryBtn: {
-    backgroundColor: "#E84E26",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
+  get primaryBtn() {
+    return {
+      backgroundColor: ownerColors.primary,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center" as const,
+    };
   },
-  primaryBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
+  get primaryBtnText() {
+    return {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600" as const,
+      fontFamily: ownerFonts.semiBold,
+    };
   },
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: ownerColors.primary,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
+  get outlineBtn() {
+    return {
+      borderWidth: 1,
+      borderColor: ownerColors.primary,
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: "center" as const,
+    };
   },
-  outlineBtnText: {
-    color: ownerColors.primary,
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
+  get outlineBtnText() {
+    return {
+      color: ownerColors.primary,
+      fontSize: 15,
+      fontWeight: "600" as const,
+      fontFamily: ownerFonts.semiBold,
+    };
   },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: ownerColors.card,
-    marginBottom: 12,
-    fontFamily: ownerFonts.regular,
+  get searchInput() {
+    return {
+      borderWidth: 1,
+      borderColor: ownerColors.border,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      backgroundColor: ownerColors.card,
+      marginBottom: 12,
+      color: ownerColors.text,
+      fontFamily: ownerFonts.regular,
+    };
   },
-});
+};

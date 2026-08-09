@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import type { StaffWorkingDay } from "@/services/staff/profile";
 
 const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -10,6 +12,8 @@ interface Props {
 }
 
 export function WorkingHoursCard({ workingHours }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const ordered = [1, 2, 3, 4, 5, 6, 0]; // Mon → Sun
 
   return (
@@ -38,48 +42,53 @@ export function WorkingHoursCard({ workingHours }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    ...ownerStyles.card,
-    backgroundColor: ownerColors.primarySurface,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: ownerColors.text,
-    marginBottom: 4,
-    fontFamily: ownerFonts.bold,
-  },
-  hint: {
-    fontSize: 12,
-    color: ownerColors.textDim,
-    marginBottom: 12,
-    fontFamily: ownerFonts.regular,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ownerColors.border,
-  },
-  dayName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.medium,
-  },
-  hours: {
-    fontSize: 14,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.regular,
-  },
-  off: { color: ownerColors.textDim },
-  empty: {
-    fontSize: 13,
-    color: ownerColors.textDim,
-    marginTop: 8,
-    fontFamily: ownerFonts.regular,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.primarySurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 12,
+    },
+    title: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 4,
+      fontFamily: ownerFonts.bold,
+    },
+    hint: {
+      fontSize: 12,
+      color: colors.textDim,
+      marginBottom: 12,
+      fontFamily: ownerFonts.regular,
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    dayName: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.text,
+      fontFamily: ownerFonts.medium,
+    },
+    hours: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    off: { color: colors.textDim },
+    empty: {
+      fontSize: 13,
+      color: colors.textDim,
+      marginTop: 8,
+      fontFamily: ownerFonts.regular,
+    },
+  });
+}

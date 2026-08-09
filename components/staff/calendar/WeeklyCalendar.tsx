@@ -3,7 +3,8 @@ import { LayoutChangeEvent, ScrollView, StyleSheet, Text, View } from "react-nat
 
 import { ApptBlock } from "@/components/staff/calendar/ApptBlock";
 import { NowLine } from "@/components/staff/calendar/NowLine";
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import {
   GRID_HOURS,
   GRID_START_HOUR,
@@ -35,6 +36,8 @@ export function WeeklyCalendar({
   workingDays = [],
   onSelect,
 }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [colWidth, setColWidth] = useState(0);
   const today = new Date();
 
@@ -142,73 +145,75 @@ export function WeeklyCalendar({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: ownerColors.bg },
-  headerRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: ownerColors.border,
-    paddingBottom: 6,
-    paddingTop: 4,
-    paddingHorizontal: 4,
-  },
-  dayHeader: { flex: 1, alignItems: "center" },
-  dayHeaderToday: {},
-  dayName: {
-    fontSize: 11,
-    color: ownerColors.textDim,
-    fontWeight: "500",
-    fontFamily: ownerFonts.medium,
-  },
-  dayNameToday: {
-    color: ownerColors.primary,
-    fontWeight: "700",
-    fontFamily: ownerFonts.bold,
-  },
-  dayNum: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    marginTop: 2,
-    fontFamily: ownerFonts.semiBold,
-  },
-  dayNumToday: {
-    color: "#fff",
-    backgroundColor: ownerColors.primary,
-    overflow: "hidden",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    textAlign: "center",
-    lineHeight: 24,
-    fontFamily: ownerFonts.bold,
-  },
-  scroll: { flex: 1 },
-  body: { flexDirection: "row", height: TOTAL_PX },
-  timeCol: {},
-  timeSlot: { justifyContent: "flex-start" },
-  timeLabel: {
-    fontSize: 10,
-    color: ownerColors.textDim,
-    marginTop: -6,
-    fontFamily: ownerFonts.regular,
-  },
-  dayCol: {
-    flex: 1,
-    position: "relative",
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderLeftColor: ownerColors.border,
-  },
-  dayColToday: { backgroundColor: ownerColors.primarySurface },
-  hourLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: ownerColors.border,
-  },
-  offOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(155,123,114,0.12)",
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: colors.bg },
+    headerRow: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingBottom: 6,
+      paddingTop: 4,
+      paddingHorizontal: 4,
+    },
+    dayHeader: { flex: 1, alignItems: "center" },
+    dayHeaderToday: {},
+    dayName: {
+      fontSize: 11,
+      color: colors.textDim,
+      fontWeight: "500",
+      fontFamily: ownerFonts.medium,
+    },
+    dayNameToday: {
+      color: colors.primary,
+      fontWeight: "700",
+      fontFamily: ownerFonts.bold,
+    },
+    dayNum: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: 2,
+      fontFamily: ownerFonts.semiBold,
+    },
+    dayNumToday: {
+      color: "#fff",
+      backgroundColor: colors.primary,
+      overflow: "hidden",
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      textAlign: "center",
+      lineHeight: 24,
+      fontFamily: ownerFonts.bold,
+    },
+    scroll: { flex: 1 },
+    body: { flexDirection: "row", height: TOTAL_PX },
+    timeCol: {},
+    timeSlot: { justifyContent: "flex-start" },
+    timeLabel: {
+      fontSize: 10,
+      color: colors.textDim,
+      marginTop: -6,
+      fontFamily: ownerFonts.regular,
+    },
+    dayCol: {
+      flex: 1,
+      position: "relative",
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderLeftColor: colors.border,
+    },
+    dayColToday: { backgroundColor: colors.primarySurface },
+    hourLine: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+    },
+    offOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.textDim + "1F",
+    },
+  });
+}

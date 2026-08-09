@@ -18,13 +18,14 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { Suspense, useEffect, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { AuthGate } from '@/components/AuthGate';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { AppThemeProvider, useAppTheme } from '@/contexts/AppThemeContext';
 import { TenantProvider } from '@/contexts/TenantContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { initI18n } from '@/i18n';
@@ -77,28 +78,35 @@ function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TenantProvider>
-            <ToastProvider>
-              <Suspense fallback={<LoadingSpinner />}>
-                <AuthGate>
-                  <RootLayoutNav />
-                </AuthGate>
-              </Suspense>
-            </ToastProvider>
-          </TenantProvider>
-        </AuthProvider>
+        <AppThemeProvider>
+          <AuthProvider>
+            <TenantProvider>
+              <ToastProvider>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AuthGate>
+                    <RootLayoutNav />
+                  </AuthGate>
+                </Suspense>
+              </ToastProvider>
+            </TenantProvider>
+          </AuthProvider>
+        </AppThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const { resolvedMode, colors } = useAppTheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
+    <ThemeProvider value={resolvedMode === 'dark' ? DarkTheme : DefaultTheme}>
+      <StatusBar style={resolvedMode === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(app)" />

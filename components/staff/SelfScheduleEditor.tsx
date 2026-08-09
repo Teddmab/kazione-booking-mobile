@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,7 +9,8 @@ import {
   View,
 } from "react-native";
 
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import type { StaffScheduleDay, StaffWorkingDay } from "@/services/staff/profile";
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -34,6 +35,8 @@ interface Props {
 }
 
 export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [schedule, setSchedule] = useState(() => normalizeSchedule(workingHours));
 
   useEffect(() => {
@@ -71,7 +74,7 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
             <Switch
               value={row.is_working}
               onValueChange={(is_working) => updateDay(row.day, { is_working })}
-              trackColor={{ true: ownerColors.primary, false: ownerColors.border }}
+              trackColor={{ true: colors.primary, false: colors.border }}
             />
           </View>
           {row.is_working ? (
@@ -81,7 +84,7 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
                 value={row.start_time ?? ""}
                 onChangeText={(start_time) => updateDay(row.day, { start_time })}
                 placeholder="09:00"
-                placeholderTextColor={ownerColors.textDim}
+                placeholderTextColor={colors.textDim}
                 autoCapitalize="none"
               />
               <Text style={styles.sep}>–</Text>
@@ -90,7 +93,7 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
                 value={row.end_time ?? ""}
                 onChangeText={(end_time) => updateDay(row.day, { end_time })}
                 placeholder="18:00"
-                placeholderTextColor={ownerColors.textDim}
+                placeholderTextColor={colors.textDim}
                 autoCapitalize="none"
               />
             </View>
@@ -103,83 +106,88 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    ...ownerStyles.card,
-    backgroundColor: ownerColors.primarySurface,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-    gap: 8,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  saveBtn: {
-    backgroundColor: ownerColors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 96,
-    alignItems: "center",
-  },
-  saveDisabled: { opacity: 0.7 },
-  saveText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  hint: {
-    fontSize: 12,
-    color: ownerColors.textDim,
-    marginBottom: 12,
-    fontFamily: ownerFonts.regular,
-  },
-  row: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-    backgroundColor: ownerColors.card,
-  },
-  head: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  dayName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  times: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: ownerColors.text,
-    backgroundColor: ownerColors.bg,
-    fontFamily: ownerFonts.regular,
-  },
-  sep: { color: ownerColors.textMuted },
-  off: {
-    marginTop: 8,
-    fontSize: 13,
-    color: ownerColors.textDim,
-    fontFamily: ownerFonts.regular,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.primarySurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 12,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 4,
+      gap: 8,
+    },
+    title: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    saveBtn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      minWidth: 96,
+      alignItems: "center",
+    },
+    saveDisabled: { opacity: 0.7 },
+    saveText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    hint: {
+      fontSize: 12,
+      color: colors.textDim,
+      marginBottom: 12,
+      fontFamily: ownerFonts.regular,
+    },
+    row: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 8,
+      backgroundColor: colors.card,
+    },
+    head: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    dayName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    times: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+    input: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      fontSize: 14,
+      color: colors.text,
+      backgroundColor: colors.bg,
+      fontFamily: ownerFonts.regular,
+    },
+    sep: { color: colors.textMuted },
+    off: {
+      marginTop: 8,
+      fontSize: 13,
+      color: colors.textDim,
+      fontFamily: ownerFonts.regular,
+    },
+  });
+}

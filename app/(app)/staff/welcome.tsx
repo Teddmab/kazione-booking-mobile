@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ImageBackground,
   StyleSheet,
@@ -16,11 +16,14 @@ import {
   STAFF_WELCOME_SLIDES,
   staffWelcomeStorageKey,
 } from "@/constants/staffWelcome";
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
 import { TYPOGRAPHY } from "@/constants/tokens";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 
 export default function StaffWelcomeScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { user } = useAuthContext();
   const insets = useSafeAreaInsets();
@@ -81,76 +84,78 @@ export default function StaffWelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#F7F3EE",
-  },
-  hero: {
-    width: "100%",
-    justifyContent: "flex-start",
-  },
-  heroScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.22)",
-  },
-  brand: {
-    marginLeft: 24,
-    fontSize: 12,
-    letterSpacing: 3,
-    textTransform: "uppercase",
-    color: "rgba(255,255,255,0.92)",
-    fontFamily: ownerFonts.semiBold,
-  },
-  panel: {
-    flex: 1,
-    marginTop: -28,
-    backgroundColor: "#F7F3EE",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 8,
-  },
-  kicker: {
-    ...TYPOGRAPHY.caption,
-    letterSpacing: 2.4,
-    textTransform: "uppercase",
-    color: ownerColors.textDim,
-    fontFamily: ownerFonts.semiBold,
-    marginBottom: 10,
-  },
-  title: {
-    ...TYPOGRAPHY.display,
-    fontSize: 28,
-    lineHeight: 34,
-    fontFamily: ownerFonts.bold,
-    color: ownerColors.text,
-    marginBottom: 12,
-  },
-  body: {
-    ...TYPOGRAPHY.body,
-    fontFamily: ownerFonts.regular,
-    color: ownerColors.textMuted,
-    flexGrow: 1,
-  },
-  footer: {
-    gap: 18,
-    marginTop: 20,
-  },
-  dots: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(107, 83, 68, 0.25)",
-  },
-  dotActive: {
-    backgroundColor: ownerColors.primary,
-    width: 24,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
+    hero: {
+      width: "100%",
+      justifyContent: "flex-start",
+    },
+    heroScrim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.22)",
+    },
+    brand: {
+      marginLeft: 24,
+      fontSize: 12,
+      letterSpacing: 3,
+      textTransform: "uppercase",
+      color: "rgba(255,255,255,0.92)",
+      fontFamily: ownerFonts.semiBold,
+    },
+    panel: {
+      flex: 1,
+      marginTop: -28,
+      backgroundColor: colors.bg,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      paddingHorizontal: 24,
+      paddingTop: 28,
+      paddingBottom: 8,
+    },
+    kicker: {
+      ...TYPOGRAPHY.caption,
+      letterSpacing: 2.4,
+      textTransform: "uppercase",
+      color: colors.textDim,
+      fontFamily: ownerFonts.semiBold,
+      marginBottom: 10,
+    },
+    title: {
+      ...TYPOGRAPHY.display,
+      fontSize: 28,
+      lineHeight: 34,
+      fontFamily: ownerFonts.bold,
+      color: colors.text,
+      marginBottom: 12,
+    },
+    body: {
+      ...TYPOGRAPHY.body,
+      fontFamily: ownerFonts.regular,
+      color: colors.textMuted,
+      flexGrow: 1,
+    },
+    footer: {
+      gap: 18,
+      marginTop: 20,
+    },
+    dots: {
+      flexDirection: "row",
+      gap: 8,
+      alignItems: "center",
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.border,
+    },
+    dotActive: {
+      backgroundColor: colors.primary,
+      width: 24,
+    },
+  });
+}

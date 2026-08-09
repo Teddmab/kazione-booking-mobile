@@ -50,6 +50,13 @@ const config: ExpoConfig = {
     'expo-router',
     ['@stripe/stripe-react-native', {}],
     '@sentry/react-native',
+    [
+      'expo-camera',
+      {
+        cameraPermission:
+          'KaziOne utilise la caméra pour scanner les QR codes des vouchers.',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

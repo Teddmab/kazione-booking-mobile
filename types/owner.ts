@@ -35,6 +35,7 @@ export interface AppointmentWithRelations {
   deposit_amount: number;
   booking_reference: string;
   notes?: string | null;
+  intake_answers?: Record<string, { label: string; value: unknown }> | null;
   client: {
     id: string;
     first_name: string;
@@ -197,6 +198,8 @@ export interface BusinessSettingsRow {
   buffer_minutes: number;
   enabled_payment_methods: string[];
   reminder_hours_before?: number;
+  staff_see_all_appointments?: boolean | null;
+  staff_module_permissions?: Record<string, boolean> | null;
 }
 
 export interface BusinessSettingsResponse {
@@ -284,6 +287,7 @@ export interface CreateClientInput {
 }
 
 export interface UpdateClientInput {
+  business_id?: string;
   first_name?: string;
   last_name?: string;
   email?: string | null;

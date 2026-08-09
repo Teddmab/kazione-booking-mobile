@@ -12,7 +12,8 @@ import {
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
@@ -74,9 +75,11 @@ function buildTopServices(appts: StaffAppointment[]) {
 function PeriodSelector({
   value,
   onChange,
+  styles,
 }: {
   value: PeriodKey;
   onChange: (p: PeriodKey) => void;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   return (
     <View style={styles.periodRow}>
@@ -101,9 +104,11 @@ function PeriodSelector({
 function StatsRow({
   perf,
   loading,
+  styles,
 }: {
   perf: StaffPerformance | null | undefined;
   loading: boolean;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const cells = [
     {
@@ -142,8 +147,10 @@ function StatsRow({
 
 function WeeklyActivityChart({
   data,
+  styles,
 }: {
   data: { name: string; count: number }[];
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
@@ -168,8 +175,10 @@ function WeeklyActivityChart({
 
 function TopServicesList({
   data,
+  styles,
 }: {
   data: { name: string; count: number }[];
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const max = data[0]?.count ?? 1;
   return (
@@ -198,6 +207,8 @@ function TopServicesList({
 
 export default function StaffPerformanceScreen() {
   const toast = useToast();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
   const { data: self } = useStaffSelf();
@@ -269,34 +280,35 @@ export default function StaffPerformanceScreen() {
   }
 
   return (
-    <View style={ownerStyles.screen}>
+    <View style={styles.screen}>
       <StaffAppBar
         title="Performance"
         subtitle={perf?.display_name ?? self?.display_name ?? undefined}
         displayTitle
       />
       <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching || apptsRefetching}
             onRefresh={() => void onRefresh()}
-            tintColor={ownerColors.primary}
+            tintColor={colors.primary}
           />
         }>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <PeriodSelector value={period} onChange={setPeriod} styles={styles} />
 
         <QueryState
           loading={false}
           error={isError ? (error as Error) : null}
           empty={false}
           onRetry={() => void refetch()}>
-          <StatsRow perf={perf} loading={isLoading} />
+          <StatsRow perf={perf} loading={isLoading} styles={styles} />
 
           {isLoading && !perf ? (
             <ActivityIndicator
               style={{ marginVertical: 16 }}
-              color={ownerColors.primary}
+              color={colors.primary}
             />
           ) : null}
 
@@ -362,13 +374,13 @@ export default function StaffPerformanceScreen() {
             <Text style={styles.cardHint}>
               RDV non annulés sur la période sélectionnée
             </Text>
-            <WeeklyActivityChart data={weeklyActivity} />
+            <WeeklyActivityChart data={weeklyActivity} styles={styles} />
           </View>
 
           {topServices.length > 0 ? (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Top services</Text>
-              <TopServicesList data={topServices} />
+              <TopServicesList data={topServices} styles={styles} />
             </View>
           ) : null}
 
@@ -384,189 +396,192 @@ export default function StaffPerformanceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40, gap: 12 },
-  periodRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
-  periodChip: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: ownerColors.card,
-  },
-  periodChipActive: {
-    borderColor: ownerColors.primary,
-    backgroundColor: ownerColors.primary,
-  },
-  periodText: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  periodTextActive: {
-    color: "#fff",
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  statsRow: { flexDirection: "row", gap: 8 },
-  statCard: {
-    flex: 1,
-    backgroundColor: ownerColors.primarySurface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.bold,
-  },
-  statLabel: {
-    fontSize: 10,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.medium,
-  },
-  card: {
-    ...ownerStyles.card,
-    marginBottom: 0,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: ownerColors.text,
-    marginBottom: 10,
-    fontFamily: ownerFonts.bold,
-  },
-  cardHint: {
-    fontSize: 12,
-    color: ownerColors.textDim,
-    marginBottom: 10,
-    fontFamily: ownerFonts.regular,
-  },
-  refStats: { flexDirection: "row", gap: 16, marginBottom: 8 },
-  refStat: { flex: 1, alignItems: "center" },
-  refValue: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  refLabel: {
-    fontSize: 12,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  refRevenue: {
-    fontSize: 13,
-    color: ownerColors.text,
-    marginBottom: 12,
-    textAlign: "center",
-    fontFamily: ownerFonts.regular,
-  },
-  copyBtn: {
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: ownerColors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copyBtnDone: { backgroundColor: "#059669" },
-  copyText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-    fontFamily: ownerFonts.semiBold,
-  },
-  earnRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ownerColors.border,
-  },
-  earnLabel: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.regular,
-  },
-  earnValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  earnValuePrimary: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.bold,
-  },
-  chartRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    height: 100,
-    gap: 4,
-    paddingHorizontal: 4,
-  },
-  chartCol: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
-  chartCount: {
-    fontSize: 10,
-    color: ownerColors.text,
-    marginBottom: 2,
-    fontFamily: ownerFonts.medium,
-  },
-  chartBar: {
-    width: "100%",
-    backgroundColor: ownerColors.primary,
-    borderRadius: 3,
-  },
-  chartDay: {
-    fontSize: 10,
-    color: ownerColors.textDim,
-    marginTop: 4,
-    fontFamily: ownerFonts.regular,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  topName: {
-    flex: 1,
-    fontSize: 13,
-    color: ownerColors.text,
-    marginRight: 8,
-    fontFamily: ownerFonts.medium,
-  },
-  topCount: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  topTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: ownerColors.bg,
-    overflow: "hidden",
-  },
-  topFill: {
-    height: "100%",
-    borderRadius: 3,
-    backgroundColor: ownerColors.primary,
-  },
-  emptyHint: {
-    fontSize: 13,
-    color: ownerColors.textDim,
-    textAlign: "center",
-    marginTop: 8,
-    fontFamily: ownerFonts.regular,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: 16, paddingBottom: 40, gap: 12 },
+    periodRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+    periodChip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      backgroundColor: colors.card,
+    },
+    periodChipActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+    periodText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    periodTextActive: {
+      color: "#fff",
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    statsRow: { flexDirection: "row", gap: 8 },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.primarySurface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.primary,
+      fontFamily: ownerFonts.bold,
+    },
+    statLabel: {
+      fontSize: 10,
+      color: colors.textMuted,
+      marginTop: 2,
+      fontFamily: ownerFonts.medium,
+    },
+    card: {
+      ...ownerStyles.card,
+      marginBottom: 0,
+    },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 10,
+      fontFamily: ownerFonts.bold,
+    },
+    cardHint: {
+      fontSize: 12,
+      color: colors.textDim,
+      marginBottom: 10,
+      fontFamily: ownerFonts.regular,
+    },
+    refStats: { flexDirection: "row", gap: 16, marginBottom: 8 },
+    refStat: { flex: 1, alignItems: "center" },
+    refValue: {
+      fontSize: 22,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    refLabel: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    refRevenue: {
+      fontSize: 13,
+      color: colors.text,
+      marginBottom: 12,
+      textAlign: "center",
+      fontFamily: ownerFonts.regular,
+    },
+    copyBtn: {
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    copyBtnDone: { backgroundColor: colors.success },
+    copyText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 14,
+      fontFamily: ownerFonts.semiBold,
+    },
+    earnRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    earnLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    earnValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    earnValuePrimary: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.primary,
+      fontFamily: ownerFonts.bold,
+    },
+    chartRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      height: 100,
+      gap: 4,
+      paddingHorizontal: 4,
+    },
+    chartCol: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
+    chartCount: {
+      fontSize: 10,
+      color: colors.text,
+      marginBottom: 2,
+      fontFamily: ownerFonts.medium,
+    },
+    chartBar: {
+      width: "100%",
+      backgroundColor: colors.primary,
+      borderRadius: 3,
+    },
+    chartDay: {
+      fontSize: 10,
+      color: colors.textDim,
+      marginTop: 4,
+      fontFamily: ownerFonts.regular,
+    },
+    topRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 4,
+    },
+    topName: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.text,
+      marginRight: 8,
+      fontFamily: ownerFonts.medium,
+    },
+    topCount: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    topTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.bg,
+      overflow: "hidden",
+    },
+    topFill: {
+      height: "100%",
+      borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    emptyHint: {
+      fontSize: 13,
+      color: colors.textDim,
+      textAlign: "center",
+      marginTop: 8,
+      fontFamily: ownerFonts.regular,
+    },
+  });
+}

@@ -16,6 +16,7 @@ export interface StaffService {
   currency_code: string;
   is_active: boolean;
   image_url: string | null;
+  image_url_2?: string | null;
   assignment_status: OfferStatus;
   offered_commission_type: CommissionType;
   offered_commission_value: number | null;

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname, type Href } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Image,
@@ -11,21 +11,40 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { Logos } from "@/constants/logos";
 import { STAFF_DRAWER_SECTIONS } from "@/constants/staffDrawerNav";
-import { ownerDrawerColors } from "@/constants/ownerTheme";
+import { ownerDrawerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useStaffShell } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useThemeColors } from "@/contexts/AppThemeContext";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
+import { useStaffSelf } from "@/hooks/useStaffSelf";
 import { roleLabel } from "@/lib/workspaceRouting";
 
 const DRAWER_WIDTH = 288;
 
+/** Keys gated by staff_module_permissions; reviews + notifications always shown */
+const PERMISSION_KEYS = new Set([
+  "dashboard",
+  "appointments",
+  "clients",
+  "services",
+  "reports",
+  "account",
+]);
+
 function isDrawerItemActive(key: string, pathname: string): boolean {
   if (key === "dashboard") {
-    return pathname.includes("/today") || pathname.endsWith("/staff") || pathname.endsWith("/staff/");
+    return (
+      pathname.includes("/today") ||
+      pathname.endsWith("/staff") ||
+      pathname.endsWith("/staff/")
+    );
   }
   if (key === "appointments") return pathname.includes("/calendar");
   if (key === "clients") return pathname.includes("/clients");
@@ -38,16 +57,45 @@ function isDrawerItemActive(key: string, pathname: string): boolean {
 }
 
 export function StaffDrawer() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
   const { drawerOpen, closeDrawer } = useStaffShell();
   const { tenant, clearActiveBusiness } = useTenantContext();
   const { user, signOut } = useAuthContext();
+  const { data: staff } = useStaffSelf();
+  const settingsQ = useBusinessSettings(tenant?.businessId ?? "");
+  const colors = useThemeColors();
   const slide = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
   const email = user?.email ?? "";
-  const initial = email[0]?.toUpperCase() ?? "S";
+  const displayName =
+    staff?.display_name?.trim() ||
+    (staff
+      ? `${staff.first_name ?? ""} ${staff.last_name ?? ""}`.trim()
+      : "") ||
+    email ||
+    "Staff";
+  const initial =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "S";
+
+  const sections = useMemo(() => {
+    const perms = settingsQ.data?.settings?.staff_module_permissions ?? {};
+    return STAFF_DRAWER_SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!PERMISSION_KEYS.has(item.key)) return true;
+        return perms[item.key] !== false;
+      }),
+    })).filter((section) => section.items.length > 0);
+  }, [settingsQ.data?.settings?.staff_module_permissions]);
 
   useEffect(() => {
     Animated.timing(slide, {
@@ -87,15 +135,18 @@ export function StaffDrawer() {
           </View>
 
           <ScrollView style={styles.nav} showsVerticalScrollIndicator={false}>
-            {STAFF_DRAWER_SECTIONS.map((section) => (
-              <View key={section.title} style={styles.section}>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
+            {sections.map((section) => (
+              <View key={section.titleKey} style={styles.section}>
+                <Text style={styles.sectionTitle}>{t(section.titleKey)}</Text>
                 {section.items.map((item) => {
                   const active = isDrawerItemActive(item.key, pathname);
                   return (
                     <Pressable
                       key={item.key}
-                      style={[styles.navRow, active && styles.navRowActive]}
+                      style={[
+                        styles.navRow,
+                        active && { backgroundColor: colors.primary },
+                      ]}
                       onPress={() => navigate(item.href)}>
                       <Ionicons
                         name={item.icon}
@@ -103,7 +154,7 @@ export function StaffDrawer() {
                         color={active ? "#fff" : ownerDrawerColors.icon}
                       />
                       <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-                        {item.label}
+                        {t(item.labelKey)}
                       </Text>
                     </Pressable>
                   );
@@ -113,17 +164,18 @@ export function StaffDrawer() {
           </ScrollView>
 
           <View style={styles.footer}>
-            <View style={styles.footerAvatar}>
+            <View style={[styles.footerAvatar, { backgroundColor: colors.primary }]}>
               <Text style={styles.footerAvatarText}>{initial}</Text>
             </View>
             <View style={styles.footerText}>
               <Text style={styles.footerEmail} numberOfLines={1}>
-                {email}
+                {displayName}
               </Text>
               <Text style={styles.footerRole}>
                 {roleLabel(tenant?.role ?? "staff", tenant?.position)}
               </Text>
             </View>
+            <LanguageSelector variant="compact" tone="drawer" />
           </View>
 
           <Pressable
@@ -139,7 +191,7 @@ export function StaffDrawer() {
               size={18}
               color={ownerDrawerColors.textMuted}
             />
-            <Text style={styles.signOutText}>Changer d'espace</Text>
+            <Text style={styles.signOutText}>{t("staffNav.switchWorkspace")}</Text>
           </Pressable>
 
           <Pressable
@@ -149,7 +201,7 @@ export function StaffDrawer() {
               void signOut().then(() => router.replace("/(auth)/login" as Href));
             }}>
             <Ionicons name="log-out-outline" size={18} color={ownerDrawerColors.textMuted} />
-            <Text style={styles.signOutText}>Déconnexion</Text>
+            <Text style={styles.signOutText}>{t("staffNav.signOut")}</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -182,6 +234,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 8,
     marginLeft: 4,
+    fontFamily: ownerFonts.semiBold,
   },
   nav: { flex: 1 },
   navRow: {
@@ -193,7 +246,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 2,
   },
-  navRowActive: { backgroundColor: ownerDrawerColors.accent },
   navLabel: { fontSize: 15, color: ownerDrawerColors.textMuted, fontWeight: "500" },
   navLabelActive: { color: "#fff", fontWeight: "600" },
   footer: {
@@ -208,7 +260,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: ownerDrawerColors.accent,
     alignItems: "center",
     justifyContent: "center",
   },

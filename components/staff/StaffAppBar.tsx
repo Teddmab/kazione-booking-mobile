@@ -5,7 +5,8 @@ import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { StaffNotificationBell } from "@/components/staff/StaffNotificationBell";
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useAppTheme } from "@/contexts/AppThemeContext";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useStaffShell } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
@@ -33,6 +34,7 @@ export function StaffAppBar({
   const { signOut, user } = useAuthContext();
   const { tenant, clearActiveBusiness } = useTenantContext();
   const { data: staff } = useStaffSelf();
+  const { colors } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const staffName = staff
@@ -82,24 +84,39 @@ export function StaffAppBar({
   };
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
+    <View
+      style={[
+        styles.wrap,
+        {
+          paddingTop: insets.top + 8,
+          backgroundColor: colors.bg,
+          borderBottomColor: colors.border,
+        },
+      ]}>
       <View style={styles.row}>
         <Pressable
-          style={styles.menuBtn}
+          style={[
+            styles.menuBtn,
+            { borderColor: colors.border, backgroundColor: colors.card },
+          ]}
           onPress={toggleDrawer}
           accessibilityLabel="Ouvrir le menu"
           accessibilityRole="button">
-          <Ionicons name="menu" size={22} color={ownerColors.primary} />
+          <Ionicons name="menu" size={22} color={colors.primary} />
         </Pressable>
 
         <View style={styles.titleBlock}>
           <Text
-            style={[styles.title, displayTitle && styles.titleDisplay]}
+            style={[
+              styles.title,
+              { color: colors.text },
+              displayTitle && styles.titleDisplay,
+            ]}
             numberOfLines={1}>
             {resolvedTitle}
           </Text>
           {resolvedSubtitle ? (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
               {resolvedSubtitle}
             </Text>
           ) : null}
@@ -109,7 +126,7 @@ export function StaffAppBar({
           {rightSlot}
           <StaffNotificationBell />
           <Pressable
-            style={styles.avatar}
+            style={[styles.avatar, { backgroundColor: colors.avatar }]}
             onPress={() => setMenuOpen(true)}
             accessibilityLabel="Menu profil"
             accessibilityRole="button">
@@ -126,9 +143,17 @@ export function StaffAppBar({
         animationType="fade"
         onRequestClose={() => setMenuOpen(false)}>
         <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
-          <View style={styles.menuCard}>
-            <Text style={styles.menuName}>{staffName || "Staff"}</Text>
-            <Text style={styles.menuEmail}>{staff?.email ?? user?.email ?? ""}</Text>
+          <View
+            style={[
+              styles.menuCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}>
+            <Text style={[styles.menuName, { color: colors.text }]}>
+              {staffName || "Staff"}
+            </Text>
+            <Text style={[styles.menuEmail, { color: colors.textMuted }]}>
+              {staff?.email ?? user?.email ?? ""}
+            </Text>
 
             <Pressable
               style={styles.menuItem}
@@ -136,16 +161,20 @@ export function StaffAppBar({
                 setMenuOpen(false);
                 router.push("/(app)/staff/profile" as Href);
               }}>
-              <Ionicons name="person-outline" size={18} color={ownerColors.text} />
-              <Text style={styles.menuItemText}>Mon compte</Text>
+              <Ionicons name="person-outline" size={18} color={colors.text} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Mon compte</Text>
             </Pressable>
             <Pressable style={styles.menuItem} onPress={switchWorkspace}>
-              <Ionicons name="swap-horizontal-outline" size={18} color={ownerColors.text} />
-              <Text style={styles.menuItemText}>{"Changer d'espace"}</Text>
+              <Ionicons name="swap-horizontal-outline" size={18} color={colors.text} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>
+                {"Changer d'espace"}
+              </Text>
             </Pressable>
             <Pressable style={styles.menuItem} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={18} color={ownerColors.danger} />
-              <Text style={[styles.menuItemText, styles.menuDanger]}>Déconnexion</Text>
+              <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+              <Text style={[styles.menuItemText, { color: colors.danger }]}>
+                Déconnexion
+              </Text>
             </Pressable>
           </View>
         </Pressable>
@@ -158,9 +187,7 @@ const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 16,
     paddingBottom: 14,
-    backgroundColor: ownerColors.bg,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ownerColors.border,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   menuBtn: {
@@ -168,8 +195,6 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: ownerColors.border,
-    backgroundColor: ownerColors.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -177,7 +202,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: ownerColors.text,
     fontFamily: ownerFonts.bold,
   },
   titleDisplay: {
@@ -186,7 +210,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: ownerColors.textMuted,
     marginTop: 2,
     fontFamily: ownerFonts.regular,
   },
@@ -195,7 +218,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: ownerColors.avatar,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -216,22 +238,18 @@ const styles = StyleSheet.create({
   },
   menuCard: {
     width: 240,
-    backgroundColor: ownerColors.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: ownerColors.border,
     padding: 14,
     gap: 4,
   },
   menuName: {
     fontSize: 15,
     fontWeight: "700",
-    color: ownerColors.text,
     fontFamily: ownerFonts.bold,
   },
   menuEmail: {
     fontSize: 12,
-    color: ownerColors.textMuted,
     marginBottom: 8,
     fontFamily: ownerFonts.regular,
   },
@@ -243,8 +261,6 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 14,
-    color: ownerColors.text,
     fontFamily: ownerFonts.medium,
   },
-  menuDanger: { color: ownerColors.danger },
 });

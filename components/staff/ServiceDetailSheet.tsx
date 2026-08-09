@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { formatCurrency } from "@/lib/format";
 import {
   commissionEarnings,
@@ -37,6 +38,8 @@ export function ServiceDetailSheet({
   onShare,
   sharing,
 }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
 
@@ -60,8 +63,18 @@ export function ServiceDetailSheet({
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <View style={styles.handle} />
         <ScrollView showsVerticalScrollIndicator={false}>
-          {service.image_url ? (
-            <Image source={{ uri: service.image_url }} style={styles.image} />
+          {service.image_url || service.image_url_2 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.imageRow}>
+              {service.image_url ? (
+                <Image source={{ uri: service.image_url }} style={styles.image} />
+              ) : null}
+              {service.image_url_2 ? (
+                <Image source={{ uri: service.image_url_2 }} style={styles.image} />
+              ) : null}
+            </ScrollView>
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={styles.imagePlaceholderText}>✂</Text>
@@ -146,144 +159,149 @@ export async function shareReferralUrl(url: string): Promise<void> {
   await Share.share({ message: url, url });
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(26,15,10,0.4)",
-  },
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: "88%",
-    backgroundColor: ownerColors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: ownerColors.border,
-  },
-  handle: {
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ownerColors.border,
-    marginBottom: 14,
-  },
-  image: {
-    width: "100%",
-    height: 160,
-    borderRadius: 14,
-    marginBottom: 14,
-    backgroundColor: ownerColors.bg,
-  },
-  imagePlaceholder: {
-    width: "100%",
-    height: 120,
-    borderRadius: 14,
-    marginBottom: 14,
-    backgroundColor: ownerColors.primarySurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imagePlaceholderText: { fontSize: 36 },
-  name: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  category: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    marginTop: 4,
-    marginBottom: 12,
-    fontFamily: ownerFonts.medium,
-  },
-  metaCard: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 12,
-    backgroundColor: ownerColors.bg,
-    marginBottom: 14,
-    overflow: "hidden",
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ownerColors.border,
-  },
-  metaLabel: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.regular,
-  },
-  metaValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  metaValuePrimary: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.bold,
-  },
-  metaHint: {
-    fontSize: 11,
-    color: ownerColors.textDim,
-    marginTop: 2,
-    fontFamily: ownerFonts.regular,
-  },
-  block: { marginBottom: 16 },
-  blockTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: ownerColors.textDim,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    marginBottom: 6,
-    fontFamily: ownerFonts.bold,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.regular,
-  },
-  linkHint: {
-    fontSize: 12,
-    color: ownerColors.textMuted,
-    marginBottom: 10,
-    fontFamily: ownerFonts.regular,
-  },
-  shareBtn: {
-    backgroundColor: ownerColors.primary,
-    height: 46,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  disabled: { opacity: 0.7 },
-  closeBtn: { alignItems: "center", paddingVertical: 14 },
-  closeText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.semiBold,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(26,15,10,0.4)",
+    },
+    sheet: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      maxHeight: "88%",
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    handle: {
+      alignSelf: "center",
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 14,
+    },
+    image: {
+      width: 280,
+      height: 160,
+      borderRadius: 14,
+      backgroundColor: colors.bg,
+    },
+    imageRow: {
+      gap: 10,
+      marginBottom: 14,
+    },
+    imagePlaceholder: {
+      width: "100%",
+      height: 120,
+      borderRadius: 14,
+      marginBottom: 14,
+      backgroundColor: colors.primarySurface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    imagePlaceholderText: { fontSize: 36 },
+    name: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    category: {
+      fontSize: 13,
+      color: colors.textMuted,
+      marginTop: 4,
+      marginBottom: 12,
+      fontFamily: ownerFonts.medium,
+    },
+    metaCard: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.bg,
+      marginBottom: 14,
+      overflow: "hidden",
+    },
+    metaRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    metaLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    metaValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    metaValuePrimary: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.primary,
+      fontFamily: ownerFonts.bold,
+    },
+    metaHint: {
+      fontSize: 11,
+      color: colors.textDim,
+      marginTop: 2,
+      fontFamily: ownerFonts.regular,
+    },
+    block: { marginBottom: 16 },
+    blockTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.textDim,
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+      marginBottom: 6,
+      fontFamily: ownerFonts.bold,
+    },
+    description: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.text,
+      fontFamily: ownerFonts.regular,
+    },
+    linkHint: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginBottom: 10,
+      fontFamily: ownerFonts.regular,
+    },
+    shareBtn: {
+      backgroundColor: colors.primary,
+      height: 46,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    shareText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    disabled: { opacity: 0.7 },
+    closeBtn: { alignItems: "center", paddingVertical: 14 },
+    closeText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textMuted,
+      fontFamily: ownerFonts.semiBold,
+    },
+  });
+}

@@ -1,9 +1,8 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { useRouter, type Href } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,15 +10,18 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { AddExceptionSheet } from "@/components/staff/AddExceptionSheet";
 import { SelfScheduleEditor } from "@/components/staff/SelfScheduleEditor";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
-import { useLanguage } from "@/hooks/useLanguage";
 import {
   useDeleteSelfOverride,
   useSelfOverrides,
@@ -28,49 +30,54 @@ import {
   useUpdateSelfSchedule,
   useUpsertSelfOverride,
 } from "@/hooks/useStaffSelf";
+import { authClient } from "@/lib/auth";
 import { roleLabel } from "@/lib/workspaceRouting";
 
-const LANGUAGES = [
-  { code: "en", label: "English", flag: "🇬🇧" },
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "et", label: "Eesti", flag: "🇪🇪" },
-  { code: "ru", label: "Русский", flag: "🇷🇺" },
-] as const;
-
-function monthRange(base: Date): { from: string; to: string; label: string } {
-  const y = base.getFullYear();
-  const m = base.getMonth();
-  const from = new Date(y, m, 1);
-  const to = new Date(y, m + 1, 0);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return {
-    from: `${y}-${pad(m + 1)}-01`,
-    to: `${y}-${pad(m + 1)}-${pad(to.getDate())}`,
-    label: from.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }),
-  };
-}
+type MainTab = "resume" | "horaire" | "appearance";
+type ScheduleTab = "weekly" | "exceptions";
 
 export default function StaffProfileScreen() {
-  const router = useRouter();
-  const { signOut } = useAuthContext();
-  const { tenant, clearActiveBusiness } = useTenantContext();
+  const { t, i18n } = useTranslation();
+  const { user } = useAuthContext();
+  const { tenant } = useTenantContext();
   const { data: staff, isLoading } = useStaffSelf();
-  const { language, setLanguage } = useLanguage();
   const toast = useToast();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const updateProfile = useUpdateSelfProfile();
   const updateSchedule = useUpdateSelfSchedule();
   const upsertOverride = useUpsertSelfOverride();
   const deleteOverride = useDeleteSelfOverride();
 
+  const [mainTab, setMainTab] = useState<MainTab>("resume");
+  const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("weekly");
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
-  const [nameError, setNameError] = useState<string | null>(null);
   const [monthCursor, setMonthCursor] = useState(() => new Date());
   const [exceptionOpen, setExceptionOpen] = useState(false);
-  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordBusy, setPasswordBusy] = useState(false);
 
-  const range = useMemo(() => monthRange(monthCursor), [monthCursor]);
+  const range = useMemo(() => {
+    const y = monthCursor.getFullYear();
+    const m = monthCursor.getMonth();
+    const from = new Date(y, m, 1);
+    const to = new Date(y, m + 1, 0);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return {
+      from: `${y}-${pad(m + 1)}-01`,
+      to: `${y}-${pad(m + 1)}-${pad(to.getDate())}`,
+      label: from.toLocaleDateString(i18n.language || "en", {
+        month: "long",
+        year: "numeric",
+      }),
+    };
+  }, [monthCursor, i18n.language]);
+
   const {
     data: overrides = [],
     isLoading: overridesLoading,
@@ -80,42 +87,18 @@ export default function StaffProfileScreen() {
   const displayName = staff
     ? (staff.display_name?.trim() ||
         `${staff.first_name ?? ""} ${staff.last_name ?? ""}`.trim() ||
-        "…")
-    : "…";
-
-  const initials = staff
-    ? `${staff.first_name?.[0] ?? ""}${staff.last_name?.[0] ?? ""}`.toUpperCase() || "?"
-    : "?";
-
-  function handleLogout() {
-    Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Déconnexion",
-        style: "destructive",
-        onPress: () => {
-          void signOut().then(() => router.replace("/(auth)/login" as Href));
-        },
-      },
-    ]);
-  }
-
-  async function switchWorkspace() {
-    await clearActiveBusiness();
-    router.replace("/(auth)/role-select" as Href);
-  }
+        "—")
+    : "—";
 
   function startEditName() {
-    setNameValue(displayName === "…" ? "" : displayName);
-    setNameError(null);
+    setNameValue(displayName === "—" ? "" : displayName);
     setEditingName(true);
   }
 
   function saveName() {
     const trimmed = nameValue.trim();
     if (trimmed.length < 2) {
-      setNameError("Le nom doit contenir au moins 2 caractères");
-      toast.warning("Nom invalide", "Le nom doit contenir au moins 2 caractères.");
+      toast.warning(t("staffAccount.labelName"), t("staffAccount.pwMinError"));
       return;
     }
     updateProfile.mutate(
@@ -123,235 +106,337 @@ export default function StaffProfileScreen() {
       {
         onSuccess: () => {
           setEditingName(false);
-          setNameError(null);
-          toast.success("Profil", "Nom mis à jour.");
+          toast.success(t("staffAccount.profileTitle"), "OK");
         },
         onError: (err: Error) => {
-          console.warn("[staff-profile] update name failed", err);
-          setNameError(err.message || "Échec de la mise à jour");
-          toast.error("Erreur", err.message || "Échec de la mise à jour");
+          toast.error(t("staffAccount.errorSave"), err.message);
         },
       },
     );
   }
 
+  async function savePassword() {
+    setPasswordError(null);
+    if (newPassword.length < 8) {
+      setPasswordError(t("staffAccount.pwMinError"));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t("staffAccount.pwMatchError"));
+      return;
+    }
+    setPasswordBusy(true);
+    try {
+      const { error } = await authClient.updatePassword(newPassword);
+      if (error) throw error;
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success(t("staffAccount.passwordTitle"), t("staffAccount.pwUpdated"));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("staffAccount.pwFailed");
+      setPasswordError(msg);
+      toast.error(t("staffAccount.errorSave"), msg);
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
+
   return (
-    <View style={ownerStyles.screen}>
-      <StaffAppBar title="Profil" subtitle={tenant?.businessName} displayTitle />
+    <View style={styles.screen}>
+      <StaffAppBar
+        title={t("staffAccount.title")}
+        subtitle={t("staffAccount.subtitle")}
+        displayTitle
+      />
+
+      <View style={styles.tabs}>
+        {(
+          [
+            { key: "resume" as const, label: t("staffAccount.tabResume"), icon: "person-outline" as const },
+            { key: "horaire" as const, label: t("staffAccount.tabSchedule"), icon: "time-outline" as const },
+            { key: "appearance" as const, label: t("appearance.title"), icon: "color-palette-outline" as const },
+          ]
+        ).map((tab) => {
+          const active = mainTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              style={[styles.tab, active && styles.tabActive]}
+              onPress={() => setMainTab(tab.key)}>
+              <Ionicons
+                name={tab.icon}
+                size={14}
+                color={active ? colors.primary : colors.textMuted}
+              />
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <ScrollView contentContainerStyle={styles.container}>
         {isLoading ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={ownerColors.primary} />
-        ) : (
+          <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
+        ) : mainTab === "resume" ? (
           <>
-            <View style={styles.avatarSection}>
-              {staff?.avatar_url ? (
-                <Image source={{ uri: staff.avatar_url }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarText}>{initials}</Text>
-                </View>
-              )}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="person-outline" size={16} color={colors.primary} />
+                <Text style={styles.cardTitle}>{t("staffAccount.profileTitle")}</Text>
+              </View>
 
-              {editingName ? (
-                <View style={styles.editNameBlock}>
-                  <TextInput
-                    style={styles.nameInput}
-                    value={nameValue}
-                    onChangeText={setNameValue}
-                    autoFocus
-                    placeholder="Nom affiché"
-                    placeholderTextColor={ownerColors.textDim}
-                  />
-                  {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
-                  <View style={styles.editActions}>
-                    <Pressable
-                      style={styles.cancelNameBtn}
-                      onPress={() => setEditingName(false)}
-                      disabled={updateProfile.isPending}>
-                      <Text style={styles.cancelNameText}>Annuler</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[
-                        styles.saveNameBtn,
-                        updateProfile.isPending && styles.disabled,
-                      ]}
-                      onPress={saveName}
-                      disabled={updateProfile.isPending}>
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("staffAccount.labelName")}</Text>
+                {editingName ? (
+                  <View style={styles.editRow}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={nameValue}
+                      onChangeText={setNameValue}
+                      autoFocus
+                      placeholderTextColor={colors.textDim}
+                    />
+                    <Pressable style={styles.iconBtn} onPress={saveName} disabled={updateProfile.isPending}>
                       {updateProfile.isPending ? (
-                        <ActivityIndicator color="#fff" size="small" />
+                        <ActivityIndicator size="small" color={colors.success} />
                       ) : (
-                        <Text style={styles.saveNameText}>Sauver</Text>
+                        <Ionicons name="checkmark" size={20} color={colors.success} />
                       )}
                     </Pressable>
-                  </View>
-                </View>
-              ) : (
-                <>
-                  <Text style={styles.name}>{displayName}</Text>
-                  <Pressable onPress={startEditName} style={styles.editNameLink}>
-                    <Text style={styles.editNameLinkText}>Modifier le nom</Text>
-                  </Pressable>
-                </>
-              )}
-
-              <Text style={styles.role}>
-                {roleLabel(
-                  (staff?.role as "staff") ?? "staff",
-                  staff?.position ?? tenant?.position,
-                )}
-              </Text>
-            </View>
-
-            <View style={styles.infoCard}>
-              {staff?.email ? (
-                <Text style={styles.info}>✉  {staff.email}</Text>
-              ) : null}
-              {staff?.phone ? (
-                <Text style={styles.info}>📞  {staff.phone}</Text>
-              ) : null}
-              {tenant?.businessName ? (
-                <Text style={styles.info}>🏪  {tenant.businessName}</Text>
-              ) : null}
-            </View>
-
-            <SelfScheduleEditor
-              workingHours={staff?.working_hours ?? []}
-              busy={updateSchedule.isPending}
-              onSave={(schedule) => {
-                console.log("[staff-profile] save schedule", schedule);
-                updateSchedule.mutate(schedule, {
-                  onSuccess: () => {
-                    toast.success("Horaires", "Horaires enregistrés.");
-                  },
-                  onError: (err: Error) => {
-                    console.warn("[staff-profile] save schedule failed", err);
-                    toast.error(
-                      "Horaires",
-                      err.message || "Échec de l'enregistrement",
-                    );
-                  },
-                });
-              }}
-            />
-
-            <View style={styles.exceptionsCard}>
-              <View style={styles.exceptionsHeader}>
-                <Text style={styles.sectionTitle}>Exceptions / congés</Text>
-                <Pressable
-                  style={styles.addBtn}
-                  onPress={() => {
-                    setOverrideError(null);
-                    setExceptionOpen(true);
-                  }}>
-                  <Text style={styles.addBtnText}>+ Ajouter</Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.monthNav}>
-                <Pressable
-                  style={styles.monthBtn}
-                  onPress={() =>
-                    setMonthCursor(
-                      (d) => new Date(d.getFullYear(), d.getMonth() - 1, 1),
-                    )
-                  }>
-                  <Text style={styles.monthBtnText}>‹</Text>
-                </Pressable>
-                <Text style={styles.monthLabel}>{range.label}</Text>
-                <Pressable
-                  style={styles.monthBtn}
-                  onPress={() =>
-                    setMonthCursor(
-                      (d) => new Date(d.getFullYear(), d.getMonth() + 1, 1),
-                    )
-                  }>
-                  <Text style={styles.monthBtnText}>›</Text>
-                </Pressable>
-              </View>
-
-              {overridesLoading ? (
-                <ActivityIndicator color={ownerColors.primary} />
-              ) : overrides.length === 0 ? (
-                <Text style={styles.emptyOverrides}>
-                  Aucune exception ce mois-ci.
-                </Text>
-              ) : (
-                overrides.map((item) => (
-                  <View key={item.id} style={styles.overrideRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.overrideDate}>{item.override_date}</Text>
-                      <Text style={styles.overrideMeta}>
-                        {item.is_available
-                          ? `${item.start_time ?? "?"} – ${item.end_time ?? "?"}`
-                          : "Jour off"}
-                        {item.reason ? ` · ${item.reason}` : ""}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => {
-                        Alert.alert(
-                          "Supprimer",
-                          `Supprimer l'exception du ${item.override_date} ?`,
-                          [
-                            { text: "Annuler", style: "cancel" },
-                            {
-                              text: "Supprimer",
-                              style: "destructive",
-                              onPress: () =>
-                                deleteOverride.mutate(item.override_date, {
-                                  onSuccess: () => {
-                                    toast.success(
-                                      "Exception",
-                                      "Exception supprimée.",
-                                    );
-                                  },
-                                  onError: (err: Error) =>
-                                    toast.error(
-                                      "Erreur",
-                                      err.message || "Suppression impossible",
-                                    ),
-                                }),
-                            },
-                          ],
-                        );
-                      }}
-                      disabled={deleteOverride.isPending}>
-                      <Text style={styles.deleteText}>✕</Text>
+                    <Pressable style={styles.iconBtn} onPress={() => setEditingName(false)}>
+                      <Ionicons name="close" size={20} color={colors.textMuted} />
                     </Pressable>
                   </View>
-                ))
-              )}
-              {overrideError ? (
-                <Text style={styles.error}>{overrideError}</Text>
+                ) : (
+                  <View style={styles.nameRow}>
+                    <Text style={styles.value}>{displayName}</Text>
+                    <Pressable style={styles.iconBtn} onPress={startEditName}>
+                      <Ionicons name="pencil" size={14} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+
+              {staff?.position ? (
+                <View style={styles.field}>
+                  <Text style={styles.label}>{t("staffAccount.labelPosition")}</Text>
+                  <Text style={styles.value}>{staff.position}</Text>
+                </View>
               ) : null}
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("staffAccount.labelEmail")}</Text>
+                <Text style={styles.value}>{staff?.email ?? user?.email ?? "—"}</Text>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>{t("staffAccount.labelRole")}</Text>
+                <Text style={styles.value}>
+                  {roleLabel(
+                    (staff?.role as "staff") ?? "staff",
+                    staff?.position ?? tenant?.position,
+                  )}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Langue</Text>
-              {LANGUAGES.map((lang) => (
-                <Pressable
-                  key={lang.code}
-                  onPress={() => setLanguage(lang.code)}
-                  style={[
-                    styles.langRow,
-                    language === lang.code && styles.langRowActive,
-                  ]}>
-                  <Text style={styles.langFlag}>{lang.flag}</Text>
-                  <Text style={styles.langLabel}>{lang.label}</Text>
-                  {language === lang.code ? (
-                    <Text style={styles.check}>✓</Text>
-                  ) : null}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
+                <Text style={styles.cardTitle}>{t("staffAccount.passwordTitle")}</Text>
+              </View>
+
+              <Text style={styles.label}>{t("staffAccount.newPassword")}</Text>
+              <View style={styles.passwordWrap}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder={t("staffAccount.passwordMin")}
+                  placeholderTextColor={colors.textDim}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Pressable style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={18}
+                    color={colors.textMuted}
+                  />
                 </Pressable>
-              ))}
+              </View>
+
+              <Text style={[styles.label, { marginTop: 10 }]}>
+                {t("staffAccount.confirmPassword")}
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder={t("staffAccount.repeatPassword")}
+                placeholderTextColor={colors.textDim}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
+
+              <Pressable
+                style={[
+                  styles.primaryBtn,
+                  (passwordBusy || !newPassword || !confirmPassword) && styles.disabled,
+                ]}
+                disabled={passwordBusy || !newPassword || !confirmPassword}
+                onPress={() => void savePassword()}>
+                {passwordBusy ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>{t("staffAccount.updatePassword")}</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
+        ) : mainTab === "horaire" ? (
+          <>
+            <View style={styles.subTabs}>
+              {(
+                [
+                  { key: "weekly" as const, label: t("staffAccount.weeklyTab") },
+                  { key: "exceptions" as const, label: t("staffAccount.exceptionsTab") },
+                ]
+              ).map((tab) => {
+                const active = scheduleTab === tab.key;
+                return (
+                  <Pressable
+                    key={tab.key}
+                    style={[styles.subTab, active && styles.subTabActive]}
+                    onPress={() => setScheduleTab(tab.key)}>
+                    <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
-            <Pressable style={styles.switchBtn} onPress={() => void switchWorkspace()}>
-              <Text style={styles.switchText}>{"Changer d'espace"}</Text>
-            </Pressable>
+            {scheduleTab === "weekly" ? (
+              <SelfScheduleEditor
+                workingHours={staff?.working_hours ?? []}
+                busy={updateSchedule.isPending}
+                onSave={(schedule) => {
+                  updateSchedule.mutate(schedule, {
+                    onSuccess: () =>
+                      toast.success(
+                        t("staffAccount.scheduleTitle"),
+                        t("staffAccount.schedulesSaved"),
+                      ),
+                    onError: (err: Error) =>
+                      toast.error(t("staffAccount.errorSave"), err.message),
+                  });
+                }}
+              />
+            ) : (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                  <Text style={styles.cardTitle}>{t("staffAccount.exceptionsTab")}</Text>
+                </View>
+                <Text style={styles.hint}>{t("staffAccount.exceptionsDesc")}</Text>
 
-            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-              <Text style={styles.logoutText}>Déconnexion</Text>
-            </Pressable>
+                <View style={styles.monthNav}>
+                  <Pressable
+                    style={styles.monthBtn}
+                    onPress={() =>
+                      setMonthCursor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+                    }>
+                    <Ionicons name="chevron-back" size={18} color={colors.text} />
+                  </Pressable>
+                  <Text style={styles.monthLabel}>{range.label}</Text>
+                  <Pressable
+                    style={styles.monthBtn}
+                    onPress={() =>
+                      setMonthCursor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+                    }>
+                    <Ionicons name="chevron-forward" size={18} color={colors.text} />
+                  </Pressable>
+                </View>
+
+                {overridesLoading ? (
+                  <ActivityIndicator color={colors.primary} />
+                ) : overrides.length === 0 ? (
+                  <Text style={styles.emptyOverrides}>{t("staffAccount.noExceptions")}</Text>
+                ) : (
+                  overrides.map((item) => (
+                    <View key={item.id} style={styles.overrideRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.overrideDate}>{item.override_date}</Text>
+                        <Text style={styles.overrideMeta}>
+                          {item.is_available
+                            ? `${item.start_time ?? "?"} – ${item.end_time ?? "?"}`
+                            : t("staffAccount.dayOff")}
+                          {item.reason ? ` · ${item.reason}` : ""}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => {
+                          Alert.alert(
+                            t("staffAccount.cancelBtn"),
+                            item.override_date,
+                            [
+                              { text: t("staffAccount.cancelBtn"), style: "cancel" },
+                              {
+                                text: "OK",
+                                style: "destructive",
+                                onPress: () =>
+                                  deleteOverride.mutate(item.override_date, {
+                                    onSuccess: () =>
+                                      toast.success(
+                                        t("staffAccount.exceptionsTab"),
+                                        t("staffAccount.exceptionSaved"),
+                                      ),
+                                    onError: (err: Error) =>
+                                      toast.error(t("staffAccount.errorSave"), err.message),
+                                  }),
+                              },
+                            ],
+                          );
+                        }}
+                        disabled={deleteOverride.isPending}>
+                        <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                      </Pressable>
+                    </View>
+                  ))
+                )}
+
+                <Pressable style={styles.outlineBtn} onPress={() => setExceptionOpen(true)}>
+                  <Ionicons name="add" size={16} color={colors.primary} />
+                  <Text style={styles.outlineBtnText}>{t("staffAccount.addException")}</Text>
+                </Pressable>
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="color-palette-outline" size={16} color={colors.primary} />
+                <Text style={styles.cardTitle}>{t("appearance.title")}</Text>
+              </View>
+              <Text style={styles.hint}>{t("appearance.themeHint")}</Text>
+              <ThemeToggle />
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="globe-outline" size={16} color={colors.primary} />
+                <Text style={styles.cardTitle}>{t("appearance.language")}</Text>
+              </View>
+              <LanguageSelector variant="list" />
+            </View>
           </>
         )}
       </ScrollView>
@@ -362,19 +447,17 @@ export default function StaffProfileScreen() {
         busy={upsertOverride.isPending}
         onClose={() => setExceptionOpen(false)}
         onSave={(override) => {
-          setOverrideError(null);
           upsertOverride.mutate(override, {
             onSuccess: () => {
               setExceptionOpen(false);
               void refetchOverrides();
-              toast.success("Exception", "Exception enregistrée.");
+              toast.success(
+                t("staffAccount.exceptionsTab"),
+                t("staffAccount.exceptionSaved"),
+              );
             },
             onError: (err: Error) => {
-              setOverrideError(err.message || "Échec de l'enregistrement");
-              toast.error(
-                "Erreur",
-                err.message || "Échec de l'enregistrement",
-              );
+              toast.error(t("staffAccount.errorSave"), err.message);
             },
           });
         }}
@@ -383,227 +466,218 @@ export default function StaffProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { padding: 16, gap: 8, paddingBottom: 40 },
-  avatarSection: { alignItems: "center", paddingVertical: 20 },
-  avatar: { width: 88, height: 88, borderRadius: 44, marginBottom: 12 },
-  avatarFallback: {
-    backgroundColor: ownerColors.avatar,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#fff",
-    fontFamily: ownerFonts.bold,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  editNameLink: { marginTop: 4, marginBottom: 2 },
-  editNameLinkText: {
-    fontSize: 13,
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.semiBold,
-  },
-  editNameBlock: { width: "100%", alignItems: "center", gap: 8 },
-  nameInput: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: ownerColors.text,
-    backgroundColor: ownerColors.card,
-    textAlign: "center",
-    fontFamily: ownerFonts.regular,
-  },
-  editActions: { flexDirection: "row", gap: 10 },
-  cancelNameBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-  },
-  cancelNameText: {
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.semiBold,
-  },
-  saveNameBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: ownerColors.primary,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  saveNameText: {
-    color: "#fff",
-    fontFamily: ownerFonts.semiBold,
-  },
-  role: {
-    fontSize: 14,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.regular,
-  },
-  infoCard: {
-    ...ownerStyles.card,
-    gap: 6,
-    marginBottom: 4,
-  },
-  info: {
-    fontSize: 14,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.regular,
-  },
-  exceptionsCard: {
-    ...ownerStyles.card,
-    backgroundColor: ownerColors.primarySurface,
-    marginBottom: 12,
-  },
-  exceptionsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  addBtn: {
-    backgroundColor: ownerColors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  monthNav: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  monthBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: ownerColors.card,
-  },
-  monthBtnText: {
-    fontSize: 18,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  monthLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    textTransform: "capitalize",
-    fontFamily: ownerFonts.semiBold,
-  },
-  emptyOverrides: {
-    fontSize: 13,
-    color: ownerColors.textDim,
-    fontFamily: ownerFonts.regular,
-  },
-  overrideRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ownerColors.border,
-  },
-  overrideDate: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  overrideMeta: {
-    fontSize: 12,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.regular,
-  },
-  deleteText: {
-    fontSize: 16,
-    color: ownerColors.danger,
-    paddingHorizontal: 8,
-    fontFamily: ownerFonts.bold,
-  },
-  section: {
-    ...ownerStyles.card,
-    backgroundColor: ownerColors.primarySurface,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: ownerColors.text,
-    marginBottom: 8,
-    fontFamily: ownerFonts.bold,
-  },
-  langRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-  },
-  langRowActive: { backgroundColor: ownerColors.primaryMuted },
-  langFlag: { fontSize: 20 },
-  langLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.medium,
-  },
-  check: {
-    fontSize: 16,
-    color: ownerColors.primary,
-    fontWeight: "700",
-  },
-  switchBtn: {
-    ...ownerStyles.outlineBtn,
-    marginTop: 4,
-  },
-  switchText: ownerStyles.outlineBtnText,
-  logoutBtn: {
-    alignItems: "center",
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ownerColors.danger,
-    marginTop: 8,
-    backgroundColor: ownerColors.dangerMuted,
-  },
-  logoutText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: ownerColors.danger,
-    fontFamily: ownerFonts.semiBold,
-  },
-  error: {
-    color: ownerColors.danger,
-    fontSize: 13,
-    marginTop: 4,
-    fontFamily: ownerFonts.regular,
-  },
-  disabled: { opacity: 0.7 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    tabs: {
+      flexDirection: "row",
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 4,
+      backgroundColor: colors.primarySurface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 4,
+      gap: 4,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 5,
+      paddingVertical: 10,
+      borderRadius: 9,
+    },
+    tabActive: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    tabText: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    tabTextActive: {
+      color: colors.primary,
+      fontFamily: ownerFonts.semiBold,
+    },
+    container: { padding: 16, gap: 14, paddingBottom: 40 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      gap: 12,
+    },
+    cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    cardTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    field: { gap: 4 },
+    label: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    value: {
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    editRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+    iconBtn: {
+      width: 32,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.bg,
+      fontFamily: ownerFonts.regular,
+    },
+    passwordWrap: { position: "relative" },
+    passwordInput: { paddingRight: 44 },
+    eyeBtn: {
+      position: "absolute",
+      right: 10,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+    },
+    primaryBtn: {
+      marginTop: 6,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    primaryBtnText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    subTabs: {
+      flexDirection: "row",
+      backgroundColor: colors.primarySurface,
+      borderRadius: 10,
+      padding: 3,
+      gap: 3,
+    },
+    subTab: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+    subTabActive: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    subTabText: {
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    subTabTextActive: {
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    hint: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    monthNav: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    monthBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bg,
+    },
+    monthLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      textTransform: "capitalize",
+      fontFamily: ownerFonts.semiBold,
+    },
+    emptyOverrides: {
+      fontSize: 13,
+      color: colors.textDim,
+      textAlign: "center",
+      paddingVertical: 16,
+      fontFamily: ownerFonts.regular,
+    },
+    overrideRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    overrideDate: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    overrideMeta: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 2,
+      fontFamily: ownerFonts.regular,
+    },
+    outlineBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      height: 44,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+    },
+    outlineBtnText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontFamily: ownerFonts.semiBold,
+    },
+    error: {
+      color: colors.danger,
+      fontSize: 13,
+      marginTop: 4,
+      fontFamily: ownerFonts.regular,
+    },
+    disabled: { opacity: 0.55 },
+  });
+}
