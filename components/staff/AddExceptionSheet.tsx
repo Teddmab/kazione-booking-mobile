@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import type { StaffOverride } from "@/services/staff/profile";
 
 type ExceptionType = "day_off" | "custom";
@@ -31,6 +32,8 @@ export function AddExceptionSheet({
   defaultDate,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [type, setType] = useState<ExceptionType>("day_off");
   const [date, setDate] = useState(defaultDate ?? "");
   const [startTime, setStartTime] = useState("10:00");
@@ -107,7 +110,7 @@ export function AddExceptionSheet({
           value={date}
           onChangeText={setDate}
           placeholder="2026-08-15"
-          placeholderTextColor={ownerColors.textDim}
+          placeholderTextColor={colors.textDim}
           autoCapitalize="none"
         />
 
@@ -120,7 +123,7 @@ export function AddExceptionSheet({
                 value={startTime}
                 onChangeText={setStartTime}
                 placeholder="10:00"
-                placeholderTextColor={ownerColors.textDim}
+                placeholderTextColor={colors.textDim}
                 autoCapitalize="none"
               />
             </View>
@@ -131,7 +134,7 @@ export function AddExceptionSheet({
                 value={endTime}
                 onChangeText={setEndTime}
                 placeholder="14:00"
-                placeholderTextColor={ownerColors.textDim}
+                placeholderTextColor={colors.textDim}
                 autoCapitalize="none"
               />
             </View>
@@ -144,7 +147,7 @@ export function AddExceptionSheet({
           value={reason}
           onChangeText={setReason}
           placeholder="Congé, formation…"
-          placeholderTextColor={ownerColors.textDim}
+          placeholderTextColor={colors.textDim}
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -167,110 +170,112 @@ export function AddExceptionSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(26,15,10,0.4)",
-  },
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: ownerColors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: ownerColors.border,
-  },
-  handle: {
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ownerColors.border,
-    marginBottom: 14,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: ownerColors.text,
-    marginBottom: 14,
-    fontFamily: ownerFonts.bold,
-  },
-  typeRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  typeChip: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-    backgroundColor: ownerColors.bg,
-  },
-  typeChipActive: {
-    borderColor: ownerColors.primary,
-    backgroundColor: ownerColors.primarySurface,
-  },
-  typeText: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  typeTextActive: {
-    color: ownerColors.primary,
-    fontWeight: "600",
-  },
-  label: {
-    fontSize: 12,
-    color: ownerColors.textMuted,
-    marginBottom: 6,
-    marginTop: 4,
-    fontFamily: ownerFonts.medium,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: ownerColors.text,
-    backgroundColor: ownerColors.bg,
-    marginBottom: 8,
-    fontFamily: ownerFonts.regular,
-  },
-  reason: { minHeight: 44 },
-  times: { flexDirection: "row", gap: 10 },
-  timeCol: { flex: 1 },
-  error: {
-    color: ownerColors.danger,
-    fontSize: 13,
-    marginBottom: 8,
-    fontFamily: ownerFonts.regular,
-  },
-  saveBtn: {
-    backgroundColor: ownerColors.primary,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  disabled: { opacity: 0.7 },
-  saveText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  cancelBtn: { alignItems: "center", paddingVertical: 14 },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.semiBold,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(26,15,10,0.4)",
+    },
+    sheet: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    handle: {
+      alignSelf: "center",
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 14,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 14,
+      fontFamily: ownerFonts.bold,
+    },
+    typeRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+    typeChip: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingVertical: 10,
+      alignItems: "center",
+      backgroundColor: colors.bg,
+    },
+    typeChipActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySurface,
+    },
+    typeText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    typeTextActive: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    label: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginBottom: 6,
+      marginTop: 4,
+      fontFamily: ownerFonts.medium,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.bg,
+      marginBottom: 8,
+      fontFamily: ownerFonts.regular,
+    },
+    reason: { minHeight: 44 },
+    times: { flexDirection: "row", gap: 10 },
+    timeCol: { flex: 1 },
+    error: {
+      color: colors.danger,
+      fontSize: 13,
+      marginBottom: 8,
+      fontFamily: ownerFonts.regular,
+    },
+    saveBtn: {
+      backgroundColor: colors.primary,
+      height: 48,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+    },
+    disabled: { opacity: 0.7 },
+    saveText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    cancelBtn: { alignItems: "center", paddingVertical: 14 },
+    cancelText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textMuted,
+      fontFamily: ownerFonts.semiBold,
+    },
+  });
+}

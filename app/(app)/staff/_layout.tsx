@@ -1,13 +1,15 @@
 import { Redirect, Stack, type Href } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { StaffDrawer } from "@/components/staff/StaffDrawer";
+import { useThemeColors } from "@/contexts/AppThemeContext";
 import { StaffShellProvider } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 
 export default function StaffLayout() {
   const { tenant, loading } = useTenantContext();
+  const colors = useThemeColors();
 
   if (loading) return <LoadingScreen />;
   if (!tenant) return <Redirect href={"/" as Href} />;
@@ -19,8 +21,12 @@ export default function StaffLayout() {
 
   return (
     <StaffShellProvider>
-      <View style={styles.flex}>
-        <Stack screenOptions={{ headerShown: false }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.bg },
+          }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" />
           <Stack.Screen name="profile" />
@@ -33,7 +39,3 @@ export default function StaffLayout() {
     </StaffShellProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-});

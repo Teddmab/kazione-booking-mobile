@@ -15,7 +15,8 @@ import {
   ServiceDetailSheet,
   shareReferralUrl,
 } from "@/components/staff/ServiceDetailSheet";
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
 import {
@@ -39,11 +40,13 @@ function OfferCard({
   busy,
   onAccept,
   onDecline,
+  styles,
 }: {
   service: StaffService;
   busy: boolean;
   onAccept: () => void;
   onDecline: () => void;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const currency = service.currency_code || "EUR";
   const price = service.effective_price ?? service.price;
@@ -81,10 +84,12 @@ function ServiceRow({
   service,
   onPress,
   onShare,
+  styles,
 }: {
   service: StaffService;
   onPress: () => void;
   onShare: () => void;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   const currency = service.currency_code || "EUR";
   const price = service.effective_price ?? service.price;
@@ -112,6 +117,8 @@ function ServiceRow({
 
 export default function StaffServicesScreen() {
   const toast = useToast();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { tenant } = useTenantContext();
   const { data: self } = useStaffSelf();
   const { data, isLoading, isError, error, refetch, isRefetching } =
@@ -225,7 +232,7 @@ export default function StaffServicesScreen() {
   }
 
   return (
-    <View style={ownerStyles.screen}>
+    <View style={styles.screen}>
       <StaffAppBar
         title="Services"
         subtitle={
@@ -236,12 +243,13 @@ export default function StaffServicesScreen() {
         displayTitle
       />
       <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={() => void refetch()}
-            tintColor={ownerColors.primary}
+            tintColor={colors.primary}
           />
         }>
         <View style={styles.statsRow}>
@@ -281,6 +289,7 @@ export default function StaffServicesScreen() {
                   busy={respondingId === svc.id || respond.isPending}
                   onAccept={() => handleRespond(svc, "accepted")}
                   onDecline={() => handleRespond(svc, "declined")}
+                  styles={styles}
                 />
               ))}
             </View>
@@ -292,7 +301,7 @@ export default function StaffServicesScreen() {
             value={search}
             onChangeText={setSearch}
             placeholder="Rechercher un service…"
-            placeholderTextColor={ownerColors.textDim}
+            placeholderTextColor={colors.textDim}
             autoCapitalize="none"
           />
           <ScrollView
@@ -324,6 +333,7 @@ export default function StaffServicesScreen() {
                 service={svc}
                 onPress={() => setSelected(svc)}
                 onShare={() => void shareFor(svc.id)}
+                styles={styles}
               />
             ))
           )}
@@ -343,162 +353,165 @@ export default function StaffServicesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40 },
-  statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  statCard: {
-    flex: 1,
-    backgroundColor: ownerColors.primarySurface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.bold,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.medium,
-  },
-  offersSection: {
-    borderWidth: 1,
-    borderColor: "#FCD34D",
-    backgroundColor: "#FFFBEB",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 16,
-  },
-  offersTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#B45309",
-    marginBottom: 10,
-    fontFamily: ownerFonts.bold,
-  },
-  offerCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#FDE68A",
-    padding: 12,
-    marginBottom: 8,
-  },
-  offerActions: { flexDirection: "row", gap: 8, marginTop: 10 },
-  acceptBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: ownerColors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  acceptText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  declineBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: ownerColors.danger,
-    backgroundColor: ownerColors.dangerMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  declineText: {
-    color: ownerColors.danger,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  search: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: ownerColors.text,
-    backgroundColor: ownerColors.card,
-    marginBottom: 10,
-    fontFamily: ownerFonts.regular,
-  },
-  chips: { gap: 8, paddingBottom: 12 },
-  chip: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: ownerColors.card,
-  },
-  chipActive: {
-    borderColor: ownerColors.primary,
-    backgroundColor: ownerColors.primarySurface,
-  },
-  chipText: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  chipTextActive: {
-    color: ownerColors.primary,
-    fontWeight: "600",
-  },
-  svcCard: {
-    ...ownerStyles.card,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 10,
-  },
-  svcName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  svcMeta: {
-    fontSize: 12,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.regular,
-  },
-  commHint: {
-    fontSize: 12,
-    color: ownerColors.primary,
-    marginTop: 4,
-    fontFamily: ownerFonts.medium,
-  },
-  shareChip: {
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: ownerColors.bg,
-  },
-  shareChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  emptyFiltered: {
-    fontSize: 13,
-    color: ownerColors.textDim,
-    textAlign: "center",
-    marginTop: 16,
-    fontFamily: ownerFonts.regular,
-  },
-  disabled: { opacity: 0.6 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: 16, paddingBottom: 40 },
+    statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
+    statCard: {
+      flex: 1,
+      backgroundColor: colors.primarySurface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.primary,
+      fontFamily: ownerFonts.bold,
+    },
+    statLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 2,
+      fontFamily: ownerFonts.medium,
+    },
+    offersSection: {
+      borderWidth: 1,
+      borderColor: colors.warning,
+      backgroundColor: colors.warningMuted,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 16,
+    },
+    offersTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.warning,
+      marginBottom: 10,
+      fontFamily: ownerFonts.bold,
+    },
+    offerCard: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      padding: 12,
+      marginBottom: 8,
+    },
+    offerActions: { flexDirection: "row", gap: 8, marginTop: 10 },
+    acceptBtn: {
+      flex: 1,
+      height: 40,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    acceptText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    declineBtn: {
+      flex: 1,
+      height: 40,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: colors.dangerMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    declineText: {
+      color: colors.danger,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    search: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.card,
+      marginBottom: 10,
+      fontFamily: ownerFonts.regular,
+    },
+    chips: { gap: 8, paddingBottom: 12 },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.card,
+    },
+    chipActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySurface,
+    },
+    chipText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    chipTextActive: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    svcCard: {
+      ...ownerStyles.card,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 10,
+    },
+    svcName: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    svcMeta: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 2,
+      fontFamily: ownerFonts.regular,
+    },
+    commHint: {
+      fontSize: 12,
+      color: colors.primary,
+      marginTop: 4,
+      fontFamily: ownerFonts.medium,
+    },
+    shareChip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: colors.bg,
+    },
+    shareChipText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    emptyFiltered: {
+      fontSize: 13,
+      color: colors.textDim,
+      textAlign: "center",
+      marginTop: 16,
+      fontFamily: ownerFonts.regular,
+    },
+    disabled: { opacity: 0.6 },
+  });
+}

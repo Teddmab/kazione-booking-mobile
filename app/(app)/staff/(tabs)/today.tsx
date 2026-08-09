@@ -16,7 +16,9 @@ import { AppointmentStatusSheet } from "@/components/staff/AppointmentStatusShee
 import { OnboardingBanner } from "@/components/staff/OnboardingBanner";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
 import { TodayAppointmentCard } from "@/components/staff/TodayAppointmentCard";
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { VoucherScanSheet } from "@/components/staff/VoucherScanSheet";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -59,20 +61,22 @@ function projectMonthEnd(
   return Math.round((soFar / dayOfMonth) * daysInMonth);
 }
 
-function greetingForHour(h: number): string {
-  if (h < 12) return "Bonjour";
-  if (h < 17) return "Bon après-midi";
-  return "Bonsoir";
+function greetingKeyForHour(h: number): "staffToday.morning" | "staffToday.afternoon" | "staffToday.evening" {
+  if (h < 12) return "staffToday.morning";
+  if (h < 17) return "staffToday.afternoon";
+  return "staffToday.evening";
 }
 
 function StatTile({
   label,
   value,
   hint,
+  styles,
 }: {
   label: string;
   value: string;
   hint: string;
+  styles: ReturnType<typeof makeStyles>;
 }) {
   return (
     <View style={styles.statTile}>
@@ -86,9 +90,11 @@ function StatTile({
 }
 
 export default function StaffTodayScreen() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const toast = useToast();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuthContext();
   const { tenant } = useTenantContext();
   const { data: staffSelf } = useStaffSelf();
@@ -128,6 +134,7 @@ export default function StaffTodayScreen() {
 
   const [selected, setSelected] = useState<StaffAppointment | null>(null);
   const [offerBusyId, setOfferBusyId] = useState<string | null>(null);
+  const [voucherOpen, setVoucherOpen] = useState(false);
 
   const currency =
     settings.data?.settings?.currency_code ??
@@ -140,9 +147,9 @@ export default function StaffTodayScreen() {
       ? `${staffSelf.first_name} ${staffSelf.last_name}`.trim()
       : null) ||
     user?.email?.split("@")[0] ||
-    "là";
+    t("staffToday.fallbackName");
 
-  const greeting = greetingForHour(new Date().getHours());
+  const greeting = t(greetingKeyForHour(new Date().getHours()));
 
   const todayAppts = useMemo(
     () =>
@@ -218,16 +225,25 @@ export default function StaffTodayScreen() {
           new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
       )[0];
     if (!next) {
-      toast.warning("Aucun RDV", "Pas de prochain rendez-vous à démarrer.");
+      toast.warning(
+        t("staffToday.toastNoStartTitle"),
+        t("staffToday.toastNoStartBody"),
+      );
       return;
     }
     updateStatus.mutate(
       { appointmentId: next.id, status: "in_progress" },
       {
         onSuccess: () =>
-          toast.success("Démarré", `${next.service.name} en cours.`),
+          toast.success(
+            t("staffToday.toastStartedTitle"),
+            t("staffToday.toastStartedBody", { service: next.service.name }),
+          ),
         onError: (err: Error) =>
-          toast.error("Erreur", err.message || "Impossible de démarrer"),
+          toast.error(
+            t("staffToday.error"),
+            err.message || t("staffToday.toastStartError"),
+          ),
       },
     );
   }
@@ -242,11 +258,16 @@ export default function StaffTodayScreen() {
       {
         onSuccess: () =>
           toast.success(
-            "Offre",
-            response === "accept" ? "Rendez-vous accepté." : "Offre refusée.",
+            t("staffToday.toastOfferTitle"),
+            response === "accept"
+              ? t("staffToday.toastOfferAccepted")
+              : t("staffToday.toastOfferDeclined"),
           ),
         onError: (err: Error) =>
-          toast.error("Erreur", err.message || "Action impossible"),
+          toast.error(
+            t("staffToday.error"),
+            err.message || t("staffToday.toastOfferError"),
+          ),
         onSettled: () => setOfferBusyId(null),
       },
     );
@@ -272,96 +293,82 @@ export default function StaffTodayScreen() {
     perfQ.isRefetching;
 
   return (
-    <View style={ownerStyles.screen}>
+    <View style={styles.screen}>
       <StaffAppBar
-        title={`${greeting}, ${displayName}`}
+        title={t("staffToday.title")}
         subtitle={formatDateLong(new Date(), i18n.language)}
-        displayTitle
         rightSlot={
-          <Pressable
-            style={[
-              styles.startBtn,
-              updateStatus.isPending && styles.disabled,
-            ]}
-            disabled={updateStatus.isPending}
-            onPress={handleStartNext}>
-            <Ionicons name="play" size={14} color="#fff" />
-            <Text style={styles.startBtnText}>Démarrer</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.scanBtn}
+              onPress={() => setVoucherOpen(true)}>
+              <Ionicons name="qr-code-outline" size={14} color={colors.primary} />
+              <Text style={styles.scanBtnText}>{t("staffToday.scan")}</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.startBtn,
+                updateStatus.isPending && styles.disabled,
+              ]}
+              disabled={updateStatus.isPending}
+              onPress={handleStartNext}>
+              <Ionicons name="play" size={14} color="#fff" />
+              <Text style={styles.startBtnText}>{t("staffToday.startNext")}</Text>
+            </Pressable>
+          </View>
         }
       />
 
       <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void onRefresh()}
-            tintColor={ownerColors.primary}
+            tintColor={colors.primary}
           />
         }>
-        {/* Overview stats */}
-        <View style={styles.statsGrid}>
-          <StatTile
-            label="Clients du jour"
-            value={todayQ.isLoading ? "—" : String(todayAppts.length)}
-            hint={`${remaining} restant${remaining === 1 ? "" : "s"}`}
-          />
-          <StatTile
-            label="Prochain RDV"
-            value={
-              todayQ.isLoading
-                ? "—"
-                : nextAppointment
-                  ? formatTime(nextAppointment.starts_at)
-                  : "—"
-            }
-            hint={
-              nextAppointment
-                ? nextAppointment.service.name
-                : "Aucun aujourd'hui"
-            }
-          />
-          <StatTile
-            label="Cette semaine"
-            value={String(weekTotal)}
-            hint="rendez-vous"
-          />
-          {perf ? (
-            <StatTile
-              label="Note moy."
-              value={perf.avg_rating > 0 ? perf.avg_rating.toFixed(1) : "—"}
-              hint={
-                perf.avg_rating > 0
-                  ? "★".repeat(Math.round(perf.avg_rating))
-                  : "Pas encore d'avis"
-              }
-            />
-          ) : (
-            <StatTile label="Note moy." value="—" hint="Ce mois" />
-          )}
+        <View style={styles.greetingBlock}>
+          <Text style={styles.greetingText}>
+            {greeting}, {displayName}
+          </Text>
         </View>
 
-        <OnboardingBanner
-          hasSchedule={hasSchedule}
-          hasAcceptedServices={hasAcceptedServices}
-          pendingOfferCount={pendingServiceOffers.length}
-        />
-
-        {/* Appointment offers */}
-        {pendingOffers.length > 0 ? (
-          <View style={styles.block}>
+        {/* Pending tasks — top priority */}
+        {pendingOffers.length > 0 || pendingServiceOffers.length > 0 ? (
+          <View style={styles.pendingTasks}>
             <View style={styles.blockHeader}>
-              <Ionicons
-                name="notifications-outline"
-                size={16}
-                color="#7C3AED"
-              />
-              <Text style={styles.blockTitle}>Offres de RDV</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{pendingOffers.length}</Text>
+              <Ionicons name="notifications" size={16} color="#D97706" />
+              <Text style={styles.pendingTitle}>{t("staffToday.pendingTasks")}</Text>
+              <View style={styles.amberBadge}>
+                <Text style={styles.amberBadgeText}>
+                  {pendingOffers.length + pendingServiceOffers.length}
+                </Text>
               </View>
             </View>
+
+            {pendingServiceOffers.length > 0 ? (
+              <Pressable
+                style={styles.serviceOfferRow}
+                onPress={() =>
+                  router.push("/(app)/staff/(tabs)/services" as Href)
+                }>
+                <Ionicons name="sparkles" size={16} color="#D97706" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.offerService}>
+                    {t("staffToday.serviceOffer", {
+                      count: pendingServiceOffers.length,
+                    })}
+                  </Text>
+                  <Text style={styles.offerMeta}>
+                    {t("staffToday.serviceOfferHint")}
+                  </Text>
+                </View>
+                <Text style={styles.amberCta}>{t("staffToday.see")}</Text>
+              </Pressable>
+            ) : null}
+
             {pendingOffers.map((offer) => {
               const isReferral = !!offer.referral_staff_id;
               const busy = offerBusyId === offer.id || respondOffer.isPending;
@@ -374,7 +381,9 @@ export default function StaffTodayScreen() {
                       </Text>
                       {isReferral ? (
                         <View style={styles.refBadge}>
-                          <Text style={styles.refBadgeText}>Parrainage</Text>
+                          <Text style={styles.refBadgeText}>
+                            {t("staffToday.referral")}
+                          </Text>
                         </View>
                       ) : null}
                     </View>
@@ -392,13 +401,17 @@ export default function StaffTodayScreen() {
                       style={[styles.declineOffer, busy && styles.disabled]}
                       disabled={busy}
                       onPress={() => handleOffer(offer, "decline")}>
-                      <Text style={styles.declineOfferText}>Refuser</Text>
+                      <Text style={styles.declineOfferText}>
+                        {t("staffToday.decline")}
+                      </Text>
                     </Pressable>
                     <Pressable
                       style={[styles.acceptOffer, busy && styles.disabled]}
                       disabled={busy}
                       onPress={() => handleOffer(offer, "accept")}>
-                      <Text style={styles.acceptOfferText}>Accepter</Text>
+                      <Text style={styles.acceptOfferText}>
+                        {t("staffToday.accept")}
+                      </Text>
                     </Pressable>
                   </View>
                 </View>
@@ -407,39 +420,197 @@ export default function StaffTodayScreen() {
           </View>
         ) : null}
 
+        <OnboardingBanner
+          hasSchedule={hasSchedule}
+          hasAcceptedServices={hasAcceptedServices}
+          pendingOfferCount={pendingServiceOffers.length}
+        />
+
+        {/* Today's appointments */}
+        <View style={styles.block}>
+          <View style={styles.blockHeaderBetween}>
+            <Text style={styles.blockTitle}>{t("staffToday.apptsToday")}</Text>
+            <Pressable
+              onPress={() =>
+                router.push("/(app)/staff/(tabs)/calendar" as Href)
+              }>
+              <Text style={styles.linkText}>{t("staffToday.agendaLink")}</Text>
+            </Pressable>
+          </View>
+
+          {todayQ.isLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : todayQ.isError ? (
+            <Text style={styles.emptyText}>{t("staffToday.errorLoad")}</Text>
+          ) : todayAppts.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyTitle}>
+                {hasSchedule && hasAcceptedServices
+                  ? t("staffToday.emptyReadyTitle")
+                  : t("staffToday.emptyNoneTitle")}
+              </Text>
+              <Text style={styles.emptyText}>
+                {hasSchedule && hasAcceptedServices
+                  ? t("staffToday.emptyReadyBody")
+                  : t("staffToday.emptyNoneBody")}
+              </Text>
+            </View>
+          ) : (
+            todayAppts.map((a) => (
+              <TodayAppointmentCard
+                key={a.id}
+                appointment={a}
+                onPress={setSelected}
+              />
+            ))
+          )}
+        </View>
+
+        {/* Recent past */}
+        {pastAppts.length > 0 ? (
+          <View style={styles.block}>
+            <View style={styles.blockHeaderBetween}>
+              <Text style={styles.blockTitle}>{t("staffToday.recent")}</Text>
+              <Pressable
+                onPress={() =>
+                  router.push("/(app)/staff/(tabs)/calendar" as Href)
+                }>
+                <Text style={styles.linkText}>{t("staffToday.agendaLink")}</Text>
+              </Pressable>
+            </View>
+            {pastAppts.map((a) => (
+              <View key={a.id} style={styles.pastRow}>
+                <View style={styles.pastTime}>
+                  <Text style={styles.pastDate}>
+                    {new Date(a.starts_at).toLocaleDateString(i18n.language, {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </Text>
+                  <Text style={styles.pastHour}>{formatTime(a.starts_at)}</Text>
+                </View>
+                <View style={styles.pastDivider} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pastClient} numberOfLines={1}>
+                    {clientDisplayName(
+                      a.client.first_name,
+                      a.client.last_name,
+                    )}
+                  </Text>
+                  <Text style={styles.pastService} numberOfLines={1}>
+                    {a.service.name}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statusPill,
+                    a.status === "completed" && styles.statusDone,
+                    a.status === "no_show" && styles.statusNoShow,
+                  ]}>
+                  <Text style={styles.statusPillText}>
+                    {a.status === "completed"
+                      ? t("staffStatus.doneShort")
+                      : t(`staffStatus.${a.status}`, {
+                          defaultValue: a.status,
+                        })}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Overview stats */}
+        <View style={styles.statsGrid}>
+          <StatTile
+            label={t("staffToday.todayClients")}
+            value={todayQ.isLoading ? "—" : String(todayAppts.length)}
+            hint={t("staffToday.remaining", { count: remaining })}
+            styles={styles}
+          />
+          <StatTile
+            label={t("staffToday.nextAppt")}
+            value={
+              todayQ.isLoading
+                ? "—"
+                : nextAppointment
+                  ? formatTime(nextAppointment.starts_at)
+                  : "—"
+            }
+            hint={
+              nextAppointment
+                ? nextAppointment.service.name
+                : t("staffToday.noneToday")
+            }
+            styles={styles}
+          />
+          <StatTile
+            label={t("staffToday.thisWeek")}
+            value={String(weekTotal)}
+            hint={t("staffToday.appointments")}
+            styles={styles}
+          />
+          {perf ? (
+            <StatTile
+              label={t("staffToday.avgRating")}
+              value={perf.avg_rating > 0 ? perf.avg_rating.toFixed(1) : "—"}
+              hint={
+                perf.avg_rating > 0
+                  ? "★".repeat(Math.round(perf.avg_rating))
+                  : t("staffToday.noReviewsYet")
+              }
+              styles={styles}
+            />
+          ) : (
+            <StatTile
+              label={t("staffToday.avgRating")}
+              value="—"
+              hint={t("staffToday.thisMonth")}
+              styles={styles}
+            />
+          )}
+        </View>
+
         {/* Monthly performance */}
         {perf ? (
           <View style={styles.perfGrid}>
             <View style={styles.perfCard}>
-              <Text style={styles.perfLabel}>CA du mois</Text>
+              <Text style={styles.perfLabel}>{t("staffToday.monthRevenue")}</Text>
               <Text style={styles.perfValue}>
                 {money(perf.revenue, currency)}
               </Text>
               {projectedRevenue != null && projectedRevenue > perf.revenue ? (
                 <Text style={styles.perfProj}>
-                  ~{money(projectedRevenue, currency)} projeté
+                  {t("staffToday.projected", {
+                    amount: money(projectedRevenue, currency),
+                  })}
                 </Text>
               ) : null}
             </View>
             <View style={styles.perfCard}>
-              <Text style={styles.perfLabel}>Commission</Text>
+              <Text style={styles.perfLabel}>{t("staffToday.commission")}</Text>
               <Text style={styles.perfValue}>
                 {money(perf.commission_amount, currency)}
               </Text>
               {projectedCommission != null &&
               projectedCommission > perf.commission_amount ? (
                 <Text style={styles.perfProj}>
-                  ~{money(projectedCommission, currency)} projeté
+                  {t("staffToday.projected", {
+                    amount: money(projectedCommission, currency),
+                  })}
                 </Text>
               ) : null}
             </View>
             <View style={styles.perfCard}>
-              <Text style={styles.perfLabel}>Clients</Text>
+              <Text style={styles.perfLabel}>{t("staffToday.clients")}</Text>
               <Text style={styles.perfValue}>{perf.unique_clients}</Text>
-              <Text style={styles.perfHint}>{perf.bookings} RDV</Text>
+              <Text style={styles.perfHint}>
+                {t("staffToday.bookingsCount", { count: perf.bookings })}
+              </Text>
             </View>
             <View style={styles.perfCard}>
-              <Text style={styles.perfLabel}>Complétion</Text>
+              <Text style={styles.perfLabel}>{t("staffToday.completion")}</Text>
               <Text style={styles.perfValue}>
                 {perf.completion_rate > 0
                   ? `${Math.round(perf.completion_rate * 100)}%`
@@ -461,11 +632,11 @@ export default function StaffTodayScreen() {
               onPress={() =>
                 router.push("/(app)/staff/(tabs)/performance" as Href)
               }>
-              <Text style={styles.linkText}>Voir la performance</Text>
+              <Text style={styles.linkText}>{t("staffToday.viewPerformance")}</Text>
               <Ionicons
                 name="arrow-forward"
                 size={14}
-                color={ownerColors.primary}
+                color={colors.primary}
               />
             </Pressable>
           </View>
@@ -475,27 +646,14 @@ export default function StaffTodayScreen() {
         {services.length > 0 ? (
           <View style={styles.block}>
             <View style={styles.blockHeaderBetween}>
-              <Text style={styles.blockTitle}>Mes services</Text>
+              <Text style={styles.blockTitle}>{t("staffToday.myServices")}</Text>
               <Pressable
                 onPress={() =>
                   router.push("/(app)/staff/(tabs)/services" as Href)
                 }>
-                <Text style={styles.linkText}>Tout voir →</Text>
+                <Text style={styles.linkText}>{t("staffToday.seeAll")}</Text>
               </Pressable>
             </View>
-            {pendingServiceOffers.length > 0 ? (
-              <Pressable
-                style={styles.amberBanner}
-                onPress={() =>
-                  router.push("/(app)/staff/(tabs)/services" as Href)
-                }>
-                <Text style={styles.amberText}>
-                  {pendingServiceOffers.length} offre
-                  {pendingServiceOffers.length > 1 ? "s" : ""} en attente
-                </Text>
-                <Text style={styles.amberCta}>Voir</Text>
-              </Pressable>
-            ) : null}
             <View style={styles.svcGrid}>
               {acceptedServices.slice(0, 6).map((svc) => {
                 const type =
@@ -527,103 +685,6 @@ export default function StaffTodayScreen() {
             </View>
           </View>
         ) : null}
-
-        {/* Today's appointments */}
-        <View style={styles.block}>
-          <View style={styles.blockHeaderBetween}>
-            <Text style={styles.blockTitle}>RDV du jour</Text>
-            <Pressable
-              onPress={() =>
-                router.push("/(app)/staff/(tabs)/calendar" as Href)
-              }>
-              <Text style={styles.linkText}>Agenda →</Text>
-            </Pressable>
-          </View>
-
-          {todayQ.isLoading ? (
-            <ActivityIndicator color={ownerColors.primary} />
-          ) : todayQ.isError ? (
-            <Text style={styles.emptyText}>
-              Impossible de charger les rendez-vous.
-            </Text>
-          ) : todayAppts.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyTitle}>
-                {hasSchedule && hasAcceptedServices
-                  ? "Tout est prêt"
-                  : "Aucun rendez-vous"}
-              </Text>
-              <Text style={styles.emptyText}>
-                {hasSchedule && hasAcceptedServices
-                  ? "Les rendez-vous apparaîtront ici dès que des clients réserveront."
-                  : "Profitez de votre journée libre."}
-              </Text>
-            </View>
-          ) : (
-            todayAppts.map((a) => (
-              <TodayAppointmentCard
-                key={a.id}
-                appointment={a}
-                onPress={setSelected}
-              />
-            ))
-          )}
-        </View>
-
-        {/* Recent past */}
-        {pastAppts.length > 0 ? (
-          <View style={styles.block}>
-            <View style={styles.blockHeaderBetween}>
-              <Text style={styles.blockTitle}>Récents (7 j)</Text>
-              <Pressable
-                onPress={() =>
-                  router.push("/(app)/staff/(tabs)/calendar" as Href)
-                }>
-                <Text style={styles.linkText}>Agenda →</Text>
-              </Pressable>
-            </View>
-            {pastAppts.map((a) => (
-              <View key={a.id} style={styles.pastRow}>
-                <View style={styles.pastTime}>
-                  <Text style={styles.pastDate}>
-                    {new Date(a.starts_at).toLocaleDateString("fr-FR", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </Text>
-                  <Text style={styles.pastHour}>{formatTime(a.starts_at)}</Text>
-                </View>
-                <View style={styles.pastDivider} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pastClient} numberOfLines={1}>
-                    {clientDisplayName(
-                      a.client.first_name,
-                      a.client.last_name,
-                    )}
-                  </Text>
-                  <Text style={styles.pastService} numberOfLines={1}>
-                    {a.service.name}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.statusPill,
-                    a.status === "completed" && styles.statusDone,
-                    a.status === "no_show" && styles.statusNoShow,
-                  ]}>
-                  <Text style={styles.statusPillText}>
-                    {a.status === "completed"
-                      ? "Fait"
-                      : a.status === "no_show"
-                        ? "No-show"
-                        : a.status}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : null}
       </ScrollView>
 
       <AppointmentStatusSheet
@@ -631,27 +692,104 @@ export default function StaffTodayScreen() {
         visible={!!selected}
         onClose={() => setSelected(null)}
       />
+      <VoucherScanSheet
+        visible={voucherOpen}
+        onClose={() => setVoucherOpen(false)}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+
   content: { padding: 16, paddingBottom: 40 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  scanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  scanBtnText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: ownerFonts.semiBold,
+  },
   startBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: ownerColors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   startBtnText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     fontFamily: ownerFonts.semiBold,
   },
+  greetingBlock: {
+    marginBottom: 12,
+  },
+  greetingText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: colors.text,
+    fontFamily: ownerFonts.bold,
+    letterSpacing: -0.3,
+  },
+  pendingTasks: {
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.warning,
+    backgroundColor: colors.warningMuted,
+    padding: 14,
+    gap: 10,
+    marginBottom: 4,
+  },
+  pendingTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.warning,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    fontFamily: ownerFonts.bold,
+  },
+  amberBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.warning,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  amberBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  serviceOfferRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    padding: 12,
+  },
+  disabled: { opacity: 0.55 },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -661,27 +799,27 @@ const styles = StyleSheet.create({
   statTile: {
     width: "48%",
     flexGrow: 1,
-    backgroundColor: ownerColors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ownerColors.border,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 12,
   },
   statLabel: {
     fontSize: 11,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     fontFamily: ownerFonts.medium,
   },
   statValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: ownerColors.text,
+    color: colors.text,
     marginTop: 4,
     fontFamily: ownerFonts.bold,
   },
   statHint: {
     fontSize: 11,
-    color: ownerColors.textDim,
+    color: colors.textDim,
     marginTop: 2,
     fontFamily: ownerFonts.regular,
   },
@@ -701,7 +839,7 @@ const styles = StyleSheet.create({
   blockTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: ownerColors.text,
+    color: colors.text,
     fontFamily: ownerFonts.bold,
   },
   badge: {
@@ -736,25 +874,25 @@ const styles = StyleSheet.create({
   offerService: {
     fontSize: 14,
     fontWeight: "700",
-    color: ownerColors.text,
+    color: colors.text,
     fontFamily: ownerFonts.bold,
   },
   refBadge: {
     borderRadius: 999,
-    backgroundColor: ownerColors.primarySurface,
+    backgroundColor: colors.primarySurface,
     borderWidth: 1,
-    borderColor: ownerColors.primary + "44",
+    borderColor: colors.primary + "44",
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   refBadgeText: {
     fontSize: 10,
-    color: ownerColors.primary,
+    color: colors.primary,
     fontFamily: ownerFonts.medium,
   },
   offerMeta: {
     fontSize: 12,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     fontFamily: ownerFonts.regular,
   },
   offerActions: { flexDirection: "row", gap: 8, marginTop: 10 },
@@ -763,13 +901,13 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: ownerColors.border,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
   declineOfferText: {
     fontSize: 12,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     fontFamily: ownerFonts.semiBold,
   },
   acceptOffer: {
@@ -794,46 +932,46 @@ const styles = StyleSheet.create({
   perfCard: {
     width: "48%",
     flexGrow: 1,
-    backgroundColor: ownerColors.card,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: ownerColors.border,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 12,
   },
   perfLabel: {
     fontSize: 11,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     fontFamily: ownerFonts.medium,
   },
   perfValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: ownerColors.text,
+    color: colors.text,
     marginTop: 4,
     fontFamily: ownerFonts.bold,
   },
   perfProj: {
     fontSize: 11,
-    color: ownerColors.primary,
+    color: colors.primary,
     marginTop: 4,
     fontFamily: ownerFonts.medium,
   },
   perfHint: {
     fontSize: 11,
-    color: ownerColors.textDim,
+    color: colors.textDim,
     marginTop: 4,
     fontFamily: ownerFonts.regular,
   },
   progressTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: ownerColors.bg,
+    backgroundColor: colors.bg,
     marginTop: 8,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: ownerColors.primary,
+    backgroundColor: colors.primary,
     borderRadius: 3,
   },
   linkRow: {
@@ -846,7 +984,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 13,
-    color: ownerColors.primary,
+    color: colors.primary,
     fontWeight: "600",
     fontFamily: ownerFonts.semiBold,
   },
@@ -854,9 +992,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFBEB",
+    backgroundColor: colors.warningMuted,
     borderWidth: 1,
-    borderColor: "#FCD34D",
+    borderColor: colors.warning,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -864,13 +1002,13 @@ const styles = StyleSheet.create({
   },
   amberText: {
     fontSize: 12,
-    color: "#92400E",
+    color: colors.warning,
     fontFamily: ownerFonts.medium,
   },
   amberCta: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#92400E",
+    color: colors.warning,
     fontFamily: ownerFonts.bold,
   },
   svcGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -878,33 +1016,33 @@ const styles = StyleSheet.create({
     width: "48%",
     flexGrow: 1,
     borderWidth: 1,
-    borderColor: ownerColors.border,
+    borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: ownerColors.card,
+    backgroundColor: colors.card,
     padding: 10,
   },
   svcName: {
     fontSize: 13,
     fontWeight: "700",
-    color: ownerColors.text,
+    color: colors.text,
     fontFamily: ownerFonts.bold,
   },
   svcMeta: {
     fontSize: 11,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
     fontFamily: ownerFonts.regular,
   },
   svcComm: {
     fontSize: 10,
-    color: ownerColors.primary,
+    color: colors.primary,
     marginTop: 4,
     fontFamily: ownerFonts.medium,
   },
   emptyBox: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: ownerColors.border,
+    borderColor: colors.border,
     borderRadius: 14,
     padding: 24,
     alignItems: "center",
@@ -912,12 +1050,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: ownerColors.text,
+    color: colors.text,
     fontFamily: ownerFonts.semiBold,
   },
   emptyText: {
     fontSize: 12,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     textAlign: "center",
     marginTop: 6,
     fontFamily: ownerFonts.regular,
@@ -927,8 +1065,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     borderWidth: 1,
-    borderColor: ownerColors.border,
-    backgroundColor: ownerColors.card,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -936,38 +1074,38 @@ const styles = StyleSheet.create({
   pastTime: { width: 72 },
   pastDate: {
     fontSize: 10,
-    color: ownerColors.textDim,
+    color: colors.textDim,
     textTransform: "uppercase",
     fontFamily: ownerFonts.medium,
   },
   pastHour: {
     fontSize: 12,
     fontWeight: "700",
-    color: ownerColors.text,
+    color: colors.text,
     fontFamily: ownerFonts.bold,
   },
   pastDivider: {
     width: 2,
     height: 28,
     borderRadius: 1,
-    backgroundColor: ownerColors.border,
+    backgroundColor: colors.border,
   },
   pastClient: {
     fontSize: 13,
     fontWeight: "600",
-    color: ownerColors.text,
+    color: colors.text,
     fontFamily: ownerFonts.semiBold,
   },
   pastService: {
     fontSize: 11,
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     fontFamily: ownerFonts.regular,
   },
   statusPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: ownerColors.border,
-    backgroundColor: ownerColors.bg,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
@@ -982,8 +1120,9 @@ const styles = StyleSheet.create({
   statusPillText: {
     fontSize: 10,
     fontWeight: "600",
-    color: ownerColors.textMuted,
+    color: colors.textMuted,
     fontFamily: ownerFonts.semiBold,
   },
-  disabled: { opacity: 0.6 },
 });
+}
+

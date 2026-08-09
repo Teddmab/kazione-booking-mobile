@@ -6,66 +6,67 @@ export type StaffDrawerIcon = ComponentProps<typeof Ionicons>["name"];
 
 export type StaffDrawerNavItem = {
   key: string;
-  label: string;
+  /** i18n key, e.g. sidebar.dashboard */
+  labelKey: string;
   href: Href;
   icon: StaffDrawerIcon;
 };
 
 export type StaffDrawerSection = {
-  title: string;
+  titleKey: string;
   items: StaffDrawerNavItem[];
 };
 
-/** Sidebar aligned with web staff AppSidebar */
+/** Sidebar aligned with web staff AppSidebar — labels via i18n */
 export const STAFF_DRAWER_SECTIONS: StaffDrawerSection[] = [
   {
-    title: "APERÇU",
+    titleKey: "staffNav.overview",
     items: [
       {
         key: "dashboard",
-        label: "Dashboard",
+        labelKey: "sidebar.dashboard",
         href: "/(app)/staff/(tabs)/today" as Href,
         icon: "grid-outline",
       },
       {
         key: "appointments",
-        label: "Agenda",
+        labelKey: "sidebar.appointments",
         href: "/(app)/staff/(tabs)/calendar" as Href,
         icon: "calendar-outline",
       },
       {
         key: "clients",
-        label: "Clients",
+        labelKey: "sidebar.clients",
         href: "/(app)/staff/clients" as Href,
         icon: "people-outline",
       },
       {
         key: "services",
-        label: "Services",
+        labelKey: "sidebar.services",
         href: "/(app)/staff/(tabs)/services" as Href,
         icon: "cut-outline",
       },
       {
         key: "reports",
-        label: "Performance",
+        labelKey: "sidebar.reports",
         href: "/(app)/staff/(tabs)/performance" as Href,
         icon: "bar-chart-outline",
       },
       {
         key: "reviews",
-        label: "Avis",
+        labelKey: "sidebar.reviews",
         href: "/(app)/staff/reviews" as Href,
         icon: "star-outline",
       },
       {
         key: "notifications",
-        label: "Notifications",
+        labelKey: "nav.notifications",
         href: "/(app)/staff/notifications" as Href,
         icon: "notifications-outline",
       },
       {
         key: "account",
-        label: "Mon compte",
+        labelKey: "sidebar.account",
         href: "/(app)/staff/profile" as Href,
         icon: "person-outline",
       },

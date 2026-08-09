@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { StatusBadge } from "@/components/owner/StatusBadge";
-import { ownerColors } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { clientDisplayName, formatCurrency, formatDate } from "@/lib/format";
 import type { AppointmentWithRelations } from "@/types/owner";
 
@@ -16,6 +17,9 @@ function formatTime(iso: string): string {
 }
 
 export function StaffAppointmentCard({ appointment, onPress }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const clientName = clientDisplayName(
     appointment.client.first_name,
     appointment.client.last_name,
@@ -51,30 +55,32 @@ export function StaffAppointmentCard({ appointment, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    padding: 14,
-    marginBottom: 10,
-  },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  time: { fontSize: 16, fontWeight: "700", color: ownerColors.text },
-  service: { fontSize: 15, fontWeight: "600", color: ownerColors.text, marginTop: 8 },
-  client: { fontSize: 14, color: ownerColors.textMuted, marginTop: 4 },
-  meta: { fontSize: 13, color: ownerColors.textDim, marginTop: 4 },
-  earningsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: ownerColors.border,
-  },
-  earningsLabel: { fontSize: 13, color: ownerColors.textMuted },
-  earningsValue: { fontSize: 15, fontWeight: "700", color: "#15803d" },
-  ref: { fontSize: 11, color: ownerColors.textDim, marginTop: 6 },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 10,
+    },
+    topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    time: { fontSize: 16, fontWeight: "700", color: colors.text },
+    service: { fontSize: 15, fontWeight: "600", color: colors.text, marginTop: 8 },
+    client: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
+    meta: { fontSize: 13, color: colors.textDim, marginTop: 4 },
+    earningsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    earningsLabel: { fontSize: 13, color: colors.textMuted },
+    earningsValue: { fontSize: 15, fontWeight: "700", color: colors.success },
+    ref: { fontSize: 11, color: colors.textDim, marginTop: 6 },
+  });
+}

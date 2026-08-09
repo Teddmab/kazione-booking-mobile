@@ -1,4 +1,5 @@
 import { useRouter, type Href } from "expo-router";
+import { useMemo } from "react";
 import {
   FlatList,
   Pressable,
@@ -10,7 +11,8 @@ import {
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
-import { ownerColors, ownerFonts, ownerStyles } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import {
   useMarkAllStaffNotificationsRead,
   useMarkStaffNotificationRead,
@@ -28,6 +30,9 @@ function formatWhen(iso: string): string {
 }
 
 export default function StaffNotificationsScreen() {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const router = useRouter();
   const { data, isLoading, isError, error, refetch, isRefetching } =
     useStaffNotifications();
@@ -44,7 +49,7 @@ export default function StaffNotificationsScreen() {
   };
 
   return (
-    <View style={ownerStyles.screen}>
+    <View style={styles.screen}>
       <StaffAppBar title="Notifications" displayTitle />
       <View style={styles.flex}>
         {items.some((n) => !n.is_read) ? (
@@ -65,11 +70,12 @@ export default function StaffNotificationsScreen() {
           <FlatList
             data={items}
             keyExtractor={(item) => item.id}
+            style={{ flex: 1, backgroundColor: colors.bg }}
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={() => void refetch()}
-                tintColor={ownerColors.primary}
+                tintColor={colors.primary}
               />
             }
             contentContainerStyle={styles.list}
@@ -89,44 +95,47 @@ export default function StaffNotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  markAll: { alignItems: "flex-end", padding: 16, paddingBottom: 0 },
-  markAllText: {
-    fontSize: 14,
-    color: ownerColors.primary,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  list: { padding: 16, paddingBottom: 32 },
-  card: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    padding: 14,
-    marginBottom: 10,
-  },
-  cardUnread: {
-    borderColor: ownerColors.primary,
-    backgroundColor: ownerColors.primarySurface,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.semiBold,
-  },
-  body: {
-    fontSize: 14,
-    color: ownerColors.textMuted,
-    marginTop: 4,
-    fontFamily: ownerFonts.regular,
-  },
-  when: {
-    fontSize: 12,
-    color: ownerColors.textDim,
-    marginTop: 8,
-    fontFamily: ownerFonts.regular,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.bg },
+    flex: { flex: 1, backgroundColor: colors.bg },
+    markAll: { alignItems: "flex-end", padding: 16, paddingBottom: 0 },
+    markAllText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    list: { padding: 16, paddingBottom: 32 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      marginBottom: 10,
+    },
+    cardUnread: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySurface,
+    },
+    title: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    body: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 4,
+      fontFamily: ownerFonts.regular,
+    },
+    when: {
+      fontSize: 12,
+      color: colors.textDim,
+      marginTop: 8,
+      fontFamily: ownerFonts.regular,
+    },
+  });
+}

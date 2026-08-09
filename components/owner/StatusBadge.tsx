@@ -1,21 +1,17 @@
+import { useMemo } from "react";
 import { Text, View, StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
 
-const STATUS_FR: Record<string, string> = {
-  offered: "Offre",
-  pending: "En attente",
-  pending_payment: "Paiement",
-  confirmed: "Confirmé",
-  in_progress: "En cours",
-  pending_completion: "À valider",
-  completed: "Terminé",
-  cancelled: "Annulé",
-  no_show: "Absent",
-};
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 
 type Props = { status: string };
 
 export function StatusBadge({ status }: Props) {
-  const label = STATUS_FR[status] ?? status;
+  const { t } = useTranslation();
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const key = `staffStatus.${status}`;
+  const label = t(key, { defaultValue: status });
   const variant =
     status === "confirmed"
       ? "confirmed"
@@ -37,22 +33,24 @@ export function StatusBadge({ status }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  badge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  confirmed: { backgroundColor: "#DCFCE7" },
-  pending: { backgroundColor: "#FEF9C3" },
-  cancelled: { backgroundColor: "#FEE2E2" },
-  completed: { backgroundColor: "#F0DDD8" },
-  neutral: { backgroundColor: "#F5F5F5" },
-  text: { fontSize: 12, fontWeight: "600" },
-  confirmedText: { color: "#166534" },
-  pendingText: { color: "#854D0E" },
-  cancelledText: { color: "#991B1B" },
-  completedText: { color: "#6B4C42" },
-  neutralText: { color: "#6B4C42" },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    badge: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+    confirmed: { backgroundColor: colors.successMuted },
+    pending: { backgroundColor: colors.warningMuted },
+    cancelled: { backgroundColor: colors.dangerMuted },
+    completed: { backgroundColor: colors.primarySurface },
+    neutral: { backgroundColor: colors.cardWarm },
+    text: { fontSize: 12, fontWeight: "600" },
+    confirmedText: { color: colors.success },
+    pendingText: { color: colors.warning },
+    cancelledText: { color: colors.danger },
+    completedText: { color: colors.textMuted },
+    neutralText: { color: colors.textMuted },
+  });
+}

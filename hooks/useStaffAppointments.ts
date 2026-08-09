@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import {
   fetchStaffAppointments,
   respondToAppointmentOffer,
@@ -9,6 +10,12 @@ import {
   type PaymentMethod,
 } from "@/services/staff/appointments";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
+
+function localDateOffset(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 export function useStaffAppointments(
   dateFrom: string,
@@ -20,12 +27,15 @@ export function useStaffAppointments(
   const { data: staffSelf } = useStaffSelf();
   const staffProfileId =
     staffSelf?.staff_profile_id ?? tenant?.staffProfileId ?? "";
+  const settingsQ = useBusinessSettings(businessId);
+  const seeAll = settingsQ.data?.settings?.staff_see_all_appointments === true;
+  const staffFilter = seeAll ? undefined : staffProfileId || undefined;
 
   return useQuery({
     queryKey: [
       "staff-appointments",
       businessId,
-      staffProfileId,
+      seeAll ? "all" : staffProfileId,
       dateFrom,
       dateTo,
       limit,
@@ -33,7 +43,7 @@ export function useStaffAppointments(
     queryFn: () =>
       fetchStaffAppointments({
         businessId,
-        staffProfileId: staffProfileId || undefined,
+        staffProfileId: staffFilter,
         dateFrom,
         dateTo,
         limit,
@@ -52,16 +62,8 @@ export function useStaffOfferedAppointments() {
   const staffProfileId =
     staffSelf?.staff_profile_id ?? tenant?.staffProfileId ?? "";
 
-  const from = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().slice(0, 10);
-  })();
-  const to = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 90);
-    return d.toISOString().slice(0, 10);
-  })();
+  const from = localDateOffset(-7);
+  const to = localDateOffset(90);
 
   return useQuery({
     queryKey: ["staff-offers", businessId, staffProfileId, from, to],
@@ -72,6 +74,33 @@ export function useStaffOfferedAppointments() {
         dateFrom: from,
         dateTo: to,
         status: "offered",
+        limit: 20,
+      }),
+    enabled: !!businessId,
+    staleTime: 30_000,
+  });
+}
+
+/** Completions awaiting owner confirmation */
+export function useStaffPendingCompletionAppointments() {
+  const { tenant } = useTenantContext();
+  const businessId = tenant?.businessId ?? "";
+  const { data: staffSelf } = useStaffSelf();
+  const staffProfileId =
+    staffSelf?.staff_profile_id ?? tenant?.staffProfileId ?? "";
+
+  const from = localDateOffset(-30);
+  const to = localDateOffset(7);
+
+  return useQuery({
+    queryKey: ["staff-pending-completion", businessId, staffProfileId, from, to],
+    queryFn: () =>
+      fetchStaffAppointments({
+        businessId,
+        staffProfileId: staffProfileId || undefined,
+        dateFrom: from,
+        dateTo: to,
+        status: "pending_completion",
         limit: 20,
       }),
     enabled: !!businessId,
@@ -98,6 +127,7 @@ export function useUpdateStaffAppointmentStatus() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["staff-appointments"] });
       void qc.invalidateQueries({ queryKey: ["staff-offers"] });
+      void qc.invalidateQueries({ queryKey: ["staff-pending-completion"] });
       void qc.invalidateQueries({ queryKey: ["my-performance"] });
     },
   });

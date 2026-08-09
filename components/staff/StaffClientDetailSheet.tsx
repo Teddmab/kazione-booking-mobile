@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -6,12 +6,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
-import { useStaffClientDetail } from "@/hooks/useStaffClients";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
+import { useToast } from "@/contexts/ToastContext";
+import {
+  useStaffClientDetail,
+  useUpdateStaffClientNotes,
+} from "@/hooks/useStaffClients";
 import { formatCurrency } from "@/lib/format";
 import {
   formatRelativeVisit,
@@ -27,18 +33,19 @@ interface Props {
   onClose: () => void;
 }
 
-const STATUS_COLORS: Record<
-  StaffClientStatus,
-  { bg: string; text: string; border: string }
-> = {
-  Frequent: {
-    bg: ownerColors.primarySurface,
-    text: ownerColors.primary,
-    border: ownerColors.primary + "44",
-  },
-  Returning: { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
-  New: { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" },
-};
+function statusColors(
+  colors: ThemeColors,
+): Record<StaffClientStatus, { bg: string; text: string; border: string }> {
+  return {
+    Frequent: {
+      bg: colors.primarySurface,
+      text: colors.primary,
+      border: colors.primary + "44",
+    },
+    Returning: { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
+    New: { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" },
+  };
+}
 
 const STATUS_LABELS: Record<StaffClientStatus, string> = {
   Frequent: "Fréquent",
@@ -52,34 +59,62 @@ export function StaffClientDetailSheet({
   currency,
   onClose,
 }: Props) {
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const detailQ = useStaffClientDetail(visible && client ? client.id : null);
+  const updateNotes = useUpdateStaffClientNotes();
   const [tab, setTab] = useState<"info" | "notes">("info");
+  const [noteText, setNoteText] = useState("");
 
   useEffect(() => {
-    if (!visible) setTab("info");
+    if (!visible) {
+      setTab("info");
+      setNoteText("");
+    }
   }, [visible, client?.id]);
+
+  useEffect(() => {
+    if (detailQ.data) {
+      setNoteText(detailQ.data.notes ?? "");
+    }
+  }, [detailQ.data?.id, detailQ.data?.notes]);
 
   if (!client) return null;
 
   const detail = detailQ.data;
   const status = getStaffClientStatus(client.appointment_count);
-  const colors = STATUS_COLORS[status];
+  const badge = statusColors(colors)[status];
   const name = `${client.first_name} ${client.last_name}`.trim();
   const initials = `${client.first_name[0] ?? ""}${client.last_name[0] ?? ""}`
     .toUpperCase()
     .slice(0, 2);
-  const notes = detail?.notes ?? null;
   const tags = detail?.tags ?? [];
   const email = detail?.email ?? client.email;
   const phone = detail?.phone ?? client.phone;
+  const savedNotes = detail?.notes ?? "";
+  const notesDirty = noteText !== savedNotes;
+
+  function handleSaveNotes() {
+    updateNotes.mutate(
+      { clientId: client!.id, notes: noteText },
+      {
+        onSuccess: () => toast.success("Notes", "Notes enregistrées."),
+        onError: (err: Error) =>
+          toast.error("Erreur", err.message || "Échec de l'enregistrement"),
+      },
+    );
+  }
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <View style={styles.handle} />
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials || "?"}</Text>
@@ -89,9 +124,9 @@ export function StaffClientDetailSheet({
               <View
                 style={[
                   styles.badge,
-                  { backgroundColor: colors.bg, borderColor: colors.border },
+                  { backgroundColor: badge.bg, borderColor: badge.border },
                 ]}>
-                <Text style={[styles.badgeText, { color: colors.text }]}>
+                <Text style={[styles.badgeText, { color: badge.text }]}>
                   {STATUS_LABELS[status]}
                 </Text>
               </View>
@@ -135,7 +170,7 @@ export function StaffClientDetailSheet({
           </View>
 
           {detailQ.isLoading ? (
-            <ActivityIndicator color={ownerColors.primary} style={{ marginTop: 16 }} />
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 16 }} />
           ) : tab === "info" ? (
             <View style={styles.block}>
               {email ? (
@@ -162,12 +197,29 @@ export function StaffClientDetailSheet({
             </View>
           ) : (
             <View style={styles.block}>
-              <Text style={styles.notesHint}>
-                Lecture seule — les notes sont modifiables par le propriétaire.
-              </Text>
-              <Text style={styles.notes}>
-                {notes?.trim() ? notes : "Aucune note pour ce client."}
-              </Text>
+              <TextInput
+                style={styles.notesInput}
+                value={noteText}
+                onChangeText={setNoteText}
+                placeholder="Ajouter des notes sur ce client…"
+                placeholderTextColor={colors.textDim}
+                multiline
+                textAlignVertical="top"
+                editable={!updateNotes.isPending}
+              />
+              <Pressable
+                style={[
+                  styles.saveBtn,
+                  (!notesDirty || updateNotes.isPending) && styles.disabled,
+                ]}
+                disabled={!notesDirty || updateNotes.isPending}
+                onPress={handleSaveNotes}>
+                {updateNotes.isPending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.saveText}>Enregistrer</Text>
+                )}
+              </Pressable>
             </View>
           )}
         </ScrollView>
@@ -180,157 +232,175 @@ export function StaffClientDetailSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(26,15,10,0.4)",
-  },
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    maxHeight: "88%",
-    backgroundColor: ownerColors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: ownerColors.border,
-  },
-  handle: {
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ownerColors.border,
-    marginBottom: 14,
-  },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: ownerColors.primarySurface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: ownerColors.primary,
-    fontFamily: ownerFonts.bold,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  badge: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  badgeText: { fontSize: 11, fontWeight: "600", fontFamily: ownerFonts.semiBold },
-  metrics: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 14,
-  },
-  metric: {
-    flex: 1,
-    backgroundColor: ownerColors.bg,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  metricLabel: {
-    fontSize: 11,
-    color: ownerColors.textMuted,
-    marginTop: 2,
-    fontFamily: ownerFonts.medium,
-  },
-  tabs: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  tab: {
-    flex: 1,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: ownerColors.bg,
-  },
-  tabActive: {
-    borderColor: ownerColors.primary,
-    backgroundColor: ownerColors.primarySurface,
-  },
-  tabText: {
-    fontSize: 13,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.medium,
-  },
-  tabTextActive: {
-    color: ownerColors.primary,
-    fontWeight: "600",
-    fontFamily: ownerFonts.semiBold,
-  },
-  block: { marginBottom: 12 },
-  row: {
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: ownerColors.border,
-  },
-  rowLabel: {
-    fontSize: 11,
-    color: ownerColors.textDim,
-    marginBottom: 2,
-    fontFamily: ownerFonts.medium,
-  },
-  rowValue: {
-    fontSize: 14,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.regular,
-  },
-  empty: {
-    fontSize: 13,
-    color: ownerColors.textDim,
-    fontFamily: ownerFonts.regular,
-  },
-  notesHint: {
-    fontSize: 11,
-    color: ownerColors.textDim,
-    marginBottom: 8,
-    fontFamily: ownerFonts.regular,
-  },
-  notes: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.regular,
-  },
-  closeBtn: { alignItems: "center", paddingVertical: 14 },
-  closeText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.semiBold,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(26,15,10,0.4)",
+    },
+    sheet: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      maxHeight: "88%",
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    handle: {
+      alignSelf: "center",
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 14,
+    },
+    header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primarySurface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.primary,
+      fontFamily: ownerFonts.bold,
+    },
+    name: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    badge: {
+      alignSelf: "flex-start",
+      marginTop: 6,
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    badgeText: { fontSize: 11, fontWeight: "600", fontFamily: ownerFonts.semiBold },
+    metrics: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 14,
+    },
+    metric: {
+      flex: 1,
+      backgroundColor: colors.bg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    metricValue: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    metricLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 2,
+      fontFamily: ownerFonts.medium,
+    },
+    tabs: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 12,
+    },
+    tab: {
+      flex: 1,
+      height: 36,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bg,
+    },
+    tabActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySurface,
+    },
+    tabText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    tabTextActive: {
+      color: colors.primary,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    block: { marginBottom: 12 },
+    row: {
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    rowLabel: {
+      fontSize: 11,
+      color: colors.textDim,
+      marginBottom: 2,
+      fontFamily: ownerFonts.medium,
+    },
+    rowValue: {
+      fontSize: 14,
+      color: colors.text,
+      fontFamily: ownerFonts.regular,
+    },
+    empty: {
+      fontSize: 13,
+      color: colors.textDim,
+      fontFamily: ownerFonts.regular,
+    },
+    notesInput: {
+      minHeight: 120,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.text,
+      backgroundColor: colors.bg,
+      fontFamily: ownerFonts.regular,
+    },
+    saveBtn: {
+      marginTop: 10,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    saveText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600",
+      fontFamily: ownerFonts.semiBold,
+    },
+    disabled: { opacity: 0.6 },
+    closeBtn: { alignItems: "center", paddingVertical: 14 },
+    closeText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.textMuted,
+      fontFamily: ownerFonts.semiBold,
+    },
+  });
+}

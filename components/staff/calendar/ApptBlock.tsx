@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
-import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
+import { ownerFonts } from "@/constants/ownerTheme";
+import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { APPOINTMENT_BLOCK_COLORS } from "@/lib/ownerCalendar";
 import type { StaffAppointment } from "@/services/staff/appointments";
 
@@ -23,7 +25,9 @@ export function ApptBlock({
   colWidth,
   onPress,
 }: Props) {
-  const colors = APPOINTMENT_BLOCK_COLORS[appt.status] ?? APPOINTMENT_BLOCK_COLORS.pending;
+  const colors = useThemeColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const blockColors = APPOINTMENT_BLOCK_COLORS[appt.status] ?? APPOINTMENT_BLOCK_COLORS.pending;
   const blockWidth = colWidth / colCount - 2;
   const left = colOffset * (colWidth / colCount) + 1;
   const short = height < 40;
@@ -38,8 +42,8 @@ export function ApptBlock({
           height: Math.max(height, 18),
           width: Math.max(blockWidth, 8),
           left,
-          backgroundColor: colors.bg,
-          borderLeftColor: colors.border,
+          backgroundColor: blockColors.bg,
+          borderLeftColor: blockColors.border,
         },
       ]}>
       <Text style={styles.clientName} numberOfLines={1}>
@@ -54,26 +58,28 @@ export function ApptBlock({
   );
 }
 
-const styles = StyleSheet.create({
-  block: {
-    position: "absolute",
-    borderLeftWidth: 2,
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    overflow: "hidden",
-  },
-  clientName: {
-    fontSize: 10,
-    fontWeight: "700",
-    lineHeight: 13,
-    color: ownerColors.text,
-    fontFamily: ownerFonts.bold,
-  },
-  serviceName: {
-    fontSize: 9,
-    lineHeight: 12,
-    color: ownerColors.textMuted,
-    fontFamily: ownerFonts.regular,
-  },
-});
+function makeStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    block: {
+      position: "absolute",
+      borderLeftWidth: 2,
+      borderRadius: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 2,
+      overflow: "hidden",
+    },
+    clientName: {
+      fontSize: 10,
+      fontWeight: "700",
+      lineHeight: 13,
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
+    serviceName: {
+      fontSize: 9,
+      lineHeight: 12,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+  });
+}
