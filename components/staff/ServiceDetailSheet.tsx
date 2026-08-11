@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Image,
@@ -38,6 +39,7 @@ export function ServiceDetailSheet({
   onShare,
   sharing,
 }: Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
@@ -88,16 +90,16 @@ export function ServiceDetailSheet({
 
           <View style={styles.metaCard}>
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Durée</Text>
+              <Text style={styles.metaLabel}>{t("staffServiceDetail.duration")}</Text>
               <Text style={styles.metaValue}>{service.duration_minutes} min</Text>
             </View>
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Prix</Text>
+              <Text style={styles.metaLabel}>{t("staffServiceDetail.price")}</Text>
               <Text style={styles.metaValue}>{formatCurrency(price, currency)}</Text>
             </View>
             {earnings != null ? (
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Commission</Text>
+                <Text style={styles.metaLabel}>{t("staffServiceDetail.commission")}</Text>
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={styles.metaValuePrimary}>
                     {formatCurrency(earnings, currency)}
@@ -109,7 +111,7 @@ export function ServiceDetailSheet({
               </View>
             ) : (
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Commission</Text>
+                <Text style={styles.metaLabel}>{t("staffServiceDetail.commission")}</Text>
                 <Text style={styles.metaValue}>
                   {commissionLabel(type, value, currency)}
                 </Text>
@@ -119,14 +121,14 @@ export function ServiceDetailSheet({
 
           {service.description ? (
             <View style={styles.block}>
-              <Text style={styles.blockTitle}>À propos</Text>
+              <Text style={styles.blockTitle}>{t("staffServiceDetail.about")}</Text>
               <Text style={styles.description}>{service.description}</Text>
             </View>
           ) : null}
 
           {referralLink ? (
             <View style={styles.block}>
-              <Text style={styles.blockTitle}>Lien de parrainage</Text>
+              <Text style={styles.blockTitle}>{t("staffServiceDetail.referralLink")}</Text>
               <Text style={styles.linkHint} numberOfLines={2}>
                 {referralLink}
               </Text>
@@ -140,7 +142,7 @@ export function ServiceDetailSheet({
                 {busy || sharing ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.shareText}>Partager le lien</Text>
+                  <Text style={styles.shareText}>{t("staffServiceDetail.shareLink")}</Text>
                 )}
               </Pressable>
             </View>
@@ -148,7 +150,7 @@ export function ServiceDetailSheet({
         </ScrollView>
 
         <Pressable style={styles.closeBtn} onPress={onClose}>
-          <Text style={styles.closeText}>Fermer</Text>
+          <Text style={styles.closeText}>{t("common.close")}</Text>
         </Pressable>
       </View>
     </Modal>

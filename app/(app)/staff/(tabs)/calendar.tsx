@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 
 import { AppointmentStatusSheet } from "@/components/staff/AppointmentStatusSheet";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
@@ -67,13 +68,14 @@ function ListApptRow({
   showDate?: boolean;
   onPress: () => void;
 }) {
+  const { i18n } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const name = clientDisplayName(
     appointment.client.first_name,
     appointment.client.last_name,
   );
-  const dateLabel = new Date(appointment.starts_at).toLocaleDateString("fr-FR", {
+  const dateLabel = new Date(appointment.starts_at).toLocaleDateString(i18n.language, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -116,6 +118,7 @@ function ListApptRow({
 }
 
 export default function StaffCalendarScreen() {
+  const { t } = useTranslation();
   const toast = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -261,16 +264,25 @@ export default function StaffCalendarScreen() {
           new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
       )[0];
     if (!next) {
-      toast.warning("Aucun RDV", "Pas de prochain rendez-vous à démarrer.");
+      toast.warning(
+        t("staffToday.toastNoStartTitle"),
+        t("staffToday.toastNoStartBody"),
+      );
       return;
     }
     updateStatus.mutate(
       { appointmentId: next.id, status: "in_progress" },
       {
         onSuccess: () =>
-          toast.success("Démarré", `${next.service.name} en cours.`),
+          toast.success(
+            t("staffToday.toastStartedTitle"),
+            t("staffToday.toastStartedBody", { service: next.service.name }),
+          ),
         onError: (err: Error) =>
-          toast.error("Erreur", err.message || "Impossible de démarrer"),
+          toast.error(
+            t("staffToday.error"),
+            err.message || t("staffToday.toastStartError"),
+          ),
       },
     );
   }
@@ -282,11 +294,16 @@ export default function StaffCalendarScreen() {
       {
         onSuccess: () =>
           toast.success(
-            "Offre",
-            response === "accept" ? "Rendez-vous accepté." : "Offre refusée.",
+            t("staffToday.toastOfferTitle"),
+            response === "accept"
+              ? t("staffToday.toastOfferAccepted")
+              : t("staffToday.toastOfferDeclined"),
           ),
         onError: (err: Error) =>
-          toast.error("Erreur", err.message || "Action impossible"),
+          toast.error(
+            t("staffToday.error"),
+            err.message || t("staffToday.toastOfferError"),
+          ),
         onSettled: () => setOfferBusyId(null),
       },
     );
@@ -333,29 +350,33 @@ export default function StaffCalendarScreen() {
 
   const emptyLabel =
     listView === "today"
-      ? "Aucun rendez-vous aujourd'hui."
+      ? t("staffCalendar.emptyToday")
       : listView === "upcoming"
-        ? "Aucun rendez-vous à venir."
-        : "Aucun rendez-vous sur cette période.";
+        ? t("staffCalendar.emptyUpcoming")
+        : t("staffCalendar.emptyPeriod");
 
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title="Agenda"
-        subtitle={viewMode === "week" ? "Vue hebdomadaire" : "Rendez-vous"}
+        title={t("staffCalendar.title")}
+        subtitle={
+          viewMode === "week"
+            ? t("staffCalendar.subtitleWeek")
+            : t("staffCalendar.subtitleList")
+        }
         displayTitle
         rightSlot={
           <View style={styles.headerActions}>
             <Pressable style={styles.scanBtn} onPress={() => setVoucherOpen(true)}>
               <Ionicons name="qr-code-outline" size={14} color={colors.primary} />
-              <Text style={styles.scanBtnText}>Scan</Text>
+              <Text style={styles.scanBtnText}>{t("staffCalendar.scan")}</Text>
             </Pressable>
             <Pressable
               style={[styles.startBtn, updateStatus.isPending && styles.disabled]}
               disabled={updateStatus.isPending}
               onPress={handleStartNext}>
               <Ionicons name="play" size={14} color="#fff" />
-              <Text style={styles.startBtnText}>Démarrer</Text>
+              <Text style={styles.startBtnText}>{t("staffCalendar.startNext")}</Text>
             </Pressable>
           </View>
         }
@@ -391,26 +412,38 @@ export default function StaffCalendarScreen() {
           }>
           <View style={styles.statsRow}>
             <StatTile
-              label="Aujourd'hui"
+              label={t("staffCalendar.statToday")}
               value={todayQ.isLoading ? "…" : String(todayAppts.length)}
-              hint={`${completed} terminé${completed > 1 ? "s" : ""}`}
+              hint={
+                completed > 0
+                  ? `${completed} ${t("staffStatus.completed")}`
+                  : undefined
+              }
               styles={styles}
             />
-            <StatTile label="Restants" value={String(remaining)} styles={styles} />
             <StatTile
-              label="Durée"
-              value={`${totalMinutes} min`}
-              hint={`${(totalMinutes / 60).toFixed(1)} h`}
+              label={t("staffCalendar.statRemaining")}
+              value={String(remaining)}
               styles={styles}
             />
-            <StatTile label="Semaine" value={String(upcomingAppts.length)} styles={styles} />
+            <StatTile
+              label={t("staffCalendar.statDuration")}
+              value={`${totalMinutes} min`}
+              hint={`${(totalMinutes / 60).toFixed(1)} ${t("staffCalendar.hrs")}`}
+              styles={styles}
+            />
+            <StatTile
+              label={t("staffCalendar.statWeek")}
+              value={String(upcomingAppts.length)}
+              styles={styles}
+            />
           </View>
 
           {pendingOffers.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="notifications" size={16} color="#7C3AED" />
-                <Text style={styles.sectionTitle}>Offres de RDV</Text>
+                <Text style={styles.sectionTitle}>{t("staffCalendar.offersTitle")}</Text>
                 <View style={styles.violetBadge}>
                   <Text style={styles.badgeText}>{pendingOffers.length}</Text>
                 </View>
@@ -429,7 +462,7 @@ export default function StaffCalendarScreen() {
                         {name} · {formatTime(offer.starts_at)}
                       </Text>
                       {offer.referral_staff_id ? (
-                        <Text style={styles.referralHint}>Votre parrainage</Text>
+                        <Text style={styles.referralHint}>{t("staffCalendar.referral")}</Text>
                       ) : null}
                     </View>
                     <View style={styles.offerActions}>
@@ -437,13 +470,13 @@ export default function StaffCalendarScreen() {
                         style={[styles.declineBtn, busy && styles.disabled]}
                         disabled={busy}
                         onPress={() => handleOffer(offer, "decline")}>
-                        <Text style={styles.declineText}>Refuser</Text>
+                        <Text style={styles.declineText}>{t("staffCalendar.decline")}</Text>
                       </Pressable>
                       <Pressable
                         style={[styles.acceptBtn, busy && styles.disabled]}
                         disabled={busy}
                         onPress={() => handleOffer(offer, "accept")}>
-                        <Text style={styles.acceptText}>Accepter</Text>
+                        <Text style={styles.acceptText}>{t("staffCalendar.accept")}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -456,7 +489,9 @@ export default function StaffCalendarScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="hourglass-outline" size={16} color="#D97706" />
-                <Text style={styles.sectionTitle}>En attente du salon</Text>
+                <Text style={styles.sectionTitle}>
+                  {t("staffCalendar.pendingCompletionTitle")}
+                </Text>
                 <View style={styles.amberBadge}>
                   <Text style={styles.badgeText}>{pendingCompletionAppts.length}</Text>
                 </View>
@@ -475,7 +510,9 @@ export default function StaffCalendarScreen() {
                       </Text>
                     </View>
                     <View style={styles.waitingPill}>
-                      <Text style={styles.waitingText}>Attente propriétaire</Text>
+                      <Text style={styles.waitingText}>
+                        {t("staffCalendar.pendingCompletionHint")}
+                      </Text>
                     </View>
                   </View>
                 );
@@ -487,10 +524,14 @@ export default function StaffCalendarScreen() {
             <View style={styles.toggleGroup}>
               {(
                 [
-                  { key: "list" as const, label: "Liste", icon: "list" as const },
+                  {
+                    key: "list" as const,
+                    labelKey: "staffCalendar.viewList" as const,
+                    icon: "list" as const,
+                  },
                   {
                     key: "week" as const,
-                    label: "Semaine",
+                    labelKey: "staffCalendar.viewWeek" as const,
                     icon: "calendar-outline" as const,
                   },
                 ] as const
@@ -516,7 +557,7 @@ export default function StaffCalendarScreen() {
                       styles.toggleText,
                       viewMode === opt.key && styles.toggleTextActive,
                     ]}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </Text>
                 </Pressable>
               ))}
@@ -529,10 +570,16 @@ export default function StaffCalendarScreen() {
             contentContainerStyle={styles.subfilters}>
             {(
               [
-                { key: "today" as const, label: "Aujourd'hui" },
-                { key: "upcoming" as const, label: "À venir" },
-                { key: "last7" as const, label: "7 derniers j." },
-                { key: "last30" as const, label: "30 derniers j." },
+                { key: "today" as const, labelKey: "staffCalendar.filterToday" as const },
+                {
+                  key: "upcoming" as const,
+                  labelKey: "staffCalendar.filterUpcoming" as const,
+                },
+                { key: "last7" as const, labelKey: "staffCalendar.filterLast7" as const },
+                {
+                  key: "last30" as const,
+                  labelKey: "staffCalendar.filterLast30" as const,
+                },
               ] as const
             ).map((opt) => (
               <Pressable
@@ -547,7 +594,7 @@ export default function StaffCalendarScreen() {
                     styles.subfilterText,
                     listView === opt.key && styles.subfilterTextActive,
                   ]}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </Text>
               </Pressable>
             ))}
@@ -579,11 +626,13 @@ export default function StaffCalendarScreen() {
           <View style={styles.toggleGroup}>
             <Pressable style={styles.toggleBtn} onPress={() => switchView("list")}>
               <Ionicons name="list" size={14} color={colors.textMuted} />
-              <Text style={styles.toggleText}>Liste</Text>
+              <Text style={styles.toggleText}>{t("staffCalendar.switchToList")}</Text>
             </Pressable>
             <Pressable style={[styles.toggleBtn, styles.toggleBtnActive]}>
               <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-              <Text style={[styles.toggleText, styles.toggleTextActive]}>Semaine</Text>
+              <Text style={[styles.toggleText, styles.toggleTextActive]}>
+                {t("staffCalendar.switchToWeek")}
+              </Text>
             </Pressable>
           </View>
         </View>

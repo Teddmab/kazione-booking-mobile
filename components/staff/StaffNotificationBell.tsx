@@ -2,12 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useStaffUnreadNotificationCount } from "@/hooks/useStaffNotifications";
 
 export function StaffNotificationBell() {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -17,7 +19,7 @@ export function StaffNotificationBell() {
     <Pressable
       style={styles.wrap}
       onPress={() => router.push("/(app)/staff/notifications" as Href)}
-      accessibilityLabel="Notifications"
+      accessibilityLabel={t("staffNotifPage.title")}
       accessibilityRole="button">
       <Ionicons name="notifications-outline" size={22} color={colors.text} />
       {unread > 0 ? (

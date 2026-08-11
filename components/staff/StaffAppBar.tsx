@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { useMemo, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { StaffNotificationBell } from "@/components/staff/StaffNotificationBell";
@@ -30,6 +31,7 @@ export function StaffAppBar({
 }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const { toggleDrawer } = useStaffShell();
   const { signOut, user } = useAuthContext();
   const { tenant, clearActiveBusiness } = useTenantContext();
@@ -64,10 +66,10 @@ export function StaffAppBar({
 
   const handleLogout = () => {
     setMenuOpen(false);
-    Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
+    Alert.alert(t("common.signOut"), t("common.signOutConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Déconnexion",
+        text: t("common.signOut"),
         style: "destructive",
         onPress: () => {
           void signOut().then(() => router.replace("/(auth)/login" as Href));
@@ -162,18 +164,20 @@ export function StaffAppBar({
                 router.push("/(app)/staff/profile" as Href);
               }}>
               <Ionicons name="person-outline" size={18} color={colors.text} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Mon compte</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>
+                {t("common.myAccount")}
+              </Text>
             </Pressable>
             <Pressable style={styles.menuItem} onPress={switchWorkspace}>
               <Ionicons name="swap-horizontal-outline" size={18} color={colors.text} />
               <Text style={[styles.menuItemText, { color: colors.text }]}>
-                {"Changer d'espace"}
+                {t("common.switchWorkspace")}
               </Text>
             </Pressable>
             <Pressable style={styles.menuItem} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={18} color={colors.danger} />
               <Text style={[styles.menuItemText, { color: colors.danger }]}>
-                Déconnexion
+                {t("common.signOut")}
               </Text>
             </Pressable>
           </View>

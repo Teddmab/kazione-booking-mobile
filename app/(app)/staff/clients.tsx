@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
@@ -27,17 +28,17 @@ import type { ClientWithStats } from "@/types/owner";
 
 type FilterKey = "All" | StaffClientStatus;
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "All", label: "Tous" },
-  { key: "Frequent", label: "Fréquents" },
-  { key: "Returning", label: "Récurrents" },
-  { key: "New", label: "Nouveaux" },
+const FILTERS: { key: FilterKey; labelKey: string }[] = [
+  { key: "All", labelKey: "staffClientsPage.all" },
+  { key: "Frequent", labelKey: "staffClientsPage.frequent" },
+  { key: "Returning", labelKey: "staffClientsPage.returning" },
+  { key: "New", labelKey: "staffClientsPage.new" },
 ];
 
-const STATUS_LABELS: Record<StaffClientStatus, string> = {
-  Frequent: "Fréquent",
-  Returning: "Récurrent",
-  New: "Nouveau",
+const STATUS_LABEL_KEYS: Record<StaffClientStatus, string> = {
+  Frequent: "staffClientsPage.statusFrequent",
+  Returning: "staffClientsPage.statusReturning",
+  New: "staffClientsPage.statusNew",
 };
 
 function getStatusColors(colors: ThemeColors): Record<
@@ -78,6 +79,7 @@ function ClientRow({
   styles: ClientRowStyles;
   statusColors: ReturnType<typeof getStatusColors>;
 }) {
+  const { t } = useTranslation();
   const badge = statusColors[item.status];
   const name = `${item.first_name} ${item.last_name}`.trim();
   const initials = `${item.first_name[0] ?? ""}${item.last_name[0] ?? ""}`
@@ -92,7 +94,7 @@ function ClientRow({
       <View style={{ flex: 1 }}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>
-            {name || "Client"}
+            {name || t("staffClientsPage.clientFallback")}
           </Text>
           <View
             style={[
@@ -100,13 +102,12 @@ function ClientRow({
               { backgroundColor: badge.bg, borderColor: badge.border },
             ]}>
             <Text style={[styles.badgeText, { color: badge.text }]}>
-              {STATUS_LABELS[item.status]}
+              {t(STATUS_LABEL_KEYS[item.status])}
             </Text>
           </View>
         </View>
         <Text style={styles.meta}>
-          {item.appointment_count} visite
-          {item.appointment_count === 1 ? "" : "s"} ·{" "}
+          {t("staffClientsPage.visits", { count: item.appointment_count })} ·{" "}
           {formatRelativeVisit(item.last_visit)} ·{" "}
           {formatCurrency(item.total_spent, currency)}
         </Text>
@@ -116,6 +117,7 @@ function ClientRow({
 }
 
 export default function StaffClientsScreen() {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const statusColors = useMemo(() => getStatusColors(colors), [colors]);
@@ -153,8 +155,8 @@ export default function StaffClientsScreen() {
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title="Clients"
-        subtitle="Préférences, notes et historique"
+        title={t("staffClientsPage.title")}
+        subtitle={t("staffClientsPage.subtitle")}
         displayTitle
       />
       <ScrollView
@@ -170,19 +172,19 @@ export default function StaffClientsScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{data?.total ?? tagged.length}</Text>
-            <Text style={styles.statLabel}>Total</Text>
+            <Text style={styles.statLabel}>{t("staffClientsPage.statTotal")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{neu}</Text>
-            <Text style={styles.statLabel}>Nouveaux</Text>
+            <Text style={styles.statLabel}>{t("staffClientsPage.new")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{returning}</Text>
-            <Text style={styles.statLabel}>Récurrents</Text>
+            <Text style={styles.statLabel}>{t("staffClientsPage.returning")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{frequent}</Text>
-            <Text style={styles.statLabel}>Fréquents</Text>
+            <Text style={styles.statLabel}>{t("staffClientsPage.frequent")}</Text>
           </View>
         </View>
 
@@ -190,7 +192,7 @@ export default function StaffClientsScreen() {
           style={styles.search}
           value={search}
           onChangeText={setSearch}
-          placeholder="Rechercher un client…"
+          placeholder={t("staffClientsPage.searchPh")}
           placeholderTextColor={colors.textDim}
           autoCapitalize="none"
         />
@@ -208,7 +210,7 @@ export default function StaffClientsScreen() {
                 style={[styles.chip, active && styles.chipActive]}
                 onPress={() => setFilter(f.key)}>
                 <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {f.label}
+                  {t(f.labelKey)}
                 </Text>
               </Pressable>
             );
@@ -219,7 +221,7 @@ export default function StaffClientsScreen() {
           loading={isLoading}
           error={isError ? (error as Error) : null}
           empty={!isLoading && filtered.length === 0}
-          emptyMessage="Aucun client dans cette vue."
+          emptyMessage={t("staffClientsPage.empty")}
           onRetry={() => void refetch()}>
           {filtered.map((c) => (
             <ClientRow

@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
@@ -35,6 +36,9 @@ import {
 } from "@/lib/referralLink";
 import type { StaffService } from "@/services/staff/services";
 
+const ALL_CATEGORY = "__all__";
+const OTHER_CATEGORY = "__other__";
+
 function OfferCard({
   service,
   busy,
@@ -48,6 +52,7 @@ function OfferCard({
   onDecline: () => void;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const { t } = useTranslation();
   const currency = service.currency_code || "EUR";
   const price = service.effective_price ?? service.price;
   const type =
@@ -67,13 +72,13 @@ function OfferCard({
           style={[styles.acceptBtn, busy && styles.disabled]}
           disabled={busy}
           onPress={onAccept}>
-          <Text style={styles.acceptText}>Accepter</Text>
+          <Text style={styles.acceptText}>{t("staffServices.accept")}</Text>
         </Pressable>
         <Pressable
           style={[styles.declineBtn, busy && styles.disabled]}
           disabled={busy}
           onPress={onDecline}>
-          <Text style={styles.declineText}>Refuser</Text>
+          <Text style={styles.declineText}>{t("staffServices.decline")}</Text>
         </Pressable>
       </View>
     </View>
@@ -91,6 +96,7 @@ function ServiceRow({
   onShare: () => void;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const { t } = useTranslation();
   const currency = service.currency_code || "EUR";
   const price = service.effective_price ?? service.price;
   const type =
@@ -103,19 +109,20 @@ function ServiceRow({
       <Pressable style={{ flex: 1 }} onPress={onPress}>
         <Text style={styles.svcName}>{service.name}</Text>
         <Text style={styles.svcMeta}>
-          {service.category_name ?? "Autre"} · {service.duration_minutes} min ·{" "}
-          {formatCurrency(price, currency)}
+          {service.category_name ?? t("staffServices.other")} ·{" "}
+          {service.duration_minutes} min · {formatCurrency(price, currency)}
         </Text>
         <Text style={styles.commHint}>{commissionLabel(type, value, currency)}</Text>
       </Pressable>
       <Pressable style={styles.shareChip} onPress={onShare}>
-        <Text style={styles.shareChipText}>Partager</Text>
+        <Text style={styles.shareChipText}>{t("staffServices.shareTitle")}</Text>
       </Pressable>
     </View>
   );
 }
 
 export default function StaffServicesScreen() {
+  const { t } = useTranslation();
   const toast = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -126,7 +133,7 @@ export default function StaffServicesScreen() {
   const respond = useRespondToServiceOffer();
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Tous");
+  const [category, setCategory] = useState(ALL_CATEGORY);
   const [selected, setSelected] = useState<StaffService | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
 
@@ -144,16 +151,16 @@ export default function StaffServicesScreen() {
 
   const categories = useMemo(() => {
     const cats = Array.from(
-      new Set(accepted.map((s) => s.category_name ?? "Autre")),
+      new Set(accepted.map((s) => s.category_name ?? OTHER_CATEGORY)),
     ).sort();
-    return ["Tous", ...cats];
+    return [ALL_CATEGORY, ...cats];
   }, [accepted]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return accepted.filter((s) => {
-      const matchCat =
-        category === "Tous" || (s.category_name ?? "Autre") === category;
+      const svcCat = s.category_name ?? OTHER_CATEGORY;
+      const matchCat = category === ALL_CATEGORY || svcCat === category;
       const matchSearch =
         !q ||
         s.name.toLowerCase().includes(q) ||
@@ -186,12 +193,21 @@ export default function StaffServicesScreen() {
 
   const currency = accepted[0]?.currency_code || "EUR";
 
+  function categoryLabel(cat: string): string {
+    if (cat === ALL_CATEGORY) return t("staffServices.all");
+    if (cat === OTHER_CATEGORY) return t("staffServices.other");
+    return cat;
+  }
+
   function referralUrl(serviceId?: string): string | null {
     const slug = tenant?.slug;
     const staffProfileId =
       self?.staff_profile_id ?? tenant?.staffProfileId ?? null;
     if (!slug || !staffProfileId) return null;
-    return buildStaffReferralLink(slug, staffProfileId, serviceId);
+    return buildStaffReferralLink(slug, staffProfileId, {
+      businessType: tenant?.businessType,
+      serviceId,
+    });
   }
 
   function handleRespond(svc: StaffService, response: "accepted" | "declined") {
@@ -201,14 +217,17 @@ export default function StaffServicesScreen() {
       {
         onSuccess: () => {
           toast.success(
-            "Offre",
+            t("staffServices.toastOfferTitle"),
             response === "accepted"
-              ? `${svc.name} accepté.`
-              : `${svc.name} refusé.`,
+              ? t("staffServices.toastAccepted")
+              : t("staffServices.toastDeclined"),
           );
         },
         onError: (err: Error) => {
-          toast.error("Erreur", err.message || "Impossible de répondre à l'offre");
+          toast.error(
+            t("staffServices.toastError"),
+            err.message || t("staffServices.toastRespondError"),
+          );
         },
         onSettled: () => setRespondingId(null),
       },
@@ -218,15 +237,15 @@ export default function StaffServicesScreen() {
   async function shareFor(serviceId?: string) {
     const url = referralUrl(serviceId);
     if (!url) {
-      toast.warning("Partage", "Lien de parrainage indisponible.");
+      toast.warning(t("staffServices.shareTitle"), t("staffServices.shareNoLink"));
       return;
     }
     try {
       await shareReferralUrl(url);
     } catch (err) {
       toast.error(
-        "Partage",
-        err instanceof Error ? err.message : "Partage impossible",
+        t("staffServices.shareTitle"),
+        err instanceof Error ? err.message : t("staffServices.shareFailed"),
       );
     }
   }
@@ -234,10 +253,10 @@ export default function StaffServicesScreen() {
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title="Services"
+        title={t("staffServices.title")}
         subtitle={
           self
-            ? `${accepted.length} prestation${accepted.length === 1 ? "" : "s"}`
+            ? `${accepted.length} ${t("staffServices.acceptedCount").toLowerCase()}`
             : undefined
         }
         displayTitle
@@ -255,19 +274,19 @@ export default function StaffServicesScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{accepted.length}</Text>
-            <Text style={styles.statLabel}>Acceptés</Text>
+            <Text style={styles.statLabel}>{t("staffServices.acceptedCount")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
               {accepted.length > 0 ? formatCurrency(avgCommission, currency) : "—"}
             </Text>
-            <Text style={styles.statLabel}>Comm. moy.</Text>
+            <Text style={styles.statLabel}>{t("staffToday.commission")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
               {accepted.length > 0 ? `${avgDuration} min` : "—"}
             </Text>
-            <Text style={styles.statLabel}>Durée moy.</Text>
+            <Text style={styles.statLabel}>{t("staffServices.avgDuration")}</Text>
           </View>
         </View>
 
@@ -275,12 +294,12 @@ export default function StaffServicesScreen() {
           loading={isLoading}
           error={isError ? (error as Error) : null}
           empty={!isLoading && services.length === 0}
-          emptyMessage="Aucune prestation assignée pour le moment."
+          emptyMessage={t("staffServices.empty")}
           onRetry={() => void refetch()}>
           {pending.length > 0 ? (
             <View style={styles.offersSection}>
               <Text style={styles.offersTitle}>
-                Offres de services ({pending.length})
+                {t("staffServices.offersTitle")} ({pending.length})
               </Text>
               {pending.map((svc) => (
                 <OfferCard
@@ -295,12 +314,12 @@ export default function StaffServicesScreen() {
             </View>
           ) : null}
 
-          <Text style={ownerStyles.sectionTitle}>Mes services</Text>
+          <Text style={ownerStyles.sectionTitle}>{t("staffToday.myServices")}</Text>
           <TextInput
             style={styles.search}
             value={search}
             onChangeText={setSearch}
-            placeholder="Rechercher un service…"
+            placeholder={t("staffServices.searchPh")}
             placeholderTextColor={colors.textDim}
             autoCapitalize="none"
           />
@@ -317,7 +336,7 @@ export default function StaffServicesScreen() {
                   style={[styles.chip, active && styles.chipActive]}
                   onPress={() => setCategory(cat)}>
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                    {cat}
+                    {categoryLabel(cat)}
                   </Text>
                 </Pressable>
               );
@@ -325,7 +344,7 @@ export default function StaffServicesScreen() {
           </ScrollView>
 
           {filtered.length === 0 ? (
-            <Text style={styles.emptyFiltered}>Aucun service dans cette vue.</Text>
+            <Text style={styles.emptyFiltered}>{t("staffClientsPage.empty")}</Text>
           ) : (
             filtered.map((svc) => (
               <ServiceRow

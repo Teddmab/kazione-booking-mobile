@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ownerFonts } from "@/constants/ownerTheme";
@@ -47,10 +48,10 @@ function statusColors(
   };
 }
 
-const STATUS_LABELS: Record<StaffClientStatus, string> = {
-  Frequent: "Fréquent",
-  Returning: "Récurrent",
-  New: "Nouveau",
+const STATUS_LABEL_KEYS: Record<StaffClientStatus, string> = {
+  Frequent: "staffClientsPage.statusFrequent",
+  Returning: "staffClientsPage.statusReturning",
+  New: "staffClientsPage.statusNew",
 };
 
 export function StaffClientDetailSheet({
@@ -59,6 +60,7 @@ export function StaffClientDetailSheet({
   currency,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
@@ -100,9 +102,13 @@ export function StaffClientDetailSheet({
     updateNotes.mutate(
       { clientId: client!.id, notes: noteText },
       {
-        onSuccess: () => toast.success("Notes", "Notes enregistrées."),
+        onSuccess: () =>
+          toast.success(t("staffClientsPage.tabNotes"), t("staffClientsPage.notesSaved")),
         onError: (err: Error) =>
-          toast.error("Erreur", err.message || "Échec de l'enregistrement"),
+          toast.error(
+            t("common.error"),
+            err.message || t("staffClientsPage.notesSaveFailed"),
+          ),
       },
     );
   }
@@ -120,14 +126,16 @@ export function StaffClientDetailSheet({
               <Text style={styles.avatarText}>{initials || "?"}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{name || "Client"}</Text>
+              <Text style={styles.name}>
+                {name || t("staffClientsPage.clientFallback")}
+              </Text>
               <View
                 style={[
                   styles.badge,
                   { backgroundColor: badge.bg, borderColor: badge.border },
                 ]}>
                 <Text style={[styles.badgeText, { color: badge.text }]}>
-                  {STATUS_LABELS[status]}
+                  {t(STATUS_LABEL_KEYS[status])}
                 </Text>
               </View>
             </View>
@@ -136,19 +144,19 @@ export function StaffClientDetailSheet({
           <View style={styles.metrics}>
             <View style={styles.metric}>
               <Text style={styles.metricValue}>{client.appointment_count}</Text>
-              <Text style={styles.metricLabel}>Visites</Text>
+              <Text style={styles.metricLabel}>{t("staffClientsPage.visitsLabel")}</Text>
             </View>
             <View style={styles.metric}>
               <Text style={styles.metricValue}>
                 {formatRelativeVisit(client.last_visit)}
               </Text>
-              <Text style={styles.metricLabel}>Dernière</Text>
+              <Text style={styles.metricLabel}>{t("staffClientsPage.lastVisit")}</Text>
             </View>
             <View style={styles.metric}>
               <Text style={styles.metricValue}>
                 {formatCurrency(client.total_spent, currency)}
               </Text>
-              <Text style={styles.metricLabel}>Dépensé</Text>
+              <Text style={styles.metricLabel}>{t("staffClientsPage.spentLabel")}</Text>
             </View>
           </View>
 
@@ -157,14 +165,14 @@ export function StaffClientDetailSheet({
               style={[styles.tab, tab === "info" && styles.tabActive]}
               onPress={() => setTab("info")}>
               <Text style={[styles.tabText, tab === "info" && styles.tabTextActive]}>
-                Infos
+                {t("staffClientsPage.tabInfo")}
               </Text>
             </Pressable>
             <Pressable
               style={[styles.tab, tab === "notes" && styles.tabActive]}
               onPress={() => setTab("notes")}>
               <Text style={[styles.tabText, tab === "notes" && styles.tabTextActive]}>
-                Notes
+                {t("staffClientsPage.tabNotes")}
               </Text>
             </Pressable>
           </View>
@@ -175,24 +183,24 @@ export function StaffClientDetailSheet({
             <View style={styles.block}>
               {email ? (
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Email</Text>
+                  <Text style={styles.rowLabel}>{t("staffAccount.labelEmail")}</Text>
                   <Text style={styles.rowValue}>{email}</Text>
                 </View>
               ) : null}
               {phone ? (
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Téléphone</Text>
+                  <Text style={styles.rowLabel}>{t("booking.phone")}</Text>
                   <Text style={styles.rowValue}>{phone}</Text>
                 </View>
               ) : null}
               {tags.length > 0 ? (
                 <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Tags</Text>
+                  <Text style={styles.rowLabel}>{t("staffClientsPage.tags")}</Text>
                   <Text style={styles.rowValue}>{tags.join(", ")}</Text>
                 </View>
               ) : null}
               {!email && !phone && tags.length === 0 ? (
-                <Text style={styles.empty}>Aucune info supplémentaire.</Text>
+                <Text style={styles.empty}>{t("staffClientsPage.noExtraInfo")}</Text>
               ) : null}
             </View>
           ) : (
@@ -201,7 +209,7 @@ export function StaffClientDetailSheet({
                 style={styles.notesInput}
                 value={noteText}
                 onChangeText={setNoteText}
-                placeholder="Ajouter des notes sur ce client…"
+                placeholder={t("staffClientsPage.notesPlaceholder")}
                 placeholderTextColor={colors.textDim}
                 multiline
                 textAlignVertical="top"
@@ -217,7 +225,7 @@ export function StaffClientDetailSheet({
                 {updateNotes.isPending ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.saveText}>Enregistrer</Text>
+                  <Text style={styles.saveText}>{t("common.save")}</Text>
                 )}
               </Pressable>
             </View>
@@ -225,7 +233,7 @@ export function StaffClientDetailSheet({
         </ScrollView>
 
         <Pressable style={styles.closeBtn} onPress={onClose}>
-          <Text style={styles.closeText}>Fermer</Text>
+          <Text style={styles.closeText}>{t("common.close")}</Text>
         </Pressable>
       </View>
     </Modal>

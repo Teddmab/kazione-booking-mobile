@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
@@ -28,16 +29,14 @@ import { buildStaffReferralLink } from "@/lib/referralLink";
 import type { StaffAppointment } from "@/services/staff/appointments";
 import type { StaffPerformance } from "@/services/staff/profile";
 
-const PERIODS: { key: PeriodKey; label: string }[] = [
-  { key: "7d", label: "7 jours" },
-  { key: "30d", label: "30 jours" },
-  { key: "90d", label: "90 jours" },
-];
+const PERIOD_LABEL_KEYS: Record<PeriodKey, string> = {
+  "7d": "staffPerf.periodWeek",
+  "30d": "staffPerf.periodMonth",
+  "90d": "staffPerf.periodCustom",
+};
 
-const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-
-function money(amount: number, currency: string): string {
-  return new Intl.NumberFormat("fr-FR", {
+function money(amount: number, currency: string, locale: string): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -45,19 +44,27 @@ function money(amount: number, currency: string): string {
   }).format(amount);
 }
 
+function weekdayShort(locale: string, dayIndex: number): string {
+  const date = new Date(2024, 0, 7 + dayIndex);
+  return date.toLocaleDateString(locale, { weekday: "short" });
+}
+
 function completionPct(rate: number | undefined | null): string {
   if (rate == null) return "—";
   return `${Math.round(rate * 100)}%`;
 }
 
-function buildWeeklyActivity(appts: StaffAppointment[]) {
+function buildWeeklyActivity(appts: StaffAppointment[], locale: string) {
   const counts = Array(7).fill(0) as number[];
   for (const a of appts) {
     if (a.status === "cancelled") continue;
     const dow = new Date(a.starts_at).getDay();
     counts[dow] += 1;
   }
-  return DAY_NAMES.map((name, i) => ({ name, count: counts[i] }));
+  return counts.map((count, i) => ({
+    name: weekdayShort(locale, i),
+    count,
+  }));
 }
 
 function buildTopServices(appts: StaffAppointment[]) {
@@ -72,6 +79,28 @@ function buildTopServices(appts: StaffAppointment[]) {
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 5);
 }
 
+/** Same grouping as web StaffReportsPage periodTrend (W1…W5 by day-of-month). */
+function buildPeriodTrend(appts: StaffAppointment[]) {
+  const weekMap: Record<
+    string,
+    { week: string; completed: number; cancelled: number; total: number }
+  > = {};
+  for (const a of appts) {
+    const d = new Date(a.starts_at);
+    const weekNum = Math.ceil(d.getDate() / 7);
+    const key = `W${weekNum}`;
+    if (!weekMap[key]) {
+      weekMap[key] = { week: key, completed: 0, cancelled: 0, total: 0 };
+    }
+    weekMap[key].total += 1;
+    if (a.status === "completed") weekMap[key].completed += 1;
+    if (a.status === "cancelled") weekMap[key].cancelled += 1;
+  }
+  return Object.values(weekMap).sort(
+    (a, b) => Number(a.week.slice(1)) - Number(b.week.slice(1)),
+  );
+}
+
 function PeriodSelector({
   value,
   onChange,
@@ -81,9 +110,12 @@ function PeriodSelector({
   onChange: (p: PeriodKey) => void;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const { t } = useTranslation();
+  const periods: PeriodKey[] = ["7d", "30d", "90d"];
+
   return (
     <View style={styles.periodRow}>
-      {PERIODS.map(({ key, label }) => {
+      {periods.map((key) => {
         const active = value === key;
         return (
           <Pressable
@@ -92,7 +124,7 @@ function PeriodSelector({
             onPress={() => onChange(key)}>
             <Text
               style={[styles.periodText, active && styles.periodTextActive]}>
-              {label}
+              {t(PERIOD_LABEL_KEYS[key])}
             </Text>
           </Pressable>
         );
@@ -110,21 +142,22 @@ function StatsRow({
   loading: boolean;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const { t } = useTranslation();
   const cells = [
     {
-      label: "RDV",
+      label: t("staffPerf.statAppts"),
       value: loading ? "…" : perf ? String(perf.bookings) : "—",
     },
     {
-      label: "Clients",
+      label: t("staffPerf.statClients"),
       value: loading ? "…" : perf ? String(perf.unique_clients) : "—",
     },
     {
-      label: "Complétion",
+      label: t("staffPerf.statCompletion"),
       value: loading ? "…" : completionPct(perf?.completion_rate),
     },
     {
-      label: "Note",
+      label: t("staffPerf.statRating"),
       value: loading
         ? "…"
         : perf && perf.avg_rating > 0
@@ -205,7 +238,44 @@ function TopServicesList({
   );
 }
 
+function BookingTrendChart({
+  data,
+  styles,
+}: {
+  data: { week: string; completed: number; cancelled: number; total: number }[];
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  const { t } = useTranslation();
+  const max = Math.max(...data.map((d) => d.completed), 1);
+  return (
+    <View>
+      <View style={styles.chartRow}>
+        {data.map(({ week, completed }) => (
+          <View key={week} style={styles.chartCol}>
+            <Text style={styles.chartCount}>{completed || ""}</Text>
+            <View
+              style={[
+                styles.chartBar,
+                styles.trendBar,
+                {
+                  height: Math.max(
+                    (completed / max) * 60,
+                    completed > 0 ? 4 : 0,
+                  ),
+                },
+              ]}
+            />
+            <Text style={styles.chartDay}>{week}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.trendLegend}>{t("staffPerf.completed")}</Text>
+    </View>
+  );
+}
+
 export default function StaffPerformanceScreen() {
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -235,16 +305,19 @@ export default function StaffPerformanceScreen() {
   } = useStaffAppointments(from, to, 500);
 
   const weeklyActivity = useMemo(
-    () => buildWeeklyActivity(appointments),
-    [appointments],
+    () => buildWeeklyActivity(appointments, i18n.language),
+    [appointments, i18n.language],
   );
   const topServices = useMemo(
     () => buildTopServices(appointments),
     [appointments],
   );
+  const periodTrend = useMemo(
+    () => buildPeriodTrend(appointments),
+    [appointments],
+  );
 
-  const periodLabel =
-    PERIODS.find((p) => p.key === period)?.label ?? "30 jours";
+  const periodLabel = t(PERIOD_LABEL_KEYS[period]);
 
   const avgPerAppt =
     perf && perf.bookings > 0 ? perf.revenue / perf.bookings : null;
@@ -254,23 +327,25 @@ export default function StaffPerformanceScreen() {
     const staffProfileId =
       self?.staff_profile_id ?? tenant?.staffProfileId ?? null;
     if (!slug || !staffProfileId) return null;
-    return buildStaffReferralLink(slug, staffProfileId);
-  }, [tenant?.slug, tenant?.staffProfileId, self?.staff_profile_id]);
+    return buildStaffReferralLink(slug, staffProfileId, {
+      businessType: tenant?.businessType,
+    });
+  }, [tenant?.slug, tenant?.businessType, tenant?.staffProfileId, self?.staff_profile_id]);
 
   async function copyReferral() {
     if (!referralUrl) {
-      toast.warning("Lien", "Lien de parrainage indisponible.");
+      toast.warning(t("staffPerf.toastLinkTitle"), t("staffPerf.toastNoLink"));
       return;
     }
     try {
       await Clipboard.setStringAsync(referralUrl);
       setCopied(true);
-      toast.success("Copié", "Lien de parrainage copié.");
+      toast.success(t("staffPerf.toastCopiedTitle"), t("staffPerf.toastCopiedBody"));
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast.error(
-        "Copie",
-        err instanceof Error ? err.message : "Impossible de copier",
+        t("staffPerf.toastCopyTitle"),
+        err instanceof Error ? err.message : t("staffPerf.toastCopyFailed"),
       );
     }
   }
@@ -282,7 +357,7 @@ export default function StaffPerformanceScreen() {
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title="Performance"
+        title={t("staffPerf.title")}
         subtitle={perf?.display_name ?? self?.display_name ?? undefined}
         displayTitle
       />
@@ -313,82 +388,93 @@ export default function StaffPerformanceScreen() {
           ) : null}
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Mes parrainages</Text>
+            <Text style={styles.cardTitle}>{t("staffPerf.referrals")}</Text>
             <View style={styles.refStats}>
               <View style={styles.refStat}>
                 <Text style={styles.refValue}>
                   {perf ? String(perf.referrals_initiated) : "—"}
                 </Text>
-                <Text style={styles.refLabel}>Envoyés</Text>
+                <Text style={styles.refLabel}>
+                  {t("staffPerf.referralsInitiated")}
+                </Text>
               </View>
               <View style={styles.refStat}>
                 <Text style={styles.refValue}>
                   {perf ? String(perf.referral_conversions) : "—"}
                 </Text>
-                <Text style={styles.refLabel}>Convertis</Text>
+                <Text style={styles.refLabel}>
+                  {t("staffPerf.referralConversions")}
+                </Text>
               </View>
             </View>
             <Text style={styles.refRevenue}>
-              CA parrainages :{" "}
-              {perf ? money(perf.referral_revenue, currency) : "—"}
+              {t("staffPerf.referralRevenue")}:{" "}
+              {perf ? money(perf.referral_revenue, currency, i18n.language) : "—"}
             </Text>
             <Pressable
               style={[styles.copyBtn, copied && styles.copyBtnDone]}
               onPress={() => void copyReferral()}>
               <Text style={styles.copyText}>
-                {copied ? "Copié !" : "Copier mon lien de parrainage"}
+                {copied ? t("staffPerf.copied") : t("staffPerf.copyLink")}
               </Text>
             </Pressable>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Gains — {periodLabel}</Text>
+            <Text style={styles.cardTitle}>
+              {t("staffToday.monthRevenue")} — {periodLabel}
+            </Text>
             <View style={styles.earnRow}>
-              <Text style={styles.earnLabel}>CA généré</Text>
+              <Text style={styles.earnLabel}>{t("staffToday.monthRevenue")}</Text>
               <Text style={styles.earnValue}>
-                {perf ? money(perf.revenue, currency) : "—"}
+                {perf ? money(perf.revenue, currency, i18n.language) : "—"}
               </Text>
             </View>
             <View style={styles.earnRow}>
-              <Text style={styles.earnLabel}>Commission</Text>
+              <Text style={styles.earnLabel}>{t("staffToday.commission")}</Text>
               <Text style={styles.earnValuePrimary}>
-                {perf ? money(perf.commission_amount, currency) : "—"}
+                {perf
+                  ? money(perf.commission_amount, currency, i18n.language)
+                  : "—"}
               </Text>
             </View>
             <View style={styles.earnRow}>
-              <Text style={styles.earnLabel}>Taux de complétion</Text>
+              <Text style={styles.earnLabel}>{t("staffToday.completion")}</Text>
               <Text style={styles.earnValue}>
                 {completionPct(perf?.completion_rate)}
               </Text>
             </View>
             <View style={[styles.earnRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.earnLabel}>Moy. / RDV</Text>
+              <Text style={styles.earnLabel}>{t("staffPerf.statAppts")}</Text>
               <Text style={styles.earnValue}>
-                {avgPerAppt != null ? money(avgPerAppt, currency) : "—"}
+                {avgPerAppt != null
+                  ? money(avgPerAppt, currency, i18n.language)
+                  : "—"}
               </Text>
             </View>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Activité hebdomadaire</Text>
-            <Text style={styles.cardHint}>
-              RDV non annulés sur la période sélectionnée
-            </Text>
+            <Text style={styles.cardTitle}>{t("staffPerf.activity")}</Text>
             <WeeklyActivityChart data={weeklyActivity} styles={styles} />
           </View>
 
+          {periodTrend.length > 1 ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{t("staffPerf.bookingTrend")}</Text>
+              <BookingTrendChart data={periodTrend} styles={styles} />
+            </View>
+          ) : null}
+
           {topServices.length > 0 ? (
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Top services</Text>
+              <Text style={styles.cardTitle}>{t("staffPerf.topServices")}</Text>
               <TopServicesList data={topServices} styles={styles} />
             </View>
           ) : null}
 
           {!perf && !isLoading ? (
-            <Text style={styles.emptyHint}>
-              Aucune donnée pour cette période. Complétez un rendez-vous pour
-              voir vos stats.
-            </Text>
+            <Text style={styles.emptyHint}>{t("staffPerf.noData")}</Text>
           ) : null}
         </QueryState>
       </ScrollView>
@@ -546,6 +632,17 @@ function makeStyles(colors: ThemeColors) {
       color: colors.textDim,
       marginTop: 4,
       fontFamily: ownerFonts.regular,
+    },
+    trendBar: {
+      backgroundColor: colors.primary,
+      opacity: 0.85,
+    },
+    trendLegend: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 8,
+      textAlign: "center",
+      fontFamily: ownerFonts.medium,
     },
     topRow: {
       flexDirection: "row",

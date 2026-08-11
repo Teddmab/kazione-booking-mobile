@@ -9,6 +9,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AuthPrimaryButton } from "@/components/auth/AuthPrimaryButton";
@@ -22,6 +23,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 
 export default function StaffWelcomeScreen() {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -30,7 +32,14 @@ export default function StaffWelcomeScreen() {
   const { height } = useWindowDimensions();
   const [step, setStep] = useState(0);
 
-  const slide = STAFF_WELCOME_SLIDES[step];
+  const slideImages = STAFF_WELCOME_SLIDES[step];
+  const slideTexts = (
+    t("staffWelcome.slides", { returnObjects: true }) as Array<{
+      kicker: string;
+      title: string;
+      body: string;
+    }>
+  )[step];
   const heroHeight = Math.round(height * 0.56);
 
   const finish = async () => {
@@ -45,7 +54,7 @@ export default function StaffWelcomeScreen() {
       <StatusBar style="light" />
 
       <ImageBackground
-        source={slide.image}
+        source={slideImages.image}
         style={[styles.hero, { height: heroHeight, paddingTop: insets.top + 12 }]}
         resizeMode="cover">
         <View style={styles.heroScrim} pointerEvents="none" />
@@ -53,9 +62,9 @@ export default function StaffWelcomeScreen() {
       </ImageBackground>
 
       <View style={styles.panel}>
-        <Text style={styles.kicker}>{slide.kicker}</Text>
-        <Text style={styles.title}>{slide.title}</Text>
-        <Text style={styles.body}>{slide.body}</Text>
+        <Text style={styles.kicker}>{slideTexts.kicker}</Text>
+        <Text style={styles.title}>{slideTexts.title}</Text>
+        <Text style={styles.body}>{slideTexts.body}</Text>
 
         <View style={styles.footer}>
           <View style={styles.dots}>
@@ -69,12 +78,12 @@ export default function StaffWelcomeScreen() {
 
           {step < STAFF_WELCOME_SLIDES.length - 1 ? (
             <AuthPrimaryButton
-              label="Suivant"
+              label={t("staffWelcome.next")}
               onPress={() => setStep((s) => s + 1)}
             />
           ) : (
             <AuthPrimaryButton
-              label="Entrer dans mon espace"
+              label={t("staffWelcome.enter")}
               onPress={() => void finish()}
             />
           )}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Modal,
@@ -32,6 +33,7 @@ export function AddExceptionSheet({
   defaultDate,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [type, setType] = useState<ExceptionType>("day_off");
@@ -54,12 +56,12 @@ export function AddExceptionSheet({
 
   function handleSave() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setError("Date invalide (format YYYY-MM-DD)");
+      setError(t("staffException.invalidDate"));
       return;
     }
     if (type === "custom") {
       if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
-        setError("Horaires invalides (format HH:MM)");
+        setError(t("staffException.invalidHours"));
         return;
       }
     }
@@ -77,7 +79,7 @@ export function AddExceptionSheet({
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Nouvelle exception</Text>
+        <Text style={styles.title}>{t("staffException.title")}</Text>
 
         <View style={styles.typeRow}>
           <Pressable
@@ -88,7 +90,7 @@ export function AddExceptionSheet({
                 styles.typeText,
                 type === "day_off" && styles.typeTextActive,
               ]}>
-              Jour off
+              {t("staffException.dayOff")}
             </Text>
           </Pressable>
           <Pressable
@@ -99,12 +101,12 @@ export function AddExceptionSheet({
                 styles.typeText,
                 type === "custom" && styles.typeTextActive,
               ]}>
-              Horaires custom
+              {t("staffException.customHours")}
             </Text>
           </Pressable>
         </View>
 
-        <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
+        <Text style={styles.label}>{t("staffException.dateLabel")}</Text>
         <TextInput
           style={styles.input}
           value={date}
@@ -117,7 +119,7 @@ export function AddExceptionSheet({
         {type === "custom" ? (
           <View style={styles.times}>
             <View style={styles.timeCol}>
-              <Text style={styles.label}>Début</Text>
+              <Text style={styles.label}>{t("staffException.start")}</Text>
               <TextInput
                 style={styles.input}
                 value={startTime}
@@ -128,7 +130,7 @@ export function AddExceptionSheet({
               />
             </View>
             <View style={styles.timeCol}>
-              <Text style={styles.label}>Fin</Text>
+              <Text style={styles.label}>{t("staffException.end")}</Text>
               <TextInput
                 style={styles.input}
                 value={endTime}
@@ -141,12 +143,12 @@ export function AddExceptionSheet({
           </View>
         ) : null}
 
-        <Text style={styles.label}>Raison (optionnel)</Text>
+        <Text style={styles.label}>{t("staffException.reason")}</Text>
         <TextInput
           style={[styles.input, styles.reason]}
           value={reason}
           onChangeText={setReason}
-          placeholder="Congé, formation…"
+          placeholder={t("staffException.reasonPh")}
           placeholderTextColor={colors.textDim}
         />
 
@@ -159,11 +161,11 @@ export function AddExceptionSheet({
           {busy ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.saveText}>Enregistrer</Text>
+            <Text style={styles.saveText}>{t("common.save")}</Text>
           )}
         </Pressable>
         <Pressable style={styles.cancelBtn} onPress={onClose} disabled={busy}>
-          <Text style={styles.cancelText}>Annuler</Text>
+          <Text style={styles.cancelText}>{t("common.cancel")}</Text>
         </Pressable>
       </View>
     </Modal>

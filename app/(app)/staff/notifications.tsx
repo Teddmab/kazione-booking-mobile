@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
@@ -20,8 +21,8 @@ import {
   type StaffNotification,
 } from "@/hooks/useStaffNotifications";
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString("fr-FR", {
+function formatWhen(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -30,6 +31,7 @@ function formatWhen(iso: string): string {
 }
 
 export default function StaffNotificationsScreen() {
+  const { t, i18n } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -50,14 +52,14 @@ export default function StaffNotificationsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StaffAppBar title="Notifications" displayTitle />
+      <StaffAppBar title={t("staffNotifPage.title")} displayTitle />
       <View style={styles.flex}>
         {items.some((n) => !n.is_read) ? (
           <Pressable
             style={styles.markAll}
             onPress={() => markAll.mutate()}
             disabled={markAll.isPending}>
-            <Text style={styles.markAllText}>Tout marquer comme lu</Text>
+            <Text style={styles.markAllText}>{t("staffNotifPage.markAll")}</Text>
           </Pressable>
         ) : null}
 
@@ -65,7 +67,7 @@ export default function StaffNotificationsScreen() {
           loading={isLoading}
           error={isError ? (error as Error) : null}
           empty={!isLoading && items.length === 0}
-          emptyMessage="Aucune notification."
+          emptyMessage={t("staffNotifPage.empty")}
           onRetry={() => void refetch()}>
           <FlatList
             data={items}
@@ -85,7 +87,9 @@ export default function StaffNotificationsScreen() {
                 onPress={() => onPress(item)}>
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.body}>{item.body}</Text>
-                <Text style={styles.when}>{formatWhen(item.created_at)}</Text>
+                <Text style={styles.when}>
+                  {formatWhen(item.created_at, i18n.language)}
+                </Text>
               </Pressable>
             )}
           />

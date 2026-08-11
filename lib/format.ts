@@ -1,35 +1,40 @@
-export function formatCurrency(amount: number, currency = "EUR"): string {
-  return new Intl.NumberFormat("fr-FR", {
+const LOCALE_MAP: Record<string, string> = {
+  en: "en-GB",
+  fr: "fr-FR",
+  et: "et-EE",
+  ru: "ru-RU",
+};
+
+export function localeForLanguage(lang: string): string {
+  const code = lang.split("-")[0];
+  return LOCALE_MAP[code] ?? "en-GB";
+}
+
+export function formatCurrency(
+  amount: number,
+  currency = "EUR",
+  language = "en",
+): string {
+  return new Intl.NumberFormat(localeForLanguage(language), {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
-export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("fr-FR", {
+export function formatTime(iso: string, language = "en"): string {
+  return new Date(iso).toLocaleTimeString(localeForLanguage(language), {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
+export function formatDate(iso: string, language = "en"): string {
+  return new Date(iso).toLocaleDateString(localeForLanguage(language), {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
-}
-
-const LOCALE_MAP: Record<string, string> = {
-  en: "en-GB",
-  fr: "fr-FR",
-  et: "et-EE",
-};
-
-export function localeForLanguage(lang: string): string {
-  const code = lang.split("-")[0];
-  return LOCALE_MAP[code] ?? "en-GB";
 }
 
 export function formatDateLong(d: Date, language = "en"): string {
