@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function WeekNav({ weekStart, onPrev, onNext, onToday }: Props) {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -23,7 +25,7 @@ export function WeekNav({ weekStart, onPrev, onNext, onToday }: Props) {
         <Ionicons name="chevron-back" size={20} color={colors.primary} />
       </Pressable>
       <Pressable onPress={onToday} style={styles.todayBtn}>
-        <Text style={styles.todayText}>{"Aujourd'hui"}</Text>
+        <Text style={styles.todayText}>{t("staffCalendar.todayBtn")}</Text>
       </Pressable>
       <Pressable onPress={onNext} style={styles.btn} hitSlop={6}>
         <Ionicons name="chevron-forward" size={20} color={colors.primary} />

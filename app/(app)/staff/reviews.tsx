@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
@@ -61,11 +62,12 @@ function ReviewCard({
   styles: ReviewStyles;
   colors: ThemeColors;
 }) {
+  const { t, i18n } = useTranslation();
   const displayName =
     review.reviewer_name ??
     (review.client
       ? `${review.client.first_name} ${review.client.last_name}`.trim()
-      : "Anonyme");
+      : t("staffReviewsPage.anonymous"));
   const initials = displayName.slice(0, 2).toUpperCase();
   const inviteUrl =
     review.review_token && !review.token_used_at
@@ -92,12 +94,12 @@ function ReviewCard({
             </Text>
             {!review.is_public ? (
               <View style={styles.pendingBadge}>
-                <Text style={styles.pendingText}>En attente</Text>
+                <Text style={styles.pendingText}>{t("staffStatus.pending")}</Text>
               </View>
             ) : null}
           </View>
           <Text style={styles.date}>
-            {new Date(review.created_at).toLocaleDateString("fr-FR")}
+            {new Date(review.created_at).toLocaleDateString(i18n.language)}
           </Text>
         </View>
       </View>
@@ -110,7 +112,7 @@ function ReviewCard({
 
       {review.owner_reply ? (
         <View style={styles.replyBox}>
-          <Text style={styles.replyLabel}>Réponse du salon</Text>
+          <Text style={styles.replyLabel}>{t("staffReviewsPage.salonReply")}</Text>
           <Text style={styles.replyText}>{review.owner_reply}</Text>
         </View>
       ) : null}
@@ -118,10 +120,10 @@ function ReviewCard({
       {inviteUrl ? (
         <View style={styles.inviteBox}>
           <Text style={styles.inviteHint} numberOfLines={1}>
-            En attente de l'avis client
+            {t("staffReviewsPage.invitePending")}
           </Text>
           <Pressable style={styles.copyBtn} onPress={() => onCopy(inviteUrl)}>
-            <Text style={styles.copyText}>Copier le lien</Text>
+            <Text style={styles.copyText}>{t("staffReviewsPage.copyLink")}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -130,6 +132,7 @@ function ReviewCard({
 }
 
 export default function StaffReviewsScreen() {
+  const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const toast = useToast();
@@ -152,11 +155,14 @@ export default function StaffReviewsScreen() {
   async function copyLink(url: string) {
     try {
       await Clipboard.setStringAsync(url);
-      toast.success("Copié", "Lien d'avis copié.");
+      toast.success(
+        t("staffReviewsPage.toastCopiedTitle"),
+        t("staffReviewsPage.toastCopiedBody"),
+      );
     } catch (err) {
       toast.error(
-        "Copie",
-        err instanceof Error ? err.message : "Impossible de copier",
+        t("staffReviewsPage.toastCopyTitle"),
+        err instanceof Error ? err.message : t("staffReviewsPage.toastCopyFailed"),
       );
     }
   }
@@ -164,8 +170,8 @@ export default function StaffReviewsScreen() {
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title="Avis"
-        subtitle="Retours clients sur le salon"
+        title={t("staffReviewsPage.title")}
+        subtitle={t("staffReviewsPage.subtitle")}
         displayTitle
       />
       <ScrollView
@@ -195,7 +201,7 @@ export default function StaffReviewsScreen() {
             <View style={styles.summaryBlock}>
               <Text style={styles.summaryValue}>{total}</Text>
               <Text style={styles.summaryLabel}>
-                {total === 1 ? "avis" : "avis"}
+                {t("staffReviewsPage.review", { count: total })}
               </Text>
             </View>
           </View>
@@ -205,7 +211,7 @@ export default function StaffReviewsScreen() {
           loading={isLoading}
           error={isError ? (error as Error) : null}
           empty={!isLoading && reviews.length === 0}
-          emptyMessage="Aucun avis pour le moment."
+          emptyMessage={t("staffReviewsPage.empty")}
           onRetry={() => void refetch()}>
           {reviews.map((r) => (
             <ReviewCard
@@ -224,7 +230,7 @@ export default function StaffReviewsScreen() {
               style={[styles.pageBtn, page <= 1 && styles.disabled]}
               disabled={page <= 1}
               onPress={() => setPage((p) => Math.max(1, p - 1))}>
-              <Text style={styles.pageBtnText}>Précédent</Text>
+              <Text style={styles.pageBtnText}>{t("auth.back")}</Text>
             </Pressable>
             <Text style={styles.pageLabel}>
               {page} / {totalPages}
@@ -233,7 +239,7 @@ export default function StaffReviewsScreen() {
               style={[styles.pageBtn, page >= totalPages && styles.disabled]}
               disabled={page >= totalPages}
               onPress={() => setPage((p) => Math.min(totalPages, p + 1))}>
-              <Text style={styles.pageBtnText}>Suivant</Text>
+              <Text style={styles.pageBtnText}>{t("auth.next")}</Text>
             </Pressable>
           </View>
         ) : null}

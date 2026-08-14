@@ -14,10 +14,12 @@ import {
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useToast } from "@/contexts/ToastContext";
+import { localeForLanguage } from "@/lib/format";
 import {
   extractVoucherUuid,
   staffRedeemVoucher,
@@ -32,8 +34,8 @@ interface Props {
   onClose: () => void;
 }
 
-function money(amount: number, currency = "EUR"): string {
-  return new Intl.NumberFormat("fr-FR", {
+function money(amount: number, currency: string, language: string): string {
+  return new Intl.NumberFormat(localeForLanguage(language), {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
@@ -47,6 +49,7 @@ function StatusPill({
   status: string;
   styles: ReturnType<typeof makeStyles>;
 }) {
+  const { t } = useTranslation();
   const active = status === "active";
   const done = status === "completed";
   return (
@@ -63,13 +66,14 @@ function StatusPill({
           active && styles.pillTextActive,
           done && styles.pillTextDone,
         ]}>
-        {active ? "Actif" : done ? "Utilisé" : status}
+        {active ? t("staffVoucher.active") : done ? t("staffVoucher.used") : status}
       </Text>
     </View>
   );
 }
 
 export function VoucherScanSheet({ visible, onClose }: Props) {
+  const { t, i18n } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
@@ -80,6 +84,16 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
   const [input, setInput] = useState("");
   const [lookupId, setLookupId] = useState<string | null>(null);
   const [scannedLock, setScannedLock] = useState(false);
+
+  const inputTabs = useMemo(
+    () =>
+      [
+        { id: "camera" as const, label: t("staffVoucher.camera"), icon: "camera-outline" },
+        { id: "image" as const, label: t("staffVoucher.image"), icon: "image-outline" },
+        { id: "paste" as const, label: t("staffVoucher.paste"), icon: "keypad-outline" },
+      ] as const,
+    [t],
+  );
 
   useEffect(() => {
     if (!visible) {
@@ -100,20 +114,20 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
   const redeem = useMutation({
     mutationFn: (id: string) => staffRedeemVoucher(id),
     onSuccess: () => {
-      toast.success("Voucher", "Marqué comme entièrement utilisé.");
+      toast.success(t("staffVoucher.title"), t("staffVoucher.markedUsed"));
       void qc.invalidateQueries({ queryKey: ["scan-voucher"] });
       setLookupId(null);
       setInput("");
       setScannedLock(false);
     },
     onError: (err: Error) =>
-      toast.error("Erreur", err.message || "Impossible de marquer le voucher"),
+      toast.error(t("common.error"), err.message || t("common.error")),
   });
 
   function applyScan(raw: string) {
     const id = extractVoucherUuid(raw);
     if (!id) {
-      toast.warning("Code invalide", "Collez une URL ou un UUID de voucher.");
+      toast.warning(t("staffVoucher.notFound"), t("staffVoucher.invalidCode"));
       return;
     }
     setLookupId(id);
@@ -126,10 +140,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
       quality: 1,
     });
     if (res.canceled || !res.assets[0]) return;
-    toast.warning(
-      "Image sélectionnée",
-      "La lecture QR depuis photo n'est pas fiable sur mobile — utilisez la caméra ou collez le code.",
-    );
+    toast.warning(t("staffVoucher.imageSelected"), t("staffVoucher.imageSelectedHint"));
     setTab("paste");
   }
 
@@ -155,7 +166,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
       <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
         <View style={styles.header}>
           <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-          <Text style={styles.title}>Scan voucher</Text>
+          <Text style={styles.title}>{t("staffVoucher.title")}</Text>
           <Pressable onPress={handleClose} hitSlop={12}>
             <Ionicons name="close" size={24} color={colors.textMuted} />
           </Pressable>
@@ -170,31 +181,25 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
           {!lookupId ? (
             <>
               <View style={styles.tabs}>
-                {(
-                  [
-                    { id: "camera", label: "Caméra", icon: "camera-outline" },
-                    { id: "image", label: "Image", icon: "image-outline" },
-                    { id: "paste", label: "Coller", icon: "keypad-outline" },
-                  ] as const
-                ).map((t) => (
+                {inputTabs.map((tabItem) => (
                   <Pressable
-                    key={t.id}
-                    style={[styles.tab, tab === t.id && styles.tabActive]}
+                    key={tabItem.id}
+                    style={[styles.tab, tab === tabItem.id && styles.tabActive]}
                     onPress={() => {
-                      setTab(t.id);
+                      setTab(tabItem.id);
                       setScannedLock(false);
                     }}>
                     <Ionicons
-                      name={t.icon}
+                      name={tabItem.icon}
                       size={14}
-                      color={tab === t.id ? colors.primary : colors.textMuted}
+                      color={tab === tabItem.id ? colors.primary : colors.textMuted}
                     />
                     <Text
                       style={[
                         styles.tabText,
-                        tab === t.id && styles.tabTextActive,
+                        tab === tabItem.id && styles.tabTextActive,
                       ]}>
-                      {t.label}
+                      {tabItem.label}
                     </Text>
                   </Pressable>
                 ))}
@@ -205,12 +210,12 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
                   {!permission?.granted ? (
                     <View style={styles.cameraFallback}>
                       <Text style={styles.fallbackText}>
-                        Autorisez l&apos;accès à la caméra pour scanner le QR.
+                        {t("staffVoucher.authorizeHint")}
                       </Text>
                       <Pressable
                         style={styles.primaryBtn}
                         onPress={() => void requestPermission()}>
-                        <Text style={styles.primaryBtnText}>Autoriser</Text>
+                        <Text style={styles.primaryBtnText}>{t("staffVoucher.authorize")}</Text>
                       </Pressable>
                     </View>
                   ) : (
@@ -227,9 +232,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
                       }
                     />
                   )}
-                  <Text style={styles.cameraHint}>
-                    Pointez la caméra vers le QR du voucher
-                  </Text>
+                  <Text style={styles.cameraHint}>{t("staffVoucher.pointCamera")}</Text>
                 </View>
               ) : null}
 
@@ -240,10 +243,8 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
                     size={32}
                     color={colors.textMuted}
                   />
-                  <Text style={styles.imageTitle}>Choisir une photo</Text>
-                  <Text style={styles.imageHint}>
-                    Puis collez le code si besoin (onglet Coller)
-                  </Text>
+                  <Text style={styles.imageTitle}>{t("staffVoucher.pickPhoto")}</Text>
+                  <Text style={styles.imageHint}>{t("staffVoucher.pasteIfNeeded")}</Text>
                 </Pressable>
               ) : null}
 
@@ -251,7 +252,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
                 <View style={styles.pasteRow}>
                   <TextInput
                     style={styles.input}
-                    placeholder="URL ou UUID du voucher"
+                    placeholder={t("staffVoucher.pastePh")}
                     placeholderTextColor={colors.textDim}
                     value={input}
                     onChangeText={setInput}
@@ -275,17 +276,17 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
           {lookupId && voucherQ.isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={styles.muted}>Recherche du voucher…</Text>
+              <Text style={styles.muted}>{t("staffVoucher.searching")}</Text>
             </View>
           ) : null}
 
           {lookupId && voucherQ.isError && !voucherQ.isLoading ? (
             <View style={styles.errorBox}>
               <Ionicons name="close-circle" size={28} color={colors.danger} />
-              <Text style={styles.errorTitle}>Voucher introuvable</Text>
-              <Text style={styles.muted}>Vérifiez le code et réessayez.</Text>
+              <Text style={styles.errorTitle}>{t("staffVoucher.notFound")}</Text>
+              <Text style={styles.muted}>{t("staffVoucher.invalidCode")}</Text>
               <Pressable style={styles.outlineBtn} onPress={reset}>
-                <Text style={styles.outlineBtnText}>Autre scan</Text>
+                <Text style={styles.outlineBtnText}>{t("staffVoucher.scanAnother")}</Text>
               </Pressable>
             </View>
           ) : null}
@@ -294,14 +295,14 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
             <View style={styles.result}>
               <View style={styles.resultHero}>
                 <Text style={styles.resultBiz}>
-                  {voucher.business_name ?? "Salon"}
+                  {voucher.business_name ?? t("staffVoucher.defaultSalon")}
                 </Text>
                 <Text style={styles.resultTitle}>
-                  {voucher.offer_title ?? "Voucher"}
+                  {voucher.offer_title ?? t("staffVoucher.defaultVoucher")}
                 </Text>
                 {voucher.client_first_name ? (
                   <Text style={styles.resultClient}>
-                    Pour {voucher.client_first_name}
+                    {t("staffVoucher.forClient", { name: voucher.client_first_name })}
                   </Text>
                 ) : null}
               </View>
@@ -311,12 +312,18 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
 
                 {voucher.offer_type === "gift_voucher" ? (
                   <View style={styles.balanceBox}>
-                    <Text style={styles.balanceLabel}>Solde restant</Text>
+                    <Text style={styles.balanceLabel}>{t("staffVoucher.balance")}</Text>
                     <Text style={styles.balanceValue}>
-                      {money(balance, voucher.currency_code)}
+                      {money(balance, voucher.currency_code ?? "EUR", i18n.language)}
                     </Text>
                     <Text style={styles.muted}>
-                      sur {money(voucher.voucher_value ?? 0, voucher.currency_code)}
+                      {t("staffVoucher.ofTotal", {
+                        amount: money(
+                          voucher.voucher_value ?? 0,
+                          voucher.currency_code ?? "EUR",
+                          i18n.language,
+                        ),
+                      })}
                     </Text>
                   </View>
                 ) : null}
@@ -324,7 +331,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
                 {voucher.offer_type === "package" ||
                 voucher.offer_type === "training" ? (
                   <View style={styles.balanceBox}>
-                    <Text style={styles.balanceLabel}>Séances restantes</Text>
+                    <Text style={styles.balanceLabel}>{t("staffVoucher.sessionsLeft")}</Text>
                     <Text style={styles.balanceValue}>
                       {(voucher.sessions_total ?? 0) -
                         (voucher.sessions_used ?? 0)}
@@ -338,7 +345,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
 
                 <View style={styles.resultActions}>
                   <Pressable style={styles.outlineBtnFlex} onPress={reset}>
-                    <Text style={styles.outlineBtnText}>Scanner un autre</Text>
+                    <Text style={styles.outlineBtnText}>{t("staffVoucher.scanAnother")}</Text>
                   </Pressable>
                   {voucher.status === "active" ? (
                     <Pressable
@@ -352,7 +359,7 @@ export function VoucherScanSheet({ visible, onClose }: Props) {
                         <ActivityIndicator color="#fff" />
                       ) : (
                         <Text style={styles.primaryBtnText}>
-                          Marquer utilisé
+                          {t("staffVoucher.markUsed")}
                         </Text>
                       )}
                     </Pressable>

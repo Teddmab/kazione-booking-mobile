@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,10 +12,17 @@ import {
 
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
+import { localeForLanguage } from "@/lib/format";
 import type { StaffScheduleDay, StaffWorkingDay } from "@/services/staff/profile";
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+function weekdayShort(day: number, language: string): string {
+  return new Date(2024, 0, 7 + day).toLocaleDateString(
+    localeForLanguage(language),
+    { weekday: "short" },
+  );
+}
 
 function normalizeSchedule(workingHours: StaffWorkingDay[]): StaffScheduleDay[] {
   return DAY_ORDER.map((day) => {
@@ -35,6 +43,7 @@ interface Props {
 }
 
 export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
+  const { t, i18n } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [schedule, setSchedule] = useState(() => normalizeSchedule(workingHours));
@@ -52,7 +61,7 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>Horaires de travail</Text>
+        <Text style={styles.title}>{t("staffAccount.workingHours")}</Text>
         <Pressable
           style={[styles.saveBtn, busy && styles.saveDisabled]}
           disabled={busy}
@@ -60,17 +69,17 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
           {busy ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.saveText}>Enregistrer</Text>
+            <Text style={styles.saveText}>{t("common.save")}</Text>
           )}
         </Pressable>
       </View>
-      <Text style={styles.hint}>
-        Ces horaires alimentent votre agenda. Format 24h : HH:MM
-      </Text>
+      <Text style={styles.hint}>{t("staffAccount.scheduleHint")}</Text>
       {schedule.map((row) => (
         <View key={row.day} style={styles.row}>
           <View style={styles.head}>
-            <Text style={styles.dayName}>{DAY_NAMES[row.day]}</Text>
+            <Text style={styles.dayName}>
+              {weekdayShort(row.day, i18n.language)}
+            </Text>
             <Switch
               value={row.is_working}
               onValueChange={(is_working) => updateDay(row.day, { is_working })}
@@ -98,7 +107,7 @@ export function SelfScheduleEditor({ workingHours, onSave, busy }: Props) {
               />
             </View>
           ) : (
-            <Text style={styles.off}>Repos</Text>
+            <Text style={styles.off}>{t("staffAccount.dayOff")}</Text>
           )}
         </View>
       ))}

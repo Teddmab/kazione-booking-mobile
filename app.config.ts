@@ -48,6 +48,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    'expo-localization',
     ['@stripe/stripe-react-native', {}],
     '@sentry/react-native',
     [
