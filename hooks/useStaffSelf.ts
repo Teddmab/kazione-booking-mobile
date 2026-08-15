@@ -3,13 +3,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTenantContext } from "@/contexts/TenantContext";
 import {
   deleteSelfOverride,
+  fetchMyCommissions,
   fetchStaffSelf,
   getSelfOverrides,
+  updateBankAccount,
   updateSelfProfile,
   updateSelfSchedule,
   upsertSelfOverride,
+  type CommissionLedgerResult,
   type StaffOverride,
   type StaffScheduleDay,
+  type UpdateBankAccountInput,
 } from "@/services/staff/profile";
 
 export function useStaffSelf() {
@@ -76,5 +80,32 @@ export function useDeleteSelfOverride() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["staff-overrides"] });
     },
+  });
+}
+
+export function useUpdateBankAccount() {
+  const qc = useQueryClient();
+  const { tenant } = useTenantContext();
+  const businessId = tenant?.businessId ?? "";
+  return useMutation({
+    mutationFn: (input: UpdateBankAccountInput) => updateBankAccount(input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["staff-self", businessId] });
+    },
+  });
+}
+
+export function useMyCommissions(params: {
+  from?: string;
+  to?: string;
+  status?: "all" | "unpaid";
+}) {
+  const { tenant } = useTenantContext();
+  const businessId = tenant?.businessId ?? "";
+  return useQuery<CommissionLedgerResult>({
+    queryKey: ["my-commissions", businessId, params],
+    queryFn: () => fetchMyCommissions({ ...params, business_id: businessId }),
+    enabled: !!businessId,
+    staleTime: 60_000,
   });
 }

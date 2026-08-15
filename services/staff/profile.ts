@@ -30,6 +30,45 @@ export interface StaffSelf {
   role: string;
   position?: string | null;
   working_hours: StaffWorkingDay[];
+  commission_rate?: number;
+  bank_account_iban?: string | null;
+  bank_account_bank_name?: string | null;
+  bank_account_holder_name?: string | null;
+  bank_account_is_entrepreneur?: boolean;
+  bank_account_ee_accepted_at?: string | null;
+}
+
+export interface UpdateBankAccountInput {
+  iban?: string;
+  bank_name?: string;
+  holder_name?: string;
+  is_entrepreneur?: boolean;
+  ee_accepted?: boolean;
+}
+
+export interface CommissionLedgerRow {
+  appointment_id: string;
+  starts_at: string;
+  client_name: string;
+  service_name: string;
+  price: number;
+  commission_type: "percentage" | "fixed" | "none";
+  commission_value: number;
+  commission_amount: number;
+  commission_paid_at: string | null;
+  commission_pay_method: string | null;
+  commission_amount_paid: number | null;
+}
+
+export interface CommissionSummary {
+  total_earned: number;
+  total_paid: number;
+  total_unpaid: number;
+}
+
+export interface CommissionLedgerResult {
+  commissions: CommissionLedgerRow[];
+  summary: CommissionSummary;
 }
 
 /** Current staff profile + working hours via GET /staff?action=self */
@@ -92,6 +131,26 @@ export interface StaffPerformance {
   referrals_initiated: number;
   referral_conversions: number;
   referral_revenue: number;
+}
+
+export async function updateBankAccount(
+  input: UpdateBankAccountInput,
+): Promise<{ success: boolean }> {
+  return api.patch<{ success: boolean }>("/staff?action=update-bank-account", input);
+}
+
+export async function fetchMyCommissions(params: {
+  from?: string;
+  to?: string;
+  status?: "all" | "unpaid";
+  business_id?: string;
+}): Promise<CommissionLedgerResult> {
+  const qs = new URLSearchParams({ action: "my-commissions" });
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  if (params.status) qs.set("status", params.status);
+  if (params.business_id) qs.set("business_id", params.business_id);
+  return api.get<CommissionLedgerResult>(`/staff?${qs.toString()}`);
 }
 
 export async function fetchMyPerformance(
