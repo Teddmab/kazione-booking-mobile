@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -18,6 +19,7 @@ import { OwnerSheetHeader } from "@/components/owner/OwnerSheetHeader";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useToast } from "@/contexts/ToastContext";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { useStaffDetail, useStaffCommissions, usePayCommissions } from "@/hooks/useOwnerStaff";
 import { getAppointments } from "@/services/owner/appointments";
 import type { DateRange } from "@/types/finance";
 import type { AppointmentStatus, StaffMember } from "@/types/owner";
@@ -80,6 +82,42 @@ export function StaffDetailSheet({
   const [position, setPosition] = useState("");
   const [role, setRole] = useState<EditableRole>("staff");
   const [isActive, setIsActive] = useState(true);
+  const [selectedCommissionIds, setSelectedCommissionIds] = useState<Set<string>>(new Set());
+  const [payMethod, setPayMethod] = useState<"cash" | "bank_transfer" | "offset">("cash");
+
+  const { data: staffDetail } = useStaffDetail(visible ? (member?.id ?? null) : null, businessId);
+  const { data: commissionsData, refetch: refetchCommissions } = useStaffCommissions(
+    visible ? (member?.id ?? null) : null,
+    businessId,
+    { status: "unpaid" },
+  );
+  const payCommissionsMutation = usePayCommissions(businessId);
+
+  const unpaidCommissions = commissionsData?.commissions ?? [];
+
+  function toggleCommission(id: string) {
+    setSelectedCommissionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handlePaySelected() {
+    if (selectedCommissionIds.size === 0) return;
+    payCommissionsMutation.mutate(
+      { appointmentIds: Array.from(selectedCommissionIds), payMethod },
+      {
+        onSuccess: ({ paid_count }) => {
+          toast.success("Commissions paid", `${paid_count} marked as paid`);
+          setSelectedCommissionIds(new Set());
+          void refetchCommissions();
+        },
+        onError: (err: Error) => toast.error("Payment failed", err.message),
+      },
+    );
+  }
 
   const { data: apptData, isLoading: apptsLoading } = useQuery({
     queryKey: [
@@ -180,6 +218,107 @@ export function StaffDetailSheet({
                   </View>
                 </View>
               ))
+            )}
+
+            {/* Bank Account section */}
+            <Text style={styles.sectionTitle}>Bank Account</Text>
+            {staffDetail?.bank_account_iban ? (
+              <View style={styles.bankCard}>
+                <View style={styles.bankRow}>
+                  <Ionicons name="card-outline" size={15} color={ownerColors.primary} />
+                  <Text style={styles.bankIban}>
+                    {staffDetail.bank_account_iban.replace(/(.{4})/g, "$1 ").trim()}
+                  </Text>
+                </View>
+                {staffDetail.bank_account_holder_name ? (
+                  <Text style={styles.bankMeta}>{staffDetail.bank_account_holder_name}</Text>
+                ) : null}
+                {staffDetail.bank_account_bank_name ? (
+                  <Text style={styles.bankMeta}>{staffDetail.bank_account_bank_name}</Text>
+                ) : null}
+                {staffDetail.bank_account_is_entrepreneur ? (
+                  <View style={styles.entrepreneurBadge}>
+                    <Text style={styles.entrepreneurBadgeText}>FIE / OÜ account</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.entrepreneurBadge, styles.entrepreneurBadgeWarn]}>
+                    <Text style={[styles.entrepreneurBadgeText, { color: "#92400e" }]}>
+                      Not confirmed as business account
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.empty}>Staff has not provided bank details yet.</Text>
+            )}
+
+            {/* Commissions section */}
+            <Text style={styles.sectionTitle}>Unpaid Commissions</Text>
+            {commissionsData && (
+              <View style={styles.commissionSummary}>
+                <Text style={styles.commissionSummaryText}>
+                  Unpaid: {formatCurrency(commissionsData.summary.total_unpaid)}
+                  {"  ·  "}
+                  Paid: {formatCurrency(commissionsData.summary.total_paid)}
+                </Text>
+              </View>
+            )}
+            {unpaidCommissions.length === 0 ? (
+              <Text style={styles.empty}>No unpaid commissions.</Text>
+            ) : (
+              <>
+                {unpaidCommissions.map((row) => {
+                  const selected = selectedCommissionIds.has(row.appointment_id);
+                  return (
+                    <Pressable
+                      key={row.appointment_id}
+                      style={[styles.commissionRow, selected && styles.commissionRowSelected]}
+                      onPress={() => toggleCommission(row.appointment_id)}>
+                      <View style={[styles.commissionCheck, selected && styles.commissionCheckActive]}>
+                        {selected ? <Ionicons name="checkmark" size={11} color="#fff" /> : null}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.apptService}>{row.service_name}</Text>
+                        <Text style={styles.apptMeta}>
+                          {formatDate(row.starts_at)} · {row.client_name}
+                        </Text>
+                      </View>
+                      <Text style={[styles.apptPrice, { color: "#d97706" }]}>
+                        {formatCurrency(row.commission_amount)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+
+                {selectedCommissionIds.size > 0 && (
+                  <View style={styles.payPanel}>
+                    <View style={styles.payMethodRow}>
+                      {(["cash", "bank_transfer", "offset"] as const).map((m) => (
+                        <Pressable
+                          key={m}
+                          style={[styles.methodChip, payMethod === m && styles.methodChipActive]}
+                          onPress={() => setPayMethod(m)}>
+                          <Text style={[styles.methodChipText, payMethod === m && styles.methodChipTextActive]}>
+                            {m === "cash" ? "Cash" : m === "bank_transfer" ? "Bank" : "Offset"}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Pressable
+                      style={[styles.payBtn, payCommissionsMutation.isPending && styles.disabled]}
+                      disabled={payCommissionsMutation.isPending}
+                      onPress={handlePaySelected}>
+                      {payCommissionsMutation.isPending ? (
+                        <ActivityIndicator color="#fff" size="small" />
+                      ) : (
+                        <Text style={styles.payBtnText}>
+                          Pay {selectedCommissionIds.size} selected
+                        </Text>
+                      )}
+                    </Pressable>
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.sectionTitle}>Modifier le profil</Text>
@@ -368,4 +507,81 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.6 },
   primaryBtnText: { color: ownerColors.primary, fontWeight: "600" },
+  bankCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    backgroundColor: ownerColors.bg,
+    padding: 14,
+    gap: 6,
+  },
+  bankRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  bankIban: { fontSize: 14, fontFamily: "monospace", color: ownerColors.text, fontWeight: "600" },
+  bankMeta: { fontSize: 13, color: ownerColors.textMuted },
+  entrepreneurBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "#dcfce7",
+  },
+  entrepreneurBadgeWarn: { backgroundColor: "#fef3c7" },
+  entrepreneurBadgeText: { fontSize: 11, fontWeight: "600", color: "#166534" },
+  commissionSummary: {
+    padding: 10,
+    backgroundColor: ownerColors.primaryMuted,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  commissionSummaryText: { fontSize: 13, color: ownerColors.primary, fontWeight: "600" },
+  commissionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: ownerColors.border,
+  },
+  commissionRowSelected: { backgroundColor: ownerColors.primaryMuted, borderRadius: 8 },
+  commissionCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: ownerColors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commissionCheckActive: {
+    backgroundColor: ownerColors.primary,
+    borderColor: ownerColors.primary,
+  },
+  payPanel: {
+    marginTop: 10,
+    gap: 8,
+  },
+  payMethodRow: { flexDirection: "row", gap: 8 },
+  methodChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    backgroundColor: ownerColors.bg,
+  },
+  methodChipActive: {
+    backgroundColor: ownerColors.primaryMuted,
+    borderColor: ownerColors.primary,
+  },
+  methodChipText: { fontSize: 13, color: ownerColors.textMuted },
+  methodChipTextActive: { color: ownerColors.primary, fontWeight: "600" },
+  payBtn: {
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: ownerColors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });

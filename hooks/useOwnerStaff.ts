@@ -4,9 +4,12 @@ import type { InviteStaffValues } from "@/components/owner/InviteStaffSheet";
 import type { StaffUpdateValues } from "@/components/owner/StaffDetailSheet";
 import {
   assignStaffServices,
+  getStaffCommissions,
+  getStaffDetail,
   getStaffList,
   getStaffServices,
   inviteStaff,
+  payCommissions,
   resendStaffInvite,
   updateStaff,
   updateStaffSchedule,
@@ -101,6 +104,45 @@ export function useActivateStaffInvite(businessId: string) {
     mutationFn: (staffId: string) => updateStaff(staffId, { is_active: true }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["owner-staff", businessId] });
+    },
+  });
+}
+
+export function useStaffDetail(staffId: string | null, businessId: string) {
+  return useQuery({
+    queryKey: ["owner-staff-detail", staffId, businessId],
+    queryFn: () => getStaffDetail(staffId!, businessId),
+    enabled: !!staffId && !!businessId,
+    staleTime: 30_000,
+  });
+}
+
+export function useStaffCommissions(
+  staffId: string | null,
+  businessId: string,
+  params: { status?: "all" | "unpaid" } = {},
+) {
+  return useQuery({
+    queryKey: ["owner-staff-commissions", staffId, businessId, params],
+    queryFn: () => getStaffCommissions(staffId!, businessId, params),
+    enabled: !!staffId && !!businessId,
+    staleTime: 30_000,
+  });
+}
+
+export function usePayCommissions(businessId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      appointmentIds,
+      payMethod,
+    }: {
+      appointmentIds: string[];
+      payMethod: "cash" | "bank_transfer" | "offset";
+    }) => payCommissions(businessId, appointmentIds, payMethod),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["owner-staff-commissions"] });
+      void queryClient.invalidateQueries({ queryKey: ["owner-appointments"] });
     },
   });
 }

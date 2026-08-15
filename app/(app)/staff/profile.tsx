@@ -24,8 +24,10 @@ import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
 import {
   useDeleteSelfOverride,
+  useMyCommissions,
   useSelfOverrides,
   useStaffSelf,
+  useUpdateBankAccount,
   useUpdateSelfProfile,
   useUpdateSelfSchedule,
   useUpsertSelfOverride,
@@ -33,7 +35,7 @@ import {
 import { authClient } from "@/lib/auth";
 import { roleLabel } from "@/lib/workspaceRouting";
 
-type MainTab = "resume" | "horaire" | "appearance";
+type MainTab = "resume" | "horaire" | "appearance" | "payment";
 type ScheduleTab = "weekly" | "exceptions";
 
 export default function StaffProfileScreen() {
@@ -49,6 +51,14 @@ export default function StaffProfileScreen() {
   const updateSchedule = useUpdateSelfSchedule();
   const upsertOverride = useUpsertSelfOverride();
   const deleteOverride = useDeleteSelfOverride();
+  const updateBankAccountMutation = useUpdateBankAccount();
+
+  const now = new Date();
+  const commissionFrom = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const commissionTo = now.toISOString().slice(0, 10);
+  const { data: commissionsData } = useMyCommissions({ from: commissionFrom, to: commissionTo });
 
   const [mainTab, setMainTab] = useState<MainTab>("resume");
   const [scheduleTab, setScheduleTab] = useState<ScheduleTab>("weekly");
@@ -61,6 +71,14 @@ export default function StaffProfileScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordBusy, setPasswordBusy] = useState(false);
+
+  // Bank account state
+  const [bankIban, setBankIban] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankHolder, setBankHolder] = useState("");
+  const [bankIsEntrepreneur, setBankIsEntrepreneur] = useState(false);
+  const [bankEeAccepted, setBankEeAccepted] = useState(false);
+  const [bankBusy, setBankBusy] = useState(false);
 
   const range = useMemo(() => {
     const y = monthCursor.getFullYear();
@@ -83,6 +101,41 @@ export default function StaffProfileScreen() {
     isLoading: overridesLoading,
     refetch: refetchOverrides,
   } = useSelfOverrides(range.from, range.to);
+
+  // Sync bank account fields from loaded staff data
+  const staffBankIban = staff?.bank_account_iban ?? "";
+  const staffBankName = staff?.bank_account_bank_name ?? "";
+  const staffBankHolder = staff?.bank_account_holder_name ?? "";
+  const staffIsEntrepreneur = staff?.bank_account_is_entrepreneur ?? false;
+  const staffEeAccepted = Boolean(staff?.bank_account_ee_accepted_at);
+
+  // Re-initialize local state when staff data loads
+  // (only if user hasn't started editing — check identity against loaded values)
+  if (!bankBusy && staff && bankIban === "" && staffBankIban) setBankIban(staffBankIban);
+  if (!bankBusy && staff && bankName === "" && staffBankName) setBankName(staffBankName);
+  if (!bankBusy && staff && bankHolder === "" && staffBankHolder) setBankHolder(staffBankHolder);
+
+  function formatIban(raw: string) {
+    return raw.replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
+  }
+
+  async function saveBankAccount() {
+    setBankBusy(true);
+    try {
+      await updateBankAccountMutation.mutateAsync({
+        iban: bankIban.replace(/\s/g, ""),
+        bank_name: bankName,
+        holder_name: bankHolder,
+        is_entrepreneur: bankIsEntrepreneur,
+        ee_accepted: bankEeAccepted,
+      });
+      toast.success("Bank account", "Details saved");
+    } catch (err) {
+      toast.error("Save failed", err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setBankBusy(false);
+    }
+  }
 
   const displayName = staff
     ? (staff.display_name?.trim() ||
@@ -155,6 +208,7 @@ export default function StaffProfileScreen() {
             { key: "resume" as const, label: t("staffAccount.tabResume"), icon: "person-outline" as const },
             { key: "horaire" as const, label: t("staffAccount.tabSchedule"), icon: "time-outline" as const },
             { key: "appearance" as const, label: t("appearance.title"), icon: "color-palette-outline" as const },
+            { key: "payment" as const, label: "Payment", icon: "card-outline" as const },
           ]
         ).map((tab) => {
           const active = mainTab === tab.key;
@@ -419,7 +473,7 @@ export default function StaffProfileScreen() {
               </View>
             )}
           </>
-        ) : (
+        ) : mainTab === "appearance" ? (
           <>
             <View style={styles.card}>
               <View style={styles.cardHeader}>
@@ -436,6 +490,125 @@ export default function StaffProfileScreen() {
                 <Text style={styles.cardTitle}>{t("appearance.language")}</Text>
               </View>
               <LanguageSelector variant="list" />
+            </View>
+          </>
+        ) : (
+          /* Payment / Bank Account tab */
+          <>
+            {/* Estonian entrepreneur account warning — always shown for EE pilot */}
+            <View style={styles.eeWarning}>
+              <Ionicons name="warning-outline" size={18} color="#92400e" style={{ marginTop: 2 }} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={styles.eeWarningTitle}>Commission payments in Estonia</Text>
+                <Text style={styles.eeWarningText}>
+                  Estonian law requires commission income to be received via a business
+                  account (FIE or OÜ). Personal accounts (regular LHV, SEB, Swedbank) cannot
+                  be used. Contact your bank to open an entrepreneur account.
+                </Text>
+                <Pressable
+                  style={styles.eeCheckRow}
+                  onPress={() => setBankEeAccepted((v) => !v)}>
+                  <View style={[styles.checkbox, bankEeAccepted && styles.checkboxChecked]}>
+                    {bankEeAccepted && <Ionicons name="checkmark" size={11} color="#fff" />}
+                  </View>
+                  <Text style={styles.eeCheckLabel}>
+                    I understand — I will provide a business account
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="card-outline" size={16} color={colors.primary} />
+                <Text style={styles.cardTitle}>Bank Account Details</Text>
+              </View>
+
+              {/* Commission summary for this month */}
+              {commissionsData && (
+                <View style={styles.commissionSummary}>
+                  <View style={styles.commissionSummaryItem}>
+                    <Text style={styles.commissionSummaryLabel}>This month</Text>
+                    <Text style={styles.commissionSummaryValue}>
+                      €{commissionsData.summary.total_earned.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.commissionSummaryDivider} />
+                  <View style={styles.commissionSummaryItem}>
+                    <Text style={styles.commissionSummaryLabel}>Paid</Text>
+                    <Text style={[styles.commissionSummaryValue, { color: colors.success }]}>
+                      €{commissionsData.summary.total_paid.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.commissionSummaryDivider} />
+                  <View style={styles.commissionSummaryItem}>
+                    <Text style={styles.commissionSummaryLabel}>Pending</Text>
+                    <Text style={[styles.commissionSummaryValue, { color: "#d97706" }]}>
+                      €{commissionsData.summary.total_unpaid.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Account holder name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={bankHolder}
+                  onChangeText={setBankHolder}
+                  placeholder="Full legal name on account"
+                  placeholderTextColor={colors.textDim}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>IBAN</Text>
+                <TextInput
+                  style={[styles.input, { fontFamily: "monospace" as const }]}
+                  value={bankIban}
+                  onChangeText={(v) => setBankIban(formatIban(v))}
+                  placeholder="EE38 2200 2210 1234 5678"
+                  placeholderTextColor={colors.textDim}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Bank name</Text>
+                <TextInput
+                  style={styles.input}
+                  value={bankName}
+                  onChangeText={setBankName}
+                  placeholder="e.g. LHV, SEB, Swedbank"
+                  placeholderTextColor={colors.textDim}
+                />
+              </View>
+
+              <Pressable
+                style={styles.eeCheckRow}
+                onPress={() => setBankIsEntrepreneur((v) => !v)}>
+                <View style={[styles.checkbox, bankIsEntrepreneur && styles.checkboxChecked]}>
+                  {bankIsEntrepreneur && <Ionicons name="checkmark" size={11} color="#fff" />}
+                </View>
+                <Text style={styles.hint}>
+                  This is my entrepreneur / business account (FIE or OÜ)
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.primaryBtn,
+                  (bankBusy || !bankHolder || !bankIban) && styles.disabled,
+                ]}
+                disabled={bankBusy || !bankHolder || !bankIban}
+                onPress={() => void saveBankAccount()}>
+                {bankBusy ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>Save bank details</Text>
+                )}
+              </Pressable>
             </View>
           </>
         )}
@@ -679,5 +852,79 @@ function makeStyles(colors: ThemeColors) {
       fontFamily: ownerFonts.regular,
     },
     disabled: { opacity: 0.55 },
+    eeWarning: {
+      flexDirection: "row",
+      gap: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "#fde68a",
+      backgroundColor: "#fffbeb",
+      padding: 14,
+    },
+    eeWarningTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: "#92400e",
+      fontFamily: ownerFonts.semiBold,
+    },
+    eeWarningText: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: "#92400e",
+      fontFamily: ownerFonts.regular,
+    },
+    eeCheckRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    eeCheckLabel: {
+      fontSize: 12,
+      color: "#92400e",
+      flex: 1,
+      fontFamily: ownerFonts.medium,
+    },
+    checkbox: {
+      width: 16,
+      height: 16,
+      borderRadius: 4,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    commissionSummary: {
+      flexDirection: "row",
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    commissionSummaryItem: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 10,
+      gap: 2,
+    },
+    commissionSummaryDivider: {
+      width: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+    },
+    commissionSummaryLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    commissionSummaryValue: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+      fontFamily: ownerFonts.bold,
+    },
   });
 }
