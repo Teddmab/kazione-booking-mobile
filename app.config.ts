@@ -24,11 +24,13 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.afrotouch.kazione',
+    appleTeamId: '8993YZKPQJ',
     icon: './assets/logos/logo-square-orange.png',
     infoPlist: {
       NSAppTransportSecurity: {
         NSAllowsLocalNetworking: true,
       },
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {

@@ -28,8 +28,14 @@ import {
   useStaffPendingCompletionAppointments,
   useUpdateStaffAppointmentStatus,
 } from "@/hooks/useStaffAppointments";
+import {
+  calendarMonthRange,
+  useMyPerformanceRange,
+} from "@/hooks/useMyPerformance";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
-import { clientDisplayName, formatTime } from "@/lib/format";
+import { useTenantContext } from "@/contexts/TenantContext";
+import { clientDisplayName, formatCurrency, formatTime } from "@/lib/format";
 import { addDays, startOfWeekMonday, toIsoDateLocal } from "@/lib/staffCalendar";
 import type { StaffAppointment } from "@/services/staff/appointments";
 
@@ -118,7 +124,7 @@ function ListApptRow({
 }
 
 export default function StaffCalendarScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const toast = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -196,6 +202,16 @@ export default function StaffCalendarScreen() {
   const { data: staffSelf } = useStaffSelf();
   const updateStatus = useUpdateStaffAppointmentStatus();
   const respondOffer = useRespondToAppointmentOffer();
+
+  const { tenant } = useTenantContext();
+  const businessId = tenant?.businessId ?? "";
+  const settings = useBusinessSettings(businessId);
+  const currency = settings.data?.settings?.currency_code ?? "EUR";
+  const mtdRange = useMemo(() => calendarMonthRange(), []);
+  const { data: mtdPerf, isLoading: mtdLoading } = useMyPerformanceRange(
+    mtdRange.from,
+    mtdRange.to,
+  );
 
   const todayAppts = useMemo(
     () =>
@@ -435,6 +451,21 @@ export default function StaffCalendarScreen() {
             <StatTile
               label={t("staffCalendar.statWeek")}
               value={String(upcomingAppts.length)}
+              styles={styles}
+            />
+            <StatTile
+              label={t("staffCalendar.statMtd")}
+              value={
+                mtdLoading
+                  ? "…"
+                  : mtdPerf
+                    ? formatCurrency(
+                        mtdPerf.commission_amount,
+                        currency,
+                        i18n.language,
+                      )
+                    : "—"
+              }
               styles={styles}
             />
           </View>

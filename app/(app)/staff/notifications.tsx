@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { useMemo } from "react";
 import {
@@ -20,15 +21,8 @@ import {
   useStaffNotifications,
   type StaffNotification,
 } from "@/hooks/useStaffNotifications";
-
-function formatWhen(iso: string, locale: string): string {
-  return new Date(iso).toLocaleString(locale, {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatRelativeTime } from "@/lib/format";
+import { getNotificationIcon } from "@/lib/notificationUi";
 
 export default function StaffNotificationsScreen() {
   const { t, i18n } = useTranslation();
@@ -85,11 +79,20 @@ export default function StaffNotificationsScreen() {
               <Pressable
                 style={[styles.card, !item.is_read && styles.cardUnread]}
                 onPress={() => onPress(item)}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.body}>{item.body}</Text>
-                <Text style={styles.when}>
-                  {formatWhen(item.created_at, i18n.language)}
-                </Text>
+                <View style={styles.iconCol}>
+                  <Ionicons
+                    name={getNotificationIcon(item.type)}
+                    size={20}
+                    color={colors.primary}
+                  />
+                </View>
+                <View style={styles.bodyCol}>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.body}>{item.body}</Text>
+                  <Text style={styles.when}>
+                    {formatRelativeTime(item.created_at, i18n.language)}
+                  </Text>
+                </View>
               </Pressable>
             )}
           />
@@ -112,6 +115,9 @@ function makeStyles(colors: ThemeColors) {
     },
     list: { padding: 16, paddingBottom: 32 },
     card: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
       backgroundColor: colors.card,
       borderRadius: 14,
       borderWidth: 1,
@@ -123,6 +129,15 @@ function makeStyles(colors: ThemeColors) {
       borderColor: colors.primary,
       backgroundColor: colors.primarySurface,
     },
+    iconCol: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.bg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bodyCol: { flex: 1, gap: 4 },
     title: {
       fontSize: 15,
       fontWeight: "600",
@@ -130,15 +145,14 @@ function makeStyles(colors: ThemeColors) {
       fontFamily: ownerFonts.semiBold,
     },
     body: {
-      fontSize: 14,
+      fontSize: 13,
       color: colors.textMuted,
-      marginTop: 4,
       fontFamily: ownerFonts.regular,
     },
     when: {
       fontSize: 12,
       color: colors.textDim,
-      marginTop: 8,
+      marginTop: 2,
       fontFamily: ownerFonts.regular,
     },
   });
