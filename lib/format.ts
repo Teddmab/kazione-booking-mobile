@@ -46,6 +46,24 @@ export function formatDateLong(d: Date, language = "en"): string {
   });
 }
 
+/** Relative timestamp for notification lists (matches web staff notifs). */
+export function formatRelativeTime(iso: string, language = "en"): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "—";
+  const sec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (sec < 60) return "just now";
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hr ago`;
+  return new Date(iso).toLocaleDateString(localeForLanguage(language), {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function toIsoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }

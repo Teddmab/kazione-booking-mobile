@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +38,33 @@ import { roleLabel } from "@/lib/workspaceRouting";
 
 type MainTab = "resume" | "horaire" | "appearance" | "payment";
 type ScheduleTab = "weekly" | "exceptions";
+
+/** Must match web StaffAccountPage bank Select options. */
+const BANK_OPTIONS = [
+  "LHV",
+  "SEB",
+  "Swedbank",
+  "Luminor",
+  "Coop Pank",
+  "Other",
+] as const;
+type BankOption = (typeof BANK_OPTIONS)[number];
+const KNOWN_BANKS = BANK_OPTIONS.filter((b) => b !== "Other");
+
+function resolveBankSelection(saved: string): {
+  option: BankOption | "";
+  otherText: string;
+} {
+  if (!saved) return { option: "", otherText: "" };
+  if ((KNOWN_BANKS as readonly string[]).includes(saved)) {
+    return { option: saved as BankOption, otherText: "" };
+  }
+  return { option: "Other", otherText: saved };
+}
+
+function formatIban(raw: string) {
+  return raw.replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
+}
 
 export default function StaffProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -75,10 +103,14 @@ export default function StaffProfileScreen() {
   // Bank account state
   const [bankIban, setBankIban] = useState("");
   const [bankName, setBankName] = useState("");
+  const [bankOption, setBankOption] = useState<BankOption | "">("");
+  const [bankOtherText, setBankOtherText] = useState("");
   const [bankHolder, setBankHolder] = useState("");
   const [bankIsEntrepreneur, setBankIsEntrepreneur] = useState(false);
   const [bankEeAccepted, setBankEeAccepted] = useState(false);
   const [bankBusy, setBankBusy] = useState(false);
+  const [bankPickerOpen, setBankPickerOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState(false);
 
   const range = useMemo(() => {
     const y = monthCursor.getFullYear();
@@ -102,21 +134,45 @@ export default function StaffProfileScreen() {
     refetch: refetchOverrides,
   } = useSelfOverrides(range.from, range.to);
 
-  // Sync bank account fields from loaded staff data
   const staffBankIban = staff?.bank_account_iban ?? "";
   const staffBankName = staff?.bank_account_bank_name ?? "";
   const staffBankHolder = staff?.bank_account_holder_name ?? "";
   const staffIsEntrepreneur = staff?.bank_account_is_entrepreneur ?? false;
   const staffEeAccepted = Boolean(staff?.bank_account_ee_accepted_at);
+  const hasSavedBank = Boolean(
+    staffBankIban.trim() && staffBankName.trim() && staffBankHolder.trim(),
+  );
+  const showBankForm = editingBank || !hasSavedBank;
 
-  // Re-initialize local state when staff data loads
-  // (only if user hasn't started editing — check identity against loaded values)
-  if (!bankBusy && staff && bankIban === "" && staffBankIban) setBankIban(staffBankIban);
-  if (!bankBusy && staff && bankName === "" && staffBankName) setBankName(staffBankName);
-  if (!bankBusy && staff && bankHolder === "" && staffBankHolder) setBankHolder(staffBankHolder);
+  function hydrateBankFormFromStaff() {
+    setBankIban(formatIban(staffBankIban));
+    setBankName(staffBankName);
+    const resolved = resolveBankSelection(staffBankName);
+    setBankOption(resolved.option);
+    setBankOtherText(resolved.otherText);
+    setBankHolder(staffBankHolder);
+    setBankIsEntrepreneur(staffIsEntrepreneur);
+    setBankEeAccepted(staffEeAccepted);
+  }
 
-  function formatIban(raw: string) {
-    return raw.replace(/\s/g, "").replace(/(.{4})/g, "$1 ").trim();
+  function startEditBank() {
+    hydrateBankFormFromStaff();
+    setEditingBank(true);
+  }
+
+  function cancelEditBank() {
+    setBankPickerOpen(false);
+    setEditingBank(false);
+  }
+
+  function selectBank(option: BankOption) {
+    setBankOption(option);
+    if (option === "Other") {
+      setBankName(bankOtherText.trim() || "Other");
+    } else {
+      setBankName(option);
+      setBankOtherText("");
+    }
   }
 
   async function saveBankAccount() {
@@ -129,6 +185,8 @@ export default function StaffProfileScreen() {
         is_entrepreneur: bankIsEntrepreneur,
         ee_accepted: bankEeAccepted,
       });
+      setEditingBank(false);
+      setBankPickerOpen(false);
       toast.success("Bank account", "Details saved");
     } catch (err) {
       toast.error("Save failed", err instanceof Error ? err.message : "Unknown error");
@@ -495,7 +553,6 @@ export default function StaffProfileScreen() {
         ) : (
           /* Payment / Bank Account tab */
           <>
-            {/* Estonian entrepreneur account warning — always shown for EE pilot */}
             <View style={styles.eeWarning}>
               <Ionicons name="warning-outline" size={18} color="#92400e" style={{ marginTop: 2 }} />
               <View style={{ flex: 1, gap: 6 }}>
@@ -505,27 +562,15 @@ export default function StaffProfileScreen() {
                   account (FIE or OÜ). Personal accounts (regular LHV, SEB, Swedbank) cannot
                   be used. Contact your bank to open an entrepreneur account.
                 </Text>
-                <Pressable
-                  style={styles.eeCheckRow}
-                  onPress={() => setBankEeAccepted((v) => !v)}>
-                  <View style={[styles.checkbox, bankEeAccepted && styles.checkboxChecked]}>
-                    {bankEeAccepted && <Ionicons name="checkmark" size={11} color="#fff" />}
-                  </View>
-                  <Text style={styles.eeCheckLabel}>
-                    I understand — I will provide a business account
-                  </Text>
-                </Pressable>
               </View>
             </View>
 
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="card-outline" size={16} color={colors.primary} />
-                <Text style={styles.cardTitle}>Bank Account Details</Text>
-              </View>
-
-              {/* Commission summary for this month */}
-              {commissionsData && (
+            {commissionsData ? (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="stats-chart-outline" size={16} color={colors.primary} />
+                  <Text style={styles.cardTitle}>Commissions this month</Text>
+                </View>
                 <View style={styles.commissionSummary}>
                   <View style={styles.commissionSummaryItem}>
                     <Text style={styles.commissionSummaryLabel}>This month</Text>
@@ -548,68 +593,215 @@ export default function StaffProfileScreen() {
                     </Text>
                   </View>
                 </View>
-              )}
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Account holder name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={bankHolder}
-                  onChangeText={setBankHolder}
-                  placeholder="Full legal name on account"
-                  placeholderTextColor={colors.textDim}
-                />
               </View>
+            ) : null}
 
-              <View style={styles.field}>
-                <Text style={styles.label}>IBAN</Text>
-                <TextInput
-                  style={[styles.input, { fontFamily: "monospace" as const }]}
-                  value={bankIban}
-                  onChangeText={(v) => setBankIban(formatIban(v))}
-                  placeholder="EE38 2200 2210 1234 5678"
-                  placeholderTextColor={colors.textDim}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Bank name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={bankName}
-                  onChangeText={setBankName}
-                  placeholder="e.g. LHV, SEB, Swedbank"
-                  placeholderTextColor={colors.textDim}
-                />
-              </View>
-
-              <Pressable
-                style={styles.eeCheckRow}
-                onPress={() => setBankIsEntrepreneur((v) => !v)}>
-                <View style={[styles.checkbox, bankIsEntrepreneur && styles.checkboxChecked]}>
-                  {bankIsEntrepreneur && <Ionicons name="checkmark" size={11} color="#fff" />}
+            {hasSavedBank && !showBankForm ? (
+              <View style={styles.card}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="card-outline" size={16} color={colors.primary} />
+                    <Text style={styles.cardTitle}>Saved bank account</Text>
+                  </View>
+                  <Pressable style={styles.editBankBtn} onPress={startEditBank}>
+                    <Ionicons name="create-outline" size={16} color={colors.primary} />
+                    <Text style={styles.editBankBtnText}>Edit</Text>
+                  </Pressable>
                 </View>
-                <Text style={styles.hint}>
-                  This is my entrepreneur / business account (FIE or OÜ)
-                </Text>
-              </Pressable>
 
-              <Pressable
-                style={[
-                  styles.primaryBtn,
-                  (bankBusy || !bankHolder || !bankIban) && styles.disabled,
-                ]}
-                disabled={bankBusy || !bankHolder || !bankIban}
-                onPress={() => void saveBankAccount()}>
-                {bankBusy ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.primaryBtnText}>Save bank details</Text>
-                )}
-              </Pressable>
-            </View>
+                <View style={styles.savedBankRow}>
+                  <Text style={styles.savedBankLabel}>Account holder</Text>
+                  <Text style={styles.savedBankValue}>{staffBankHolder}</Text>
+                </View>
+                <View style={styles.savedBankRow}>
+                  <Text style={styles.savedBankLabel}>IBAN</Text>
+                  <Text style={[styles.savedBankValue, styles.ibanMono]}>
+                    {formatIban(staffBankIban)}
+                  </Text>
+                </View>
+                <View style={styles.savedBankRow}>
+                  <Text style={styles.savedBankLabel}>Bank</Text>
+                  <Text style={styles.savedBankValue}>{staffBankName}</Text>
+                </View>
+                <View style={styles.savedBankFlags}>
+                  {staffIsEntrepreneur ? (
+                    <View style={styles.savedBankBadge}>
+                      <Ionicons name="briefcase-outline" size={12} color={colors.primary} />
+                      <Text style={styles.savedBankBadgeText}>Business account</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.savedBankBadge, styles.savedBankBadgeMuted]}>
+                      <Text style={styles.savedBankBadgeTextMuted}>Personal account</Text>
+                    </View>
+                  )}
+                  {staffEeAccepted ? (
+                    <View style={styles.savedBankBadge}>
+                      <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+                      <Text style={styles.savedBankBadgeText}>EE requirement accepted</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.card}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="card-outline" size={16} color={colors.primary} />
+                    <Text style={styles.cardTitle}>
+                      {hasSavedBank ? "Edit bank account" : "Bank Account Details"}
+                    </Text>
+                  </View>
+                  {hasSavedBank ? (
+                    <Pressable
+                      style={styles.editBankBtn}
+                      onPress={cancelEditBank}
+                      disabled={bankBusy}>
+                      <Text style={styles.editBankBtnText}>Cancel</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <Pressable
+                  style={styles.eeCheckRow}
+                  onPress={() => setBankEeAccepted((v) => !v)}>
+                  <View style={[styles.checkbox, bankEeAccepted && styles.checkboxChecked]}>
+                    {bankEeAccepted && <Ionicons name="checkmark" size={11} color="#fff" />}
+                  </View>
+                  <Text style={styles.eeCheckLabel}>
+                    I understand — I will provide a business account
+                  </Text>
+                </Pressable>
+
+                <View style={styles.field}>
+                  <Text style={styles.label}>Account holder name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={bankHolder}
+                    onChangeText={setBankHolder}
+                    placeholder="Full legal name on account"
+                    placeholderTextColor={colors.textDim}
+                  />
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={styles.label}>IBAN</Text>
+                  <TextInput
+                    style={[styles.input, { fontFamily: "monospace" as const }]}
+                    value={bankIban}
+                    onChangeText={(v) => setBankIban(formatIban(v))}
+                    placeholder="EE38 2200 2210 1234 5678"
+                    placeholderTextColor={colors.textDim}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                  />
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={styles.label}>Bank name</Text>
+                  <Pressable
+                    style={styles.comboTrigger}
+                    onPress={() => setBankPickerOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Select bank">
+                    <Text
+                      style={[
+                        styles.comboTriggerText,
+                        !bankOption && styles.comboPlaceholder,
+                      ]}
+                      numberOfLines={1}>
+                      {bankOption || "Select your bank"}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down"
+                      size={18}
+                      color={colors.textMuted}
+                    />
+                  </Pressable>
+                  {bankOption === "Other" ? (
+                    <TextInput
+                      style={[styles.input, { marginTop: 8 }]}
+                      value={bankOtherText}
+                      onChangeText={(v) => {
+                        setBankOtherText(v);
+                        setBankName(v.trim() || "Other");
+                      }}
+                      placeholder="Enter bank name"
+                      placeholderTextColor={colors.textDim}
+                    />
+                  ) : null}
+                  <Modal
+                    visible={bankPickerOpen}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setBankPickerOpen(false)}>
+                    <Pressable
+                      style={styles.comboBackdrop}
+                      onPress={() => setBankPickerOpen(false)}>
+                      <Pressable
+                        style={styles.comboSheet}
+                        onPress={(e) => e.stopPropagation()}>
+                        <Text style={styles.comboSheetTitle}>Select your bank</Text>
+                        {BANK_OPTIONS.map((b) => {
+                          const active = bankOption === b;
+                          return (
+                            <Pressable
+                              key={b}
+                              style={[
+                                styles.comboOption,
+                                active && styles.comboOptionActive,
+                              ]}
+                              onPress={() => {
+                                selectBank(b);
+                                setBankPickerOpen(false);
+                              }}>
+                              <Text
+                                style={[
+                                  styles.comboOptionText,
+                                  active && styles.comboOptionTextActive,
+                                ]}>
+                                {b}
+                              </Text>
+                              {active ? (
+                                <Ionicons
+                                  name="checkmark"
+                                  size={18}
+                                  color={colors.primary}
+                                />
+                              ) : null}
+                            </Pressable>
+                          );
+                        })}
+                      </Pressable>
+                    </Pressable>
+                  </Modal>
+                </View>
+
+                <Pressable
+                  style={styles.eeCheckRow}
+                  onPress={() => setBankIsEntrepreneur((v) => !v)}>
+                  <View style={[styles.checkbox, bankIsEntrepreneur && styles.checkboxChecked]}>
+                    {bankIsEntrepreneur && <Ionicons name="checkmark" size={11} color="#fff" />}
+                  </View>
+                  <Text style={styles.hint}>
+                    This is my entrepreneur / business account (FIE or OÜ)
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.primaryBtn,
+                    (bankBusy || !bankHolder || !bankIban || !bankName) && styles.disabled,
+                  ]}
+                  disabled={bankBusy || !bankHolder || !bankIban || !bankName}
+                  onPress={() => void saveBankAccount()}>
+                  {bankBusy ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.primaryBtnText}>Save bank details</Text>
+                  )}
+                </Pressable>
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -687,11 +879,85 @@ function makeStyles(colors: ThemeColors) {
       gap: 12,
     },
     cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+    cardHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
     cardTitle: {
       fontSize: 15,
       fontWeight: "700",
       color: colors.text,
       fontFamily: ownerFonts.bold,
+    },
+    editBankBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+    },
+    editBankBtnText: {
+      fontSize: 13,
+      color: colors.primary,
+      fontFamily: ownerFonts.semiBold,
+    },
+    savedBankRow: {
+      gap: 2,
+      paddingVertical: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    savedBankLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+      textTransform: "uppercase",
+      letterSpacing: 0.3,
+    },
+    savedBankValue: {
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    ibanMono: {
+      fontFamily: "monospace",
+      letterSpacing: 0.5,
+    },
+    savedBankFlags: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 4,
+    },
+    savedBankBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: colors.primarySurface,
+    },
+    savedBankBadgeMuted: {
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    savedBankBadgeText: {
+      fontSize: 11,
+      color: colors.primary,
+      fontFamily: ownerFonts.medium,
+    },
+    savedBankBadgeTextMuted: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
     },
     field: { gap: 4 },
     label: {
@@ -723,6 +989,71 @@ function makeStyles(colors: ThemeColors) {
       color: colors.text,
       backgroundColor: colors.bg,
       fontFamily: ownerFonts.regular,
+    },
+    comboTrigger: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      backgroundColor: colors.bg,
+      minHeight: 44,
+    },
+    comboTriggerText: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: ownerFonts.regular,
+      marginRight: 8,
+    },
+    comboPlaceholder: {
+      color: colors.textDim,
+    },
+    comboBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      justifyContent: "center",
+      padding: 24,
+    },
+    comboSheet: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 8,
+      maxHeight: "70%",
+    },
+    comboSheetTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textMuted,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      fontFamily: ownerFonts.bold,
+    },
+    comboOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+    },
+    comboOptionActive: {
+      backgroundColor: colors.primarySurface,
+    },
+    comboOptionText: {
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: ownerFonts.medium,
+    },
+    comboOptionTextActive: {
+      color: colors.primary,
+      fontFamily: ownerFonts.semiBold,
     },
     passwordWrap: { position: "relative" },
     passwordInput: { paddingRight: 44 },
