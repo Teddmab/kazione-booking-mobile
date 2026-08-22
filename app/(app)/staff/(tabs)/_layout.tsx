@@ -19,6 +19,13 @@ export default function StaffTabsLayout() {
       <Tabs.Screen name="calendar" options={{ title: t("staffNav.calendar") }} />
       <Tabs.Screen name="services" options={{ title: t("sidebar.services") }} />
       <Tabs.Screen name="performance" options={{ title: t("staffNav.performance") }} />
+      {/* Drawer destinations — keep bottom bar visible */}
+      <Tabs.Screen name="clients" options={{ href: null }} />
+      <Tabs.Screen name="earnings" options={{ href: null }} />
+      <Tabs.Screen name="training" options={{ href: null }} />
+      <Tabs.Screen name="reviews" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

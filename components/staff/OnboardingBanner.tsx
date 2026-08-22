@@ -47,7 +47,7 @@ export function OnboardingBanner({
             <View style={styles.circle} />
             <Pressable
               style={styles.cta}
-              onPress={() => router.push("/(app)/staff/profile" as Href)}>
+              onPress={() => router.push("/(app)/staff/(tabs)/profile" as Href)}>
               <Ionicons name="calendar-outline" size={14} color={colors.text} />
               <Text style={styles.ctaText}>{t("staffOnboarding.scheduleCta")}</Text>
               <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />

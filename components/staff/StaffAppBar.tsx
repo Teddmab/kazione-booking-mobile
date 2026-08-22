@@ -161,7 +161,7 @@ export function StaffAppBar({
               style={styles.menuItem}
               onPress={() => {
                 setMenuOpen(false);
-                router.push("/(app)/staff/profile" as Href);
+                router.push("/(app)/staff/(tabs)/profile" as Href);
               }}>
               <Ionicons name="person-outline" size={18} color={colors.text} />
               <Text style={[styles.menuItemText, { color: colors.text }]}>

@@ -50,6 +50,8 @@ function isDrawerItemActive(key: string, pathname: string): boolean {
   if (key === "clients") return pathname.includes("/clients");
   if (key === "services") return pathname.includes("/services");
   if (key === "reports") return pathname.includes("/performance");
+  if (key === "earnings") return pathname.includes("/earnings");
+  if (key === "training") return pathname.includes("/training");
   if (key === "reviews") return pathname.includes("/reviews");
   if (key === "notifications") return pathname.includes("/notifications");
   if (key === "account") return pathname.includes("/profile");
@@ -107,7 +109,7 @@ export function StaffDrawer() {
 
   const navigate = (href: Href) => {
     closeDrawer();
-    router.push(href);
+    router.navigate(href);
   };
 
   return (
