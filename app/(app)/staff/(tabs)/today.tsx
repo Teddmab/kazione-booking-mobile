@@ -35,11 +35,14 @@ import {
 } from "@/hooks/useStaffAppointments";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
 import { useStaffServices } from "@/hooks/useStaffServices";
+import { useStaffTraining } from "@/hooks/useStaffTraining";
 import { commissionLabel } from "@/lib/commissionLabel";
 import {
   clientDisplayName,
   formatDateLong,
+  formatDate,
   formatTime,
+  localeForLanguage,
 } from "@/lib/format";
 import { toIsoDateLocal } from "@/lib/ownerCalendar";
 import type { StaffAppointment } from "@/services/staff/appointments";
@@ -103,12 +106,16 @@ export default function StaffTodayScreen() {
 
   const weekStart = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() - d.getDay());
+    const day = d.getDay(); // 0=Sun
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + mondayOffset);
     return toIsoDateLocal(d);
   }, []);
   const weekEnd = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + (6 - d.getDay()));
+    const day = d.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + mondayOffset + 6);
     return toIsoDateLocal(d);
   }, []);
   const yesterday = useMemo(() => {
@@ -128,6 +135,7 @@ export default function StaffTodayScreen() {
   const pastQ = useStaffAppointments(past7Start, yesterday, 10);
   const offersQ = useStaffOfferedAppointments();
   const servicesQ = useStaffServices();
+  const trainingQ = useStaffTraining();
   const perfQ = useMyPerformanceRange(month.from, month.to);
   const updateStatus = useUpdateStaffAppointmentStatus();
   const respondOffer = useRespondToAppointmentOffer();
@@ -199,6 +207,43 @@ export default function StaffTodayScreen() {
         ),
     [pastQ.data],
   );
+
+  const weekDays = useMemo(() => {
+    const allWeek = [...(weekQ.data ?? [])].filter(
+      (a) => a.status !== "cancelled",
+    );
+    const locale = localeForLanguage(i18n.language);
+    const days: {
+      date: string;
+      label: string;
+      appts: StaffAppointment[];
+    }[] = [];
+    const anchor = new Date();
+    const dayOfWeek = anchor.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(anchor);
+      d.setDate(anchor.getDate() + mondayOffset + i);
+      const dateStr = toIsoDateLocal(d);
+      const label = d.toLocaleDateString(locale, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      });
+      days.push({
+        date: dateStr,
+        label,
+        appts: allWeek
+          .filter((a) => a.starts_at.slice(0, 10) === dateStr)
+          .sort((a, b) => a.starts_at.localeCompare(b.starts_at)),
+      });
+    }
+    return days;
+  }, [weekQ.data, i18n.language]);
+
+  const trainingItems = useMemo(() => {
+    return (trainingQ.data ?? []).filter((item) => Boolean(item.redemption_id));
+  }, [trainingQ.data]);
 
   const hasSchedule = (staffSelf?.working_hours ?? []).some((d) => d.is_working);
   const hasAcceptedServices = acceptedServices.length > 0;
@@ -280,6 +325,7 @@ export default function StaffTodayScreen() {
       pastQ.refetch(),
       offersQ.refetch(),
       servicesQ.refetch(),
+      trainingQ.refetch(),
       perfQ.refetch(),
     ]);
   }
@@ -290,13 +336,15 @@ export default function StaffTodayScreen() {
     pastQ.isRefetching ||
     offersQ.isRefetching ||
     servicesQ.isRefetching ||
+    trainingQ.isRefetching ||
     perfQ.isRefetching;
 
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title={t("staffToday.title")}
+        title={`${greeting}, ${displayName}`}
         subtitle={formatDateLong(new Date(), i18n.language)}
+        displayTitle
         rightSlot={
           <View style={styles.headerActions}>
             <Pressable
@@ -329,12 +377,6 @@ export default function StaffTodayScreen() {
             tintColor={colors.primary}
           />
         }>
-        <View style={styles.greetingBlock}>
-          <Text style={styles.greetingText}>
-            {greeting}, {displayName}
-          </Text>
-        </View>
-
         {/* Pending tasks — top priority */}
         {pendingOffers.length > 0 || pendingServiceOffers.length > 0 ? (
           <View style={styles.pendingTasks}>
@@ -444,16 +486,13 @@ export default function StaffTodayScreen() {
             <Text style={styles.emptyText}>{t("staffToday.errorLoad")}</Text>
           ) : todayAppts.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyTitle}>
-                {hasSchedule && hasAcceptedServices
-                  ? t("staffToday.emptyReadyTitle")
-                  : t("staffToday.emptyNoneTitle")}
-              </Text>
-              <Text style={styles.emptyText}>
-                {hasSchedule && hasAcceptedServices
-                  ? t("staffToday.emptyReadyBody")
-                  : t("staffToday.emptyNoneBody")}
-              </Text>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={32}
+                color={colors.textDim}
+              />
+              <Text style={styles.emptyTitle}>{t("staffToday.emptyNoneTitle")}</Text>
+              <Text style={styles.emptyText}>{t("staffToday.emptyNoneBody")}</Text>
             </View>
           ) : (
             todayAppts.map((a) => (
@@ -466,27 +505,103 @@ export default function StaffTodayScreen() {
           )}
         </View>
 
+        {/* This week — day by day (web parity) */}
+        <View style={styles.block}>
+          <View style={styles.blockHeaderBetween}>
+            <Text style={styles.blockTitle}>{t("staffToday.thisWeekSection")}</Text>
+            <Pressable
+              onPress={() =>
+                router.push("/(app)/staff/(tabs)/calendar" as Href)
+              }>
+              <Text style={styles.linkText}>{t("staffToday.agendaLink")}</Text>
+            </Pressable>
+          </View>
+          {weekDays.map((day) => {
+            const isToday = day.date === today;
+            return (
+              <View key={day.date} style={styles.weekDay}>
+                <View style={styles.weekDayHeader}>
+                  <Text
+                    style={[
+                      styles.weekDayLabel,
+                      isToday && { color: colors.primary },
+                    ]}>
+                    {day.label}
+                  </Text>
+                  {isToday ? (
+                    <View style={styles.todayPill}>
+                      <Text style={styles.todayPillText}>
+                        {t("staffToday.todayBadge")}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+                {day.appts.length === 0 ? (
+                  <View style={styles.weekEmpty}>
+                    <Text style={styles.weekEmptyText}>
+                      {t("staffToday.noBookings")}
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.weekAppts,
+                      isToday && styles.weekApptsToday,
+                    ]}>
+                    {day.appts.map((a) => (
+                      <Pressable
+                        key={a.id}
+                        style={styles.weekRow}
+                        onPress={() => setSelected(a)}>
+                        <Text style={styles.weekTime}>
+                          {formatTime(a.starts_at)}
+                        </Text>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={styles.weekClient} numberOfLines={1}>
+                            {clientDisplayName(
+                              a.client.first_name,
+                              a.client.last_name,
+                            )}
+                          </Text>
+                          <Text style={styles.weekService} numberOfLines={1}>
+                            {a.service.name}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.statusPill,
+                            a.status === "completed" && styles.statusDone,
+                            a.status === "in_progress" && styles.statusInProgress,
+                            a.status === "no_show" && styles.statusNoShow,
+                          ]}>
+                          <Text style={styles.statusPillText}>
+                            {a.status === "completed"
+                              ? t("staffStatus.doneShort")
+                              : a.status === "in_progress"
+                                ? t("staffStatus.in_progress")
+                                : a.status === "no_show"
+                                  ? t("staffStatus.no_show")
+                                  : t("staffToday.upcoming")}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
         {/* Recent past */}
         {pastAppts.length > 0 ? (
           <View style={styles.block}>
-            <View style={styles.blockHeaderBetween}>
-              <Text style={styles.blockTitle}>{t("staffToday.recent")}</Text>
-              <Pressable
-                onPress={() =>
-                  router.push("/(app)/staff/(tabs)/calendar" as Href)
-                }>
-                <Text style={styles.linkText}>{t("staffToday.agendaLink")}</Text>
-              </Pressable>
-            </View>
+            <Text style={styles.sectionMuted}>{t("staffToday.recentPast")}</Text>
             {pastAppts.map((a) => (
               <View key={a.id} style={styles.pastRow}>
                 <View style={styles.pastTime}>
                   <Text style={styles.pastDate}>
-                    {new Date(a.starts_at).toLocaleDateString(i18n.language, {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })}
+                    {formatDate(a.starts_at, i18n.language)}
                   </Text>
                   <Text style={styles.pastHour}>{formatTime(a.starts_at)}</Text>
                 </View>
@@ -643,10 +758,10 @@ export default function StaffTodayScreen() {
         ) : null}
 
         {/* Services snapshot */}
-        {services.length > 0 ? (
+        {acceptedServices.length > 0 ? (
           <View style={styles.block}>
             <View style={styles.blockHeaderBetween}>
-              <Text style={styles.blockTitle}>{t("staffToday.myServices")}</Text>
+              <Text style={styles.sectionMuted}>{t("staffToday.myServices")}</Text>
               <Pressable
                 onPress={() =>
                   router.push("/(app)/staff/(tabs)/services" as Href)
@@ -683,6 +798,83 @@ export default function StaffTodayScreen() {
                 );
               })}
             </View>
+          </View>
+        ) : null}
+
+        {/* My Training — web parity */}
+        {trainingItems.length > 0 ? (
+          <View style={styles.block}>
+            <View style={styles.blockHeaderBetween}>
+              <Text style={styles.sectionMuted}>{t("staffToday.myTraining")}</Text>
+              <Pressable
+                onPress={() =>
+                  router.push("/(app)/staff/(tabs)/training" as Href)
+                }>
+                <Text style={styles.linkText}>{t("staffToday.seeAll")}</Text>
+              </Pressable>
+            </View>
+            {trainingItems.slice(0, 4).map((item) => {
+              const total = item.sessions_total ?? 0;
+              const used = item.sessions_used ?? 0;
+              const pct = total > 0 ? Math.round((used / total) * 100) : 0;
+              const done =
+                item.status === "completed" || (total > 0 && used >= total);
+              const title =
+                item.offer_title ||
+                item.course?.title ||
+                t("staffTraining.fallbackTitle");
+              return (
+                <View key={item.offer_id} style={styles.trainingRow}>
+                  <View style={styles.trainingIcon}>
+                    <Ionicons
+                      name="book-outline"
+                      size={14}
+                      color={colors.primary}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.trainingTitle} numberOfLines={1}>
+                      {title}
+                    </Text>
+                    {total > 0 ? (
+                      <View style={styles.trainingProgress}>
+                        <View style={styles.progressTrack}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              { width: `${pct}%` },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.trainingPct}>
+                          {used}/{total}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  {done ? (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color={colors.success}
+                    />
+                  ) : item.redemption_id ? (
+                    <Pressable
+                      style={styles.trainingContinue}
+                      onPress={() =>
+                        router.push(
+                          `/(app)/staff/(tabs)/training/${item.redemption_id}` as Href,
+                        )
+                      }>
+                      <Ionicons name="play" size={12} color={colors.primary} />
+                      <Text style={styles.trainingContinueText}>
+                        {t("staffTraining.continue")}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
         ) : null}
       </ScrollView>
@@ -841,6 +1033,139 @@ function makeStyles(colors: ThemeColors) {
     fontWeight: "700",
     color: colors.text,
     fontFamily: ownerFonts.bold,
+  },
+  sectionMuted: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 10,
+    fontFamily: ownerFonts.bold,
+  },
+  weekDay: { marginBottom: 12 },
+  weekDayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  weekDayLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    fontFamily: ownerFonts.bold,
+  },
+  todayPill: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  todayPillText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700",
+    fontFamily: ownerFonts.bold,
+  },
+  weekEmpty: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  weekEmptyText: {
+    fontSize: 12,
+    color: colors.textDim,
+    fontFamily: ownerFonts.regular,
+  },
+  weekAppts: { gap: 6 },
+  weekApptsToday: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary,
+    paddingLeft: 8,
+  },
+  weekRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  weekTime: {
+    width: 44,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+    fontFamily: ownerFonts.bold,
+  },
+  weekClient: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.text,
+    fontFamily: ownerFonts.semiBold,
+  },
+  weekService: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 1,
+    fontFamily: ownerFonts.regular,
+  },
+  trainingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  trainingIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.primarySurface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trainingTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text,
+    fontFamily: ownerFonts.semiBold,
+  },
+  trainingProgress: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  trainingPct: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontFamily: ownerFonts.medium,
+  },
+  trainingContinue: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  trainingContinueText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontFamily: ownerFonts.semiBold,
   },
   badge: {
     minWidth: 20,
@@ -1046,6 +1371,7 @@ function makeStyles(colors: ThemeColors) {
     borderRadius: 14,
     padding: 24,
     alignItems: "center",
+    gap: 8,
   },
   emptyTitle: {
     fontSize: 14,
@@ -1112,6 +1438,10 @@ function makeStyles(colors: ThemeColors) {
   statusDone: {
     backgroundColor: "#ECFDF5",
     borderColor: "#A7F3D0",
+  },
+  statusInProgress: {
+    backgroundColor: colors.primarySurface,
+    borderColor: colors.primary + "44",
   },
   statusNoShow: {
     backgroundColor: "#FEF2F2",

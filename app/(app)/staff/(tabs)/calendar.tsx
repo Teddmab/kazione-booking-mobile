@@ -28,14 +28,8 @@ import {
   useStaffPendingCompletionAppointments,
   useUpdateStaffAppointmentStatus,
 } from "@/hooks/useStaffAppointments";
-import {
-  calendarMonthRange,
-  useMyPerformanceRange,
-} from "@/hooks/useMyPerformance";
-import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
-import { useTenantContext } from "@/contexts/TenantContext";
-import { clientDisplayName, formatCurrency, formatTime } from "@/lib/format";
+import { clientDisplayName, formatDate, formatTime } from "@/lib/format";
 import { addDays, startOfWeekMonday, toIsoDateLocal } from "@/lib/staffCalendar";
 import type { StaffAppointment } from "@/services/staff/appointments";
 
@@ -45,22 +39,50 @@ const WEEK_KEY = "staff_calendar_week_start";
 type ViewMode = "list" | "week";
 type ListFilter = "today" | "upcoming" | "last7" | "last30";
 
-function StatTile({
-  label,
-  value,
-  hint,
+function MetricTrioCard({
+  icon,
+  title,
+  columns,
   styles,
+  colors,
 }: {
-  label: string;
-  value: string;
-  hint?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  columns: {
+    label: string;
+    value: string;
+    valueColor?: string;
+  }[];
   styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
   return (
-    <View style={styles.statTile}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-      {hint ? <Text style={styles.statHint}>{hint}</Text> : null}
+    <View style={styles.metricCard}>
+      <View style={styles.metricCardHead}>
+        <Ionicons name={icon} size={16} color={colors.primary} />
+        <Text style={styles.metricCardTitle}>{title}</Text>
+      </View>
+      <View style={styles.metricInner}>
+        {columns.map((col, i) => (
+          <View
+            key={col.label}
+            style={[
+              styles.metricCol,
+              i < columns.length - 1 && styles.metricColBorder,
+            ]}>
+            <Text style={styles.metricColLabel}>{col.label}</Text>
+            <Text
+              style={[
+                styles.metricColValue,
+                col.valueColor ? { color: col.valueColor } : null,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit>
+              {col.value}
+            </Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -81,11 +103,7 @@ function ListApptRow({
     appointment.client.first_name,
     appointment.client.last_name,
   );
-  const dateLabel = new Date(appointment.starts_at).toLocaleDateString(i18n.language, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+  const dateLabel = formatDate(appointment.starts_at, i18n.language);
   const inProgress = appointment.status === "in_progress";
 
   return (
@@ -203,16 +221,6 @@ export default function StaffCalendarScreen() {
   const updateStatus = useUpdateStaffAppointmentStatus();
   const respondOffer = useRespondToAppointmentOffer();
 
-  const { tenant } = useTenantContext();
-  const businessId = tenant?.businessId ?? "";
-  const settings = useBusinessSettings(businessId);
-  const currency = settings.data?.settings?.currency_code ?? "EUR";
-  const mtdRange = useMemo(() => calendarMonthRange(), []);
-  const { data: mtdPerf, isLoading: mtdLoading } = useMyPerformanceRange(
-    mtdRange.from,
-    mtdRange.to,
-  );
-
   const todayAppts = useMemo(
     () =>
       [...(todayQ.data ?? [])]
@@ -253,9 +261,6 @@ export default function StaffCalendarScreen() {
     [last30Q.data],
   );
 
-  const completed = todayAppts.filter(
-    (a) => a.status === "completed" || a.status === "pending_completion",
-  ).length;
   const remaining = todayAppts.filter(
     (a) => a.status === "pending" || a.status === "confirmed",
   ).length;
@@ -426,47 +431,26 @@ export default function StaffCalendarScreen() {
               tintColor={colors.primary}
             />
           }>
-          <View style={styles.statsRow}>
-            <StatTile
-              label={t("staffCalendar.statToday")}
-              value={todayQ.isLoading ? "…" : String(todayAppts.length)}
-              hint={
-                completed > 0
-                  ? `${completed} ${t("staffStatus.completed")}`
-                  : undefined
-              }
+          <View style={styles.metricStack}>
+            <MetricTrioCard
+              icon="calendar-outline"
+              title={t("staffCalendar.scheduleCardTitle")}
               styles={styles}
-            />
-            <StatTile
-              label={t("staffCalendar.statRemaining")}
-              value={String(remaining)}
-              styles={styles}
-            />
-            <StatTile
-              label={t("staffCalendar.statDuration")}
-              value={`${totalMinutes} min`}
-              hint={`${(totalMinutes / 60).toFixed(1)} ${t("staffCalendar.hrs")}`}
-              styles={styles}
-            />
-            <StatTile
-              label={t("staffCalendar.statWeek")}
-              value={String(upcomingAppts.length)}
-              styles={styles}
-            />
-            <StatTile
-              label={t("staffCalendar.statMtd")}
-              value={
-                mtdLoading
-                  ? "…"
-                  : mtdPerf
-                    ? formatCurrency(
-                        mtdPerf.commission_amount,
-                        currency,
-                        i18n.language,
-                      )
-                    : "—"
-              }
-              styles={styles}
+              colors={colors}
+              columns={[
+                {
+                  label: t("staffCalendar.statToday"),
+                  value: todayQ.isLoading ? "…" : String(todayAppts.length),
+                },
+                {
+                  label: t("staffCalendar.statRemaining"),
+                  value: String(remaining),
+                },
+                {
+                  label: t("staffCalendar.statDuration"),
+                  value: `${(totalMinutes / 60).toFixed(1)} ${t("staffCalendar.hrs")}`,
+                },
+              ]}
             />
           </View>
 
@@ -721,6 +705,58 @@ function makeStyles(colors: ThemeColors) {
     flexWrap: "wrap",
     gap: 8,
     marginBottom: 14,
+  },
+  metricStack: { gap: 10, marginBottom: 14 },
+  metricCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+  },
+  metricCardHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  metricCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.text,
+    fontFamily: ownerFonts.bold,
+  },
+  metricInner: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  metricCol: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    gap: 4,
+  },
+  metricColBorder: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: colors.border,
+  },
+  metricColLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontFamily: ownerFonts.regular,
+    textAlign: "center",
+  },
+  metricColValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: colors.text,
+    fontFamily: ownerFonts.bold,
+    textAlign: "center",
   },
   statTile: {
     width: "47%",

@@ -5,6 +5,7 @@ import {
   flagBorderColor,
 } from "@/lib/appointmentFlags";
 import { clientDisplayName, formatTime } from "@/lib/format";
+import { toIsoDateLocal } from "@/lib/ownerCalendar";
 import { ownerColors } from "@/constants/ownerTheme";
 import type { AppointmentWithRelations } from "@/types/owner";
 
@@ -23,16 +24,14 @@ function truncate(text: string, max = 16): string {
 }
 
 function dateLabel(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  if (
-    d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate()
-  ) {
+  if (iso.slice(0, 10) === toIsoDateLocal(new Date())) {
     return "Aujourd'hui";
   }
-  return d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 interface Props {

@@ -47,6 +47,7 @@ export interface StaffAppointment {
 
 type AppointmentRow = AppointmentWithRelations & {
   referral_staff_id?: string | null;
+  referrer_staff_id?: string | null;
   payment_method?: string | null;
   intake_answers?: Record<string, { label: string; value: unknown }> | null;
 };
@@ -58,7 +59,8 @@ function mapAppointment(row: AppointmentRow): StaffAppointment {
     ends_at: row.ends_at,
     status: row.status as AppointmentStatus,
     notes: row.notes ?? null,
-    referral_staff_id: row.referral_staff_id ?? null,
+    referral_staff_id:
+      row.referrer_staff_id ?? row.referral_staff_id ?? null,
     payment_method: row.payment_method ?? row.payment?.method ?? null,
     intake_answers: row.intake_answers ?? null,
     price: row.price,
