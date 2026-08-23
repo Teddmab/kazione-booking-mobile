@@ -17,7 +17,9 @@ export type StaffDrawerSection = {
   items: StaffDrawerNavItem[];
 };
 
-/** Sidebar aligned with web staff AppSidebar — labels via i18n */
+/** Sidebar aligned with web staff AppSidebar — labels via i18n.
+ * Secondary destinations live under (tabs) with href:null so the bottom bar stays visible.
+ */
 export const STAFF_DRAWER_SECTIONS: StaffDrawerSection[] = [
   {
     titleKey: "staffNav.overview",
@@ -37,7 +39,7 @@ export const STAFF_DRAWER_SECTIONS: StaffDrawerSection[] = [
       {
         key: "clients",
         labelKey: "sidebar.clients",
-        href: "/(app)/staff/clients" as Href,
+        href: "/(app)/staff/(tabs)/clients" as Href,
         icon: "people-outline",
       },
       {
@@ -53,21 +55,33 @@ export const STAFF_DRAWER_SECTIONS: StaffDrawerSection[] = [
         icon: "bar-chart-outline",
       },
       {
+        key: "earnings",
+        labelKey: "sidebar.earnings",
+        href: "/(app)/staff/(tabs)/earnings" as Href,
+        icon: "wallet-outline",
+      },
+      {
+        key: "training",
+        labelKey: "sidebar.training",
+        href: "/(app)/staff/(tabs)/training" as Href,
+        icon: "book-outline",
+      },
+      {
         key: "reviews",
         labelKey: "sidebar.reviews",
-        href: "/(app)/staff/reviews" as Href,
+        href: "/(app)/staff/(tabs)/reviews" as Href,
         icon: "star-outline",
       },
       {
         key: "notifications",
         labelKey: "nav.notifications",
-        href: "/(app)/staff/notifications" as Href,
+        href: "/(app)/staff/(tabs)/notifications" as Href,
         icon: "notifications-outline",
       },
       {
         key: "account",
         labelKey: "sidebar.account",
-        href: "/(app)/staff/profile" as Href,
+        href: "/(app)/staff/(tabs)/profile" as Href,
         icon: "person-outline",
       },
     ],

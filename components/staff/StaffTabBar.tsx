@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { usePathname } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,10 +9,22 @@ import { STAFF_BOTTOM_TABS } from "@/constants/staffTabNav";
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors } from "@/contexts/AppThemeContext";
 
+/** Hide tab bar on focused flows (e.g. training player). */
+function shouldHideTabBar(pathname: string): boolean {
+  // /staff/training/<redemptionId> — keep bar on /staff/training list
+  const match = pathname.match(/\/training\/([^/]+)/);
+  return Boolean(match && match[1] && match[1] !== "index");
+}
+
 export function StaffTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const colors = useThemeColors();
+  const pathname = usePathname();
+
+  if (shouldHideTabBar(pathname)) {
+    return null;
+  }
 
   return (
     <View
@@ -23,11 +36,13 @@ export function StaffTabBar({ state, navigation }: BottomTabBarProps) {
           borderTopColor: colors.tabBarBorder,
         },
       ]}>
-      {state.routes.map((route, index) => {
-        const config = STAFF_BOTTOM_TABS.find((tab) => tab.name === route.name);
-        const focused = state.index === index;
+      {STAFF_BOTTOM_TABS.map((tab) => {
+        const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
+        if (routeIndex < 0) return null;
+        const route = state.routes[routeIndex];
+        const focused = state.index === routeIndex;
         const color = focused ? colors.tabBarActive : colors.tabBarInactive;
-        const iconName = focused ? config?.iconFocused : config?.icon;
+        const iconName = focused ? tab.iconFocused : tab.icon;
 
         return (
           <Pressable
@@ -45,9 +60,9 @@ export function StaffTabBar({ state, navigation }: BottomTabBarProps) {
             }}
             accessibilityRole="button"
             accessibilityState={focused ? { selected: true } : {}}>
-            <Ionicons name={iconName ?? "ellipse"} size={22} color={color} />
+            <Ionicons name={iconName} size={22} color={color} />
             <Text style={[styles.label, { color }, focused && styles.labelFocused]}>
-              {config ? t(config.titleKey) : route.name}
+              {t(tab.titleKey)}
             </Text>
           </Pressable>
         );

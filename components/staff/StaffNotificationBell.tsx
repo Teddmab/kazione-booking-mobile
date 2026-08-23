@@ -18,7 +18,7 @@ export function StaffNotificationBell() {
   return (
     <Pressable
       style={styles.wrap}
-      onPress={() => router.push("/(app)/staff/notifications" as Href)}
+      onPress={() => router.push("/(app)/staff/(tabs)/notifications" as Href)}
       accessibilityLabel={t("staffNotifPage.title")}
       accessibilityRole="button">
       <Ionicons name="notifications-outline" size={22} color={colors.text} />

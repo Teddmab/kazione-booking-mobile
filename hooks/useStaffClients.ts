@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { useTenantContext } from "@/contexts/TenantContext";
 import { getClient, getClients, patchClient } from "@/services/owner/clients";
+import { fetchClientEntitlements } from "@/services/staff/entitlements";
 
 export function useDebouncedValue<T>(value: T, delayMs = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -37,6 +38,18 @@ export function useStaffClientDetail(clientId: string | null) {
     queryFn: () => getClient(clientId!),
     enabled: !!clientId,
     staleTime: 60_000,
+  });
+}
+
+export function useClientEntitlements(clientId: string | null) {
+  const { tenant } = useTenantContext();
+  const businessId = tenant?.businessId ?? "";
+
+  return useQuery({
+    queryKey: ["client-entitlements", businessId, clientId],
+    queryFn: () => fetchClientEntitlements(businessId, clientId!),
+    enabled: !!clientId && !!businessId,
+    staleTime: 30_000,
   });
 }
 
