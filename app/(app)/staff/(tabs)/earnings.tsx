@@ -63,6 +63,7 @@ function formatRowDate(iso: string, language: string): string {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 

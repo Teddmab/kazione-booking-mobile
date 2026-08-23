@@ -3,17 +3,17 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
-import { clientDisplayName, formatCurrency, formatDate } from "@/lib/format";
+import {
+  clientDisplayName,
+  formatCurrency,
+  formatDate,
+  formatTime,
+} from "@/lib/format";
 import type { AppointmentWithRelations } from "@/types/owner";
 
 interface Props {
   appointment: AppointmentWithRelations;
   onPress?: () => void;
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
 export function StaffAppointmentCard({ appointment, onPress }: Props) {

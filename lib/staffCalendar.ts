@@ -7,7 +7,8 @@ export const TIME_COL_W = 48;
 
 export function minutesFromGridStart(iso: string): number {
   const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes() - GRID_START_HOUR * 60;
+  // Wall-clock salon time is stored as UTC — use UTC parts for grid placement.
+  return d.getUTCHours() * 60 + d.getUTCMinutes() - GRID_START_HOUR * 60;
 }
 
 export function apptTopPx(iso: string): number {

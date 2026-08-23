@@ -54,7 +54,8 @@ export function WeeklyCalendar({
     const map = new Map<string, StaffAppointment[]>();
     for (const day of days) map.set(day.iso, []);
     for (const appt of appointments) {
-      const iso = toIsoDateLocal(new Date(appt.starts_at));
+      // Match web: day key is the UTC date prefix of starts_at (salon wall-clock).
+      const iso = appt.starts_at.slice(0, 10);
       if (map.has(iso)) map.get(iso)!.push(appt);
     }
     return map;

@@ -257,7 +257,7 @@ export default function OwnerDashboardScreen() {
 function aggregateBusyHours(appointments: { starts_at: string }[]) {
   const buckets = new Map<number, number>();
   for (const a of appointments) {
-    const h = new Date(a.starts_at).getHours();
+    const h = new Date(a.starts_at).getUTCHours();
     buckets.set(h, (buckets.get(h) ?? 0) + 1);
   }
   return [...buckets.entries()]

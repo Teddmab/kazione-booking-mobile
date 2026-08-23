@@ -8,6 +8,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
@@ -39,18 +41,46 @@ import type { StaffService } from "@/services/staff/services";
 const ALL_CATEGORY = "__all__";
 const OTHER_CATEGORY = "__other__";
 
+function ServiceThumb({
+  uri,
+  styles,
+  colors,
+}: {
+  uri: string | null;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
+}) {
+  if (uri) {
+    return (
+      <Image
+        source={{ uri }}
+        style={styles.thumb}
+        contentFit="cover"
+        accessibilityIgnoresInvertColors
+      />
+    );
+  }
+  return (
+    <View style={[styles.thumb, styles.thumbFallback]}>
+      <Ionicons name="cut-outline" size={18} color={colors.primary} />
+    </View>
+  );
+}
+
 function OfferCard({
   service,
   busy,
   onAccept,
   onDecline,
   styles,
+  colors,
 }: {
   service: StaffService;
   busy: boolean;
   onAccept: () => void;
   onDecline: () => void;
   styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
   const { t } = useTranslation();
   const currency = service.currency_code || "EUR";
@@ -62,23 +92,31 @@ function OfferCard({
 
   return (
     <View style={styles.offerCard}>
-      <Text style={styles.svcName}>{service.name}</Text>
-      <Text style={styles.svcMeta}>
-        {service.duration_minutes} min · {formatCurrency(price, currency)}
-      </Text>
-      <Text style={styles.commHint}>{commissionLabel(type, value, currency)}</Text>
+      <View style={styles.offerTop}>
+        <ServiceThumb uri={service.image_url} styles={styles} colors={colors} />
+        <View style={styles.offerBody}>
+          <Text style={styles.svcName} numberOfLines={1}>
+            {service.name}
+          </Text>
+          <Text style={styles.svcMeta} numberOfLines={1}>
+            {service.duration_minutes} min · {formatCurrency(price, currency)}
+            {" · "}
+            {commissionLabel(type, value, currency)}
+          </Text>
+        </View>
+      </View>
       <View style={styles.offerActions}>
-        <Pressable
-          style={[styles.acceptBtn, busy && styles.disabled]}
-          disabled={busy}
-          onPress={onAccept}>
-          <Text style={styles.acceptText}>{t("staffServices.accept")}</Text>
-        </Pressable>
         <Pressable
           style={[styles.declineBtn, busy && styles.disabled]}
           disabled={busy}
           onPress={onDecline}>
-          <Text style={styles.declineText}>{t("staffServices.decline")}</Text>
+          <Ionicons name="close" size={16} color={colors.danger} />
+        </Pressable>
+        <Pressable
+          style={[styles.acceptBtn, busy && styles.disabled]}
+          disabled={busy}
+          onPress={onAccept}>
+          <Ionicons name="checkmark" size={16} color="#fff" />
         </Pressable>
       </View>
     </View>
@@ -88,36 +126,29 @@ function OfferCard({
 function ServiceRow({
   service,
   onPress,
-  onShare,
   styles,
+  colors,
 }: {
   service: StaffService;
   onPress: () => void;
-  onShare: () => void;
   styles: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
-  const { t } = useTranslation();
-  const currency = service.currency_code || "EUR";
-  const price = service.effective_price ?? service.price;
-  const type =
-    service.offered_commission_type ?? service.staff_commission_type ?? null;
-  const value =
-    service.offered_commission_value ?? service.staff_commission_value ?? null;
-
   return (
-    <View style={styles.svcCard}>
-      <Pressable style={{ flex: 1 }} onPress={onPress}>
-        <Text style={styles.svcName}>{service.name}</Text>
-        <Text style={styles.svcMeta}>
-          {service.category_name ?? t("staffServices.other")} ·{" "}
-          {service.duration_minutes} min · {formatCurrency(price, currency)}
+    <Pressable style={styles.svcCard} onPress={onPress}>
+      <ServiceThumb uri={service.image_url} styles={styles} colors={colors} />
+      <View style={styles.svcBody}>
+        <Text style={styles.svcName} numberOfLines={1}>
+          {service.name}
         </Text>
-        <Text style={styles.commHint}>{commissionLabel(type, value, currency)}</Text>
-      </Pressable>
-      <Pressable style={styles.shareChip} onPress={onShare}>
-        <Text style={styles.shareChipText}>{t("staffServices.shareTitle")}</Text>
-      </Pressable>
-    </View>
+        {service.description ? (
+          <Text style={styles.svcDesc} numberOfLines={1}>
+            {service.description}
+          </Text>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+    </Pressable>
   );
 }
 
@@ -309,6 +340,7 @@ export default function StaffServicesScreen() {
                   onAccept={() => handleRespond(svc, "accepted")}
                   onDecline={() => handleRespond(svc, "declined")}
                   styles={styles}
+                  colors={colors}
                 />
               ))}
             </View>
@@ -351,8 +383,8 @@ export default function StaffServicesScreen() {
                 key={svc.id}
                 service={svc}
                 onPress={() => setSelected(svc)}
-                onShare={() => void shareFor(svc.id)}
                 styles={styles}
+                colors={colors}
               />
             ))
           )}
@@ -416,18 +448,29 @@ function makeStyles(colors: ThemeColors) {
     },
     offerCard: {
       backgroundColor: colors.card,
-      borderRadius: 12,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: colors.warning,
       padding: 12,
       marginBottom: 8,
+      gap: 10,
     },
-    offerActions: { flexDirection: "row", gap: 8, marginTop: 10 },
+    offerTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    offerBody: { flex: 1, minWidth: 0 },
+    offerActions: {
+      flexDirection: "row",
+      gap: 8,
+      justifyContent: "flex-end",
+    },
     acceptBtn: {
-      flex: 1,
+      width: 40,
       height: 40,
       borderRadius: 10,
-      backgroundColor: colors.primary,
+      backgroundColor: "#059669",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -437,7 +480,7 @@ function makeStyles(colors: ThemeColors) {
       fontFamily: ownerFonts.semiBold,
     },
     declineBtn: {
-      flex: 1,
+      width: 40,
       height: 40,
       borderRadius: 10,
       borderWidth: 1,
@@ -474,7 +517,7 @@ function makeStyles(colors: ThemeColors) {
     },
     chipActive: {
       borderColor: colors.primary,
-      backgroundColor: colors.primarySurface,
+      backgroundColor: colors.primary,
     },
     chipText: {
       fontSize: 13,
@@ -482,21 +525,43 @@ function makeStyles(colors: ThemeColors) {
       fontFamily: ownerFonts.medium,
     },
     chipTextActive: {
-      color: colors.primary,
+      color: "#fff",
       fontWeight: "600",
     },
     svcCard: {
-      ...ownerStyles.card,
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
-      marginBottom: 10,
+      gap: 12,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 8,
     },
+    thumb: {
+      width: 52,
+      height: 52,
+      borderRadius: 12,
+      backgroundColor: colors.primarySurface,
+    },
+    thumbFallback: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    svcBody: { flex: 1, minWidth: 0 },
     svcName: {
       fontSize: 15,
       fontWeight: "700",
       color: colors.text,
       fontFamily: ownerFonts.bold,
+    },
+    svcDesc: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 3,
+      fontFamily: ownerFonts.regular,
     },
     svcMeta: {
       fontSize: 12,
@@ -509,20 +574,6 @@ function makeStyles(colors: ThemeColors) {
       color: colors.primary,
       marginTop: 4,
       fontFamily: ownerFonts.medium,
-    },
-    shareChip: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      backgroundColor: colors.bg,
-    },
-    shareChipText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: colors.text,
-      fontFamily: ownerFonts.semiBold,
     },
     emptyFiltered: {
       fontSize: 13,

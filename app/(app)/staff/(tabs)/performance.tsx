@@ -58,7 +58,7 @@ function buildWeeklyActivity(appts: StaffAppointment[], locale: string) {
   const counts = Array(7).fill(0) as number[];
   for (const a of appts) {
     if (a.status === "cancelled") continue;
-    const dow = new Date(a.starts_at).getDay();
+    const dow = new Date(a.starts_at).getUTCDay();
     counts[dow] += 1;
   }
   return counts.map((count, i) => ({
@@ -87,7 +87,7 @@ function buildPeriodTrend(appts: StaffAppointment[]) {
   > = {};
   for (const a of appts) {
     const d = new Date(a.starts_at);
-    const weekNum = Math.ceil(d.getDate() / 7);
+    const weekNum = Math.ceil(d.getUTCDate() / 7);
     const key = `W${weekNum}`;
     if (!weekMap[key]) {
       weekMap[key] = { week: key, completed: 0, cancelled: 0, total: 0 };

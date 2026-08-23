@@ -68,7 +68,9 @@ export function groupAppointmentsByWeekDay(
   const startMs = weekStart.getTime();
   for (const appt of appointments) {
     const d = new Date(appt.starts_at);
-    const dayStart = new Date(d);
+    // Salon wall-clock date is the UTC calendar date of starts_at.
+    const dayStart = new Date(weekStart);
+    dayStart.setFullYear(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
     dayStart.setHours(0, 0, 0, 0);
     const dayIndex = Math.round((dayStart.getTime() - startMs) / 86_400_000);
     if (dayIndex >= 0 && dayIndex < 7) {
@@ -81,7 +83,8 @@ export function groupAppointmentsByWeekDay(
 /** Minutes from CALENDAR_HOUR_START for vertical placement. */
 export function minutesFromCalendarStart(iso: string): number {
   const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes() - CALENDAR_HOUR_START * 60;
+  // Salon wall-clock time is stored as UTC.
+  return d.getUTCHours() * 60 + d.getUTCMinutes() - CALENDAR_HOUR_START * 60;
 }
 
 export function blockHeightPx(durationMinutes: number): number {
