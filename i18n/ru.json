@@ -765,6 +765,7 @@
   },
   "staffPerf": {
     "title": "Эффективность",
+    "tabOverview": "Обзор",
     "statAppts": "Зап.",
     "statClients": "Клиенты",
     "statCompletion": "Завершение",

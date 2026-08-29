@@ -765,6 +765,7 @@
   },
   "staffPerf": {
     "title": "Tulemused",
+    "tabOverview": "Ülevaade",
     "statAppts": "Bron.",
     "statClients": "Kliendid",
     "statCompletion": "Lõpetamine",

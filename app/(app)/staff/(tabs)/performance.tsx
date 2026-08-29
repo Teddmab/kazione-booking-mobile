@@ -1,5 +1,4 @@
-import * as Clipboard from "expo-clipboard";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,15 +8,14 @@ import {
   Text,
   View,
 } from "react-native";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
+import { StaffEarningsPanel } from "@/components/staff/StaffEarningsPanel";
 import { ownerFonts, ownerStyles } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
-import { useTenantContext } from "@/contexts/TenantContext";
-import { useToast } from "@/contexts/ToastContext";
-import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import {
   periodRange,
   useMyPerformance,
@@ -25,24 +23,16 @@ import {
 } from "@/hooks/useMyPerformance";
 import { useStaffAppointments } from "@/hooks/useStaffAppointments";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
-import { buildStaffReferralLink } from "@/lib/referralLink";
 import type { StaffAppointment } from "@/services/staff/appointments";
 import type { StaffPerformance } from "@/services/staff/profile";
+
+type ScreenTab = "overview" | "earnings";
 
 const PERIOD_LABEL_KEYS: Record<PeriodKey, string> = {
   "7d": "staffPerf.periodWeek",
   "30d": "staffPerf.periodMonth",
   "90d": "staffPerf.periodCustom",
 };
-
-function money(amount: number, currency: string, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
 
 function weekdayShort(locale: string, dayIndex: number): string {
   const date = new Date(2024, 0, 7 + dayIndex);
@@ -276,17 +266,21 @@ function BookingTrendChart({
 
 export default function StaffPerformanceScreen() {
   const { t, i18n } = useTranslation();
-  const toast = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { tenant } = useTenantContext();
-  const businessId = tenant?.businessId ?? "";
+  const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const { data: self } = useStaffSelf();
-  const settings = useBusinessSettings(businessId);
-  const currency = settings.data?.settings?.currency_code ?? "EUR";
 
+  const initialTab: ScreenTab =
+    params.tab === "earnings" ? "earnings" : "overview";
+  const [tab, setTab] = useState<ScreenTab>(initialTab);
   const [period, setPeriod] = useState<PeriodKey>("30d");
-  const [copied, setCopied] = useState(false);
+  const [earningsRefreshNonce, setEarningsRefreshNonce] = useState(0);
+
+  useEffect(() => {
+    setTab(params.tab === "earnings" ? "earnings" : "overview");
+  }, [params.tab]);
 
   const {
     data: perf,
@@ -317,40 +311,20 @@ export default function StaffPerformanceScreen() {
     [appointments],
   );
 
-  const periodLabel = t(PERIOD_LABEL_KEYS[period]);
-
-  const avgPerAppt =
-    perf && perf.bookings > 0 ? perf.revenue / perf.bookings : null;
-
-  const referralUrl = useMemo(() => {
-    const slug = tenant?.slug;
-    const staffProfileId =
-      self?.staff_profile_id ?? tenant?.staffProfileId ?? null;
-    if (!slug || !staffProfileId) return null;
-    return buildStaffReferralLink(slug, staffProfileId, {
-      businessType: tenant?.businessType,
-    });
-  }, [tenant?.slug, tenant?.businessType, tenant?.staffProfileId, self?.staff_profile_id]);
-
-  async function copyReferral() {
-    if (!referralUrl) {
-      toast.warning(t("staffPerf.toastLinkTitle"), t("staffPerf.toastNoLink"));
-      return;
-    }
-    try {
-      await Clipboard.setStringAsync(referralUrl);
-      setCopied(true);
-      toast.success(t("staffPerf.toastCopiedTitle"), t("staffPerf.toastCopiedBody"));
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      toast.error(
-        t("staffPerf.toastCopyTitle"),
-        err instanceof Error ? err.message : t("staffPerf.toastCopyFailed"),
-      );
-    }
+  function selectTab(next: ScreenTab) {
+    setTab(next);
+    router.replace(
+      (next === "earnings"
+        ? "/(app)/staff/(tabs)/performance?tab=earnings"
+        : "/(app)/staff/(tabs)/performance") as Href,
+    );
   }
 
   async function onRefresh() {
+    if (tab === "earnings") {
+      setEarningsRefreshNonce((n) => n + 1);
+      return;
+    }
     await Promise.all([refetch(), refetchAppts()]);
   }
 
@@ -366,117 +340,76 @@ export default function StaffPerformanceScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching || apptsRefetching}
+            refreshing={
+              tab === "overview" && (isRefetching || apptsRefetching)
+            }
             onRefresh={() => void onRefresh()}
             tintColor={colors.primary}
           />
         }>
-        <PeriodSelector value={period} onChange={setPeriod} styles={styles} />
-
-        <QueryState
-          loading={false}
-          error={isError ? (error as Error) : null}
-          empty={false}
-          onRetry={() => void refetch()}>
-          <StatsRow perf={perf} loading={isLoading} styles={styles} />
-
-          {isLoading && !perf ? (
-            <ActivityIndicator
-              style={{ marginVertical: 16 }}
-              color={colors.primary}
-            />
-          ) : null}
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t("staffPerf.referrals")}</Text>
-            <View style={styles.refStats}>
-              <View style={styles.refStat}>
-                <Text style={styles.refValue}>
-                  {perf ? String(perf.referrals_initiated) : "—"}
+        <View style={styles.tabRow}>
+          {(["overview", "earnings"] as ScreenTab[]).map((key) => {
+            const active = tab === key;
+            return (
+              <Pressable
+                key={key}
+                style={[styles.tabChip, active && styles.tabChipActive]}
+                onPress={() => selectTab(key)}>
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                  {key === "overview"
+                    ? t("staffPerf.tabOverview")
+                    : t("staffEarnings.title")}
                 </Text>
-                <Text style={styles.refLabel}>
-                  {t("staffPerf.referralsInitiated")}
-                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {tab === "earnings" ? (
+          <StaffEarningsPanel refreshNonce={earningsRefreshNonce} />
+        ) : (
+          <>
+            <PeriodSelector value={period} onChange={setPeriod} styles={styles} />
+
+            <QueryState
+              loading={false}
+              error={isError ? (error as Error) : null}
+              empty={false}
+              onRetry={() => void refetch()}>
+              <StatsRow perf={perf} loading={isLoading} styles={styles} />
+
+              {isLoading && !perf ? (
+                <ActivityIndicator
+                  style={{ marginVertical: 16 }}
+                  color={colors.primary}
+                />
+              ) : null}
+
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{t("staffPerf.activity")}</Text>
+                <WeeklyActivityChart data={weeklyActivity} styles={styles} />
               </View>
-              <View style={styles.refStat}>
-                <Text style={styles.refValue}>
-                  {perf ? String(perf.referral_conversions) : "—"}
-                </Text>
-                <Text style={styles.refLabel}>
-                  {t("staffPerf.referralConversions")}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.refRevenue}>
-              {t("staffPerf.referralRevenue")}:{" "}
-              {perf ? money(perf.referral_revenue, currency, i18n.language) : "—"}
-            </Text>
-            <Pressable
-              style={[styles.copyBtn, copied && styles.copyBtnDone]}
-              onPress={() => void copyReferral()}>
-              <Text style={styles.copyText}>
-                {copied ? t("staffPerf.copied") : t("staffPerf.copyLink")}
-              </Text>
-            </Pressable>
-          </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>
-              {t("staffToday.monthRevenue")} — {periodLabel}
-            </Text>
-            <View style={styles.earnRow}>
-              <Text style={styles.earnLabel}>{t("staffToday.monthRevenue")}</Text>
-              <Text style={styles.earnValue}>
-                {perf ? money(perf.revenue, currency, i18n.language) : "—"}
-              </Text>
-            </View>
-            <View style={styles.earnRow}>
-              <Text style={styles.earnLabel}>{t("staffToday.commission")}</Text>
-              <Text style={styles.earnValuePrimary}>
-                {perf
-                  ? money(perf.commission_amount, currency, i18n.language)
-                  : "—"}
-              </Text>
-            </View>
-            <View style={styles.earnRow}>
-              <Text style={styles.earnLabel}>{t("staffToday.completion")}</Text>
-              <Text style={styles.earnValue}>
-                {completionPct(perf?.completion_rate)}
-              </Text>
-            </View>
-            <View style={[styles.earnRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.earnLabel}>{t("staffPerf.statAppts")}</Text>
-              <Text style={styles.earnValue}>
-                {avgPerAppt != null
-                  ? money(avgPerAppt, currency, i18n.language)
-                  : "—"}
-              </Text>
-            </View>
-          </View>
+              {periodTrend.length > 1 ? (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>{t("staffPerf.bookingTrend")}</Text>
+                  <BookingTrendChart data={periodTrend} styles={styles} />
+                </View>
+              ) : null}
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{t("staffPerf.activity")}</Text>
-            <WeeklyActivityChart data={weeklyActivity} styles={styles} />
-          </View>
+              {topServices.length > 0 ? (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>{t("staffPerf.topServices")}</Text>
+                  <TopServicesList data={topServices} styles={styles} />
+                </View>
+              ) : null}
 
-          {periodTrend.length > 1 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t("staffPerf.bookingTrend")}</Text>
-              <BookingTrendChart data={periodTrend} styles={styles} />
-            </View>
-          ) : null}
-
-          {topServices.length > 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t("staffPerf.topServices")}</Text>
-              <TopServicesList data={topServices} styles={styles} />
-            </View>
-          ) : null}
-
-          {!perf && !isLoading ? (
-            <Text style={styles.emptyHint}>{t("staffPerf.noData")}</Text>
-          ) : null}
-        </QueryState>
+              {!perf && !isLoading ? (
+                <Text style={styles.emptyHint}>{t("staffPerf.noData")}</Text>
+              ) : null}
+            </QueryState>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -486,6 +419,29 @@ function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 40, gap: 12 },
+    tabRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+    tabChip: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingVertical: 10,
+      alignItems: "center",
+      backgroundColor: colors.card,
+    },
+    tabChipActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySurface,
+    },
+    tabText: {
+      fontSize: 14,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    tabTextActive: {
+      color: colors.primary,
+      fontFamily: ownerFonts.semiBold,
+    },
     periodRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
     periodChip: {
       borderWidth: 1,
@@ -541,71 +497,6 @@ function makeStyles(colors: ThemeColors) {
       fontWeight: "700",
       color: colors.text,
       marginBottom: 10,
-      fontFamily: ownerFonts.bold,
-    },
-    cardHint: {
-      fontSize: 12,
-      color: colors.textDim,
-      marginBottom: 10,
-      fontFamily: ownerFonts.regular,
-    },
-    refStats: { flexDirection: "row", gap: 16, marginBottom: 8 },
-    refStat: { flex: 1, alignItems: "center" },
-    refValue: {
-      fontSize: 22,
-      fontWeight: "700",
-      color: colors.text,
-      fontFamily: ownerFonts.bold,
-    },
-    refLabel: {
-      fontSize: 12,
-      color: colors.textMuted,
-      fontFamily: ownerFonts.medium,
-    },
-    refRevenue: {
-      fontSize: 13,
-      color: colors.text,
-      marginBottom: 12,
-      textAlign: "center",
-      fontFamily: ownerFonts.regular,
-    },
-    copyBtn: {
-      height: 44,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    copyBtnDone: { backgroundColor: colors.success },
-    copyText: {
-      color: "#fff",
-      fontWeight: "600",
-      fontSize: 14,
-      fontFamily: ownerFonts.semiBold,
-    },
-    earnRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-    },
-    earnLabel: {
-      fontSize: 13,
-      color: colors.textMuted,
-      fontFamily: ownerFonts.regular,
-    },
-    earnValue: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.text,
-      fontFamily: ownerFonts.semiBold,
-    },
-    earnValuePrimary: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: colors.primary,
       fontFamily: ownerFonts.bold,
     },
     chartRow: {
