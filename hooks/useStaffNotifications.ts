@@ -31,9 +31,9 @@ export function useStaffNotifications(enabled = true) {
   const userId = user?.id ?? "";
 
   const query = useQuery({
-    queryKey: ["staff-notifications"],
+    queryKey: ["staff-notifications", userId],
     queryFn: () => getNotifications(),
-    enabled,
+    enabled: enabled && !!userId,
     staleTime: 30_000,
   });
 
@@ -49,14 +49,14 @@ export function useStaffNotifications(enabled = true) {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "notifications",
           filter: `user_id=eq.${userId}`,
         },
         () => {
           void queryClient.invalidateQueries({
-            queryKey: ["staff-notifications"],
+            queryKey: ["staff-notifications", userId],
           });
         },
       )

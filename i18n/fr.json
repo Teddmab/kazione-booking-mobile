@@ -854,7 +854,8 @@
   "staffNotifPage": {
     "title": "Notifications",
     "empty": "Aucune notification.",
-    "markAll": "Tout marquer comme lu"
+    "markAll": "Tout marquer comme lu",
+    "pushPermissionHint": "Activez les notifications dans les réglages système pour recevoir les alertes de réservations et d'offres."
   },
   "staffEarnings": {
     "title": "Gains",

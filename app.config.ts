@@ -60,6 +60,13 @@ const config: ExpoConfig = {
           'KaziOne utilise la caméra pour scanner les QR codes des vouchers.',
       },
     ],
+    [
+      'expo-notifications',
+      {
+        // Required for iOS remote push while app is backgrounded/killed.
+        enableBackgroundRemoteNotifications: true,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
