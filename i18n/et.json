@@ -854,7 +854,8 @@
   "staffNotifPage": {
     "title": "Teavitused",
     "empty": "Teavitusi pole.",
-    "markAll": "Märgi kõik loetuks"
+    "markAll": "Märgi kõik loetuks",
+    "pushPermissionHint": "Luba teavitused süsteemi seadetes, et saada uusi broneeringuid ja pakkumisi."
   },
   "staffEarnings": {
     "title": "Tulu",

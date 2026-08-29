@@ -12,6 +12,7 @@ import {
   fetchUserRole,
   signOut as authSignOut,
 } from '@/lib/auth';
+import { unregisterCurrentPushToken } from '@/lib/pushNotifications';
 import { getSupabase } from '@/lib/supabase';
 import { useAuthStore, type UserRole } from '@/store/authStore';
 
@@ -114,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     setLoading(true);
+    await unregisterCurrentPushToken();
     await authSignOut();
     clearSession();
     queryClient.clear();

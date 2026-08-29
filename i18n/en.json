@@ -854,7 +854,8 @@
   "staffNotifPage": {
     "title": "Notifications",
     "empty": "No notifications.",
-    "markAll": "Mark all as read"
+    "markAll": "Mark all as read",
+    "pushPermissionHint": "Enable notifications in system settings to get alerts for new bookings and offers."
   },
   "staffEarnings": {
     "title": "Earnings",

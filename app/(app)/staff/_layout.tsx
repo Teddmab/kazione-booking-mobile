@@ -6,10 +6,13 @@ import { StaffDrawer } from "@/components/staff/StaffDrawer";
 import { useThemeColors } from "@/contexts/AppThemeContext";
 import { StaffShellProvider } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useStaffPushRegistration } from "@/hooks/useStaffPushRegistration";
 
 export default function StaffLayout() {
   const { tenant, loading } = useTenantContext();
   const colors = useThemeColors();
+
+  useStaffPushRegistration(!!tenant && tenant.role === "staff");
 
   if (loading) return <LoadingScreen />;
   if (!tenant) return <Redirect href={"/" as Href} />;
