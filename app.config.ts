@@ -4,7 +4,7 @@ const config: ExpoConfig = {
   name: 'KaziOne Booking',
   slug: 'kazione-booking-mobile',
   owner: 'afrotouch-ou',
-  version: '1.0.0',
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/logos/logo-square-orange.png',
   scheme: 'kazione',
