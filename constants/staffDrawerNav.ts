@@ -57,7 +57,7 @@ export const STAFF_DRAWER_SECTIONS: StaffDrawerSection[] = [
       {
         key: "earnings",
         labelKey: "sidebar.earnings",
-        href: "/(app)/staff/(tabs)/earnings" as Href,
+        href: "/(app)/staff/(tabs)/performance?tab=earnings" as Href,
         icon: "wallet-outline",
       },
       {

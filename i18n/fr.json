@@ -765,6 +765,7 @@
   },
   "staffPerf": {
     "title": "Performance",
+    "tabOverview": "Aperçu",
     "statAppts": "RDV",
     "statClients": "Clients",
     "statCompletion": "Complétion",

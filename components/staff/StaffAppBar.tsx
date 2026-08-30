@@ -34,7 +34,7 @@ export function StaffAppBar({
   const { t } = useTranslation();
   const { toggleDrawer } = useStaffShell();
   const { signOut, user } = useAuthContext();
-  const { tenant, clearActiveBusiness } = useTenantContext();
+  const { tenant } = useTenantContext();
   const { data: staff } = useStaffSelf();
   const { colors } = useAppTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -76,13 +76,6 @@ export function StaffAppBar({
         },
       },
     ]);
-  };
-
-  const switchWorkspace = () => {
-    setMenuOpen(false);
-    void clearActiveBusiness().then(() =>
-      router.replace("/(auth)/role-select" as Href),
-    );
   };
 
   return (
@@ -166,12 +159,6 @@ export function StaffAppBar({
               <Ionicons name="person-outline" size={18} color={colors.text} />
               <Text style={[styles.menuItemText, { color: colors.text }]}>
                 {t("common.myAccount")}
-              </Text>
-            </Pressable>
-            <Pressable style={styles.menuItem} onPress={switchWorkspace}>
-              <Ionicons name="swap-horizontal-outline" size={18} color={colors.text} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>
-                {t("common.switchWorkspace")}
               </Text>
             </Pressable>
             <Pressable style={styles.menuItem} onPress={handleLogout}>
