@@ -88,9 +88,10 @@ export function useUpdateBankAccount() {
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
   return useMutation({
-    mutationFn: (input: UpdateBankAccountInput) => updateBankAccount(input),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["staff-self", businessId] });
+    mutationFn: (input: UpdateBankAccountInput) =>
+      updateBankAccount({ ...input, business_id: input.business_id ?? businessId }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["staff-self", businessId] });
     },
   });
 }

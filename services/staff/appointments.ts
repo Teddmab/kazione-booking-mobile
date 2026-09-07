@@ -5,6 +5,7 @@ export type AppointmentStatus =
   | "offered"
   | "pending"
   | "confirmed"
+  | "arrived"
   | "in_progress"
   | "pending_completion"
   | "completed"
@@ -24,6 +25,7 @@ export interface StaffAppointment {
   ends_at: string;
   status: AppointmentStatus;
   notes?: string | null;
+  notes_reviewed_at?: string | null;
   referral_staff_id?: string | null;
   payment_method?: string | null;
   intake_answers?: Record<string, { label: string; value: unknown }> | null;
@@ -48,6 +50,7 @@ export interface StaffAppointment {
 type AppointmentRow = AppointmentWithRelations & {
   referral_staff_id?: string | null;
   referrer_staff_id?: string | null;
+  notes_reviewed_at?: string | null;
   payment_method?: string | null;
   intake_answers?: Record<string, { label: string; value: unknown }> | null;
 };
@@ -59,6 +62,7 @@ function mapAppointment(row: AppointmentRow): StaffAppointment {
     ends_at: row.ends_at,
     status: row.status as AppointmentStatus,
     notes: row.notes ?? null,
+    notes_reviewed_at: row.notes_reviewed_at ?? null,
     referral_staff_id:
       row.referrer_staff_id ?? row.referral_staff_id ?? null,
     payment_method: row.payment_method ?? row.payment?.method ?? null,
@@ -143,4 +147,18 @@ export async function updateAppointmentNotes(
     business_id: businessId,
     notes,
   });
+}
+
+export async function markArrived(appointmentId: string): Promise<void> {
+  await api.patch(
+    `/appointments?action=mark-arrived&id=${encodeURIComponent(appointmentId)}`,
+    {},
+  );
+}
+
+export async function markNotesReviewed(appointmentId: string): Promise<void> {
+  await api.patch(
+    `/appointments?action=mark-notes-reviewed&id=${encodeURIComponent(appointmentId)}`,
+    {},
+  );
 }

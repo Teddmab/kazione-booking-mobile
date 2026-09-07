@@ -29,6 +29,9 @@ interface Props {
   onClose: () => void;
   onShare: () => Promise<void>;
   sharing?: boolean;
+  onAcceptOffer?: () => void;
+  onDeclineOffer?: () => void;
+  offerBusy?: boolean;
 }
 
 export function ServiceDetailSheet({
@@ -38,6 +41,9 @@ export function ServiceDetailSheet({
   onClose,
   onShare,
   sharing,
+  onAcceptOffer,
+  onDeclineOffer,
+  offerBusy,
 }: Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
@@ -58,6 +64,7 @@ export function ServiceDetailSheet({
   const value =
     service.offered_commission_value ?? service.staff_commission_value ?? null;
   const earnings = commissionEarnings(type, value, price);
+  const isPending = service.assignment_status === "pending";
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -126,7 +133,7 @@ export function ServiceDetailSheet({
             </View>
           ) : null}
 
-          {referralLink ? (
+          {referralLink && !isPending ? (
             <View style={styles.block}>
               <Text style={styles.blockTitle}>{t("staffServiceDetail.referralLink")}</Text>
               <Text style={styles.linkHint} numberOfLines={2}>
@@ -145,6 +152,27 @@ export function ServiceDetailSheet({
                   <Text style={styles.shareText}>{t("staffServiceDetail.shareLink")}</Text>
                 )}
               </Pressable>
+            </View>
+          ) : null}
+
+          {isPending && (onAcceptOffer || onDeclineOffer) ? (
+            <View style={styles.offerActions}>
+              {onDeclineOffer ? (
+                <Pressable
+                  style={[styles.declineBtn, offerBusy && styles.disabled]}
+                  disabled={offerBusy}
+                  onPress={onDeclineOffer}>
+                  <Text style={styles.declineText}>{t("staffServices.decline")}</Text>
+                </Pressable>
+              ) : null}
+              {onAcceptOffer ? (
+                <Pressable
+                  style={[styles.acceptBtn, offerBusy && styles.disabled]}
+                  disabled={offerBusy}
+                  onPress={onAcceptOffer}>
+                  <Text style={styles.acceptText}>{t("staffServices.accept")}</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </ScrollView>
@@ -296,6 +324,42 @@ function makeStyles(colors: ThemeColors) {
       fontSize: 15,
       fontWeight: "600",
       fontFamily: ownerFonts.semiBold,
+    },
+    offerActions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    declineBtn: {
+      flex: 1,
+      height: 46,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bg,
+    },
+    declineText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textMuted,
+      fontFamily: ownerFonts.bold,
+    },
+    acceptBtn: {
+      flex: 1,
+      height: 46,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.primary,
+    },
+    acceptText: {
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: "700",
+      fontFamily: ownerFonts.bold,
     },
     disabled: { opacity: 0.7 },
     closeBtn: { alignItems: "center", paddingVertical: 14 },

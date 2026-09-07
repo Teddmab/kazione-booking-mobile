@@ -179,6 +179,7 @@ export default function StaffProfileScreen() {
     setBankBusy(true);
     try {
       await updateBankAccountMutation.mutateAsync({
+        business_id: tenant?.businessId,
         iban: bankIban.replace(/\s/g, ""),
         bank_name: bankName,
         holder_name: bankHolder,

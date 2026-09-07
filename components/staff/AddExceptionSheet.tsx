@@ -23,6 +23,9 @@ interface Props {
   onSave: (override: Omit<StaffOverride, "id">) => void;
   busy?: boolean;
   defaultDate?: string;
+  defaultType?: ExceptionType;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
 }
 
 export function AddExceptionSheet({
@@ -31,28 +34,31 @@ export function AddExceptionSheet({
   onSave,
   busy,
   defaultDate,
+  defaultType = "day_off",
+  defaultStartTime = "10:00",
+  defaultEndTime = "14:00",
 }: Props) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [type, setType] = useState<ExceptionType>("day_off");
+  const [type, setType] = useState<ExceptionType>(defaultType);
   const [date, setDate] = useState(defaultDate ?? "");
-  const [startTime, setStartTime] = useState("10:00");
-  const [endTime, setEndTime] = useState("14:00");
+  const [startTime, setStartTime] = useState(defaultStartTime);
+  const [endTime, setEndTime] = useState(defaultEndTime);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
-      setType("day_off");
+      setType(defaultType);
       setDate(defaultDate ?? "");
-      setStartTime("10:00");
-      setEndTime("14:00");
+      setStartTime(defaultStartTime);
+      setEndTime(defaultEndTime);
       setReason("");
       setError(null);
     }
-  }, [visible, defaultDate]);
+  }, [visible, defaultDate, defaultType, defaultStartTime, defaultEndTime]);
 
   function handleSave() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {

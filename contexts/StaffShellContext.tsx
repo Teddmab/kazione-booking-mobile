@@ -1,24 +1,24 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 interface StaffShellContextValue {
-  drawerOpen: boolean;
-  openDrawer: () => void;
-  closeDrawer: () => void;
-  toggleDrawer: () => void;
+  moreOpen: boolean;
+  openMore: () => void;
+  closeMore: () => void;
+  toggleMore: () => void;
 }
 
 const StaffShellContext = createContext<StaffShellContextValue | undefined>(undefined);
 
 export function StaffShellProvider({ children }: { children: ReactNode }) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  const openDrawer = useCallback(() => setDrawerOpen(true), []);
-  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
-  const toggleDrawer = useCallback(() => setDrawerOpen((v) => !v), []);
+  const openMore = useCallback(() => setMoreOpen(true), []);
+  const closeMore = useCallback(() => setMoreOpen(false), []);
+  const toggleMore = useCallback(() => setMoreOpen((v) => !v), []);
 
   const value = useMemo(
-    () => ({ drawerOpen, openDrawer, closeDrawer, toggleDrawer }),
-    [drawerOpen, openDrawer, closeDrawer, toggleDrawer],
+    () => ({ moreOpen, openMore, closeMore, toggleMore }),
+    [moreOpen, openMore, closeMore, toggleMore],
   );
 
   return (

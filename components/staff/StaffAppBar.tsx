@@ -32,7 +32,7 @@ export function StaffAppBar({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
-  const { toggleDrawer } = useStaffShell();
+  const { openMore } = useStaffShell();
   const { signOut, user } = useAuthContext();
   const { tenant } = useTenantContext();
   const { data: staff } = useStaffSelf();
@@ -89,17 +89,6 @@ export function StaffAppBar({
         },
       ]}>
       <View style={styles.row}>
-        <Pressable
-          style={[
-            styles.menuBtn,
-            { borderColor: colors.border, backgroundColor: colors.card },
-          ]}
-          onPress={toggleDrawer}
-          accessibilityLabel="Ouvrir le menu"
-          accessibilityRole="button">
-          <Ionicons name="menu" size={22} color={colors.primary} />
-        </Pressable>
-
         <View style={styles.titleBlock}>
           <Text
             style={[
@@ -111,7 +100,9 @@ export function StaffAppBar({
             {resolvedTitle}
           </Text>
           {resolvedSubtitle ? (
-            <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
+            <Text
+              style={[styles.subtitle, { color: colors.textMuted }]}
+              numberOfLines={1}>
               {resolvedSubtitle}
             </Text>
           ) : null}
@@ -137,7 +128,9 @@ export function StaffAppBar({
         transparent
         animationType="fade"
         onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={() => setMenuOpen(false)}>
           <View
             style={[
               styles.menuCard,
@@ -161,6 +154,21 @@ export function StaffAppBar({
                 {t("common.myAccount")}
               </Text>
             </Pressable>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                openMore();
+              }}>
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={18}
+                color={colors.text}
+              />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>
+                {t("staffNav.more")}
+              </Text>
+            </Pressable>
             <Pressable style={styles.menuItem} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={18} color={colors.danger} />
               <Text style={[styles.menuItemText, { color: colors.danger }]}>
@@ -181,14 +189,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  menuBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   titleBlock: { flex: 1, minWidth: 0 },
   title: {
     fontSize: 18,

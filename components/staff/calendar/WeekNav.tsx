@@ -1,6 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 
 import { ownerFonts } from "@/constants/ownerTheme";
@@ -12,25 +12,41 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  onOpenPicker: () => void;
 }
 
-export function WeekNav({ weekStart, onPrev, onNext, onToday }: Props) {
+export function WeekNav({
+  weekStart,
+  onPrev,
+  onNext,
+  onToday,
+  onOpenPicker,
+}: Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.row}>
-      <Pressable onPress={onPrev} style={styles.btn} hitSlop={6}>
-        <Ionicons name="chevron-back" size={20} color={colors.primary} />
+      <Pressable onPress={onPrev} style={styles.circleBtn} hitSlop={4}>
+        <Ionicons name="chevron-back" size={18} color={colors.text} />
       </Pressable>
-      <Pressable onPress={onToday} style={styles.todayBtn}>
+
+      <Pressable style={styles.rangePill} onPress={onOpenPicker}>
+        <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+        <Text style={styles.rangeText}>{formatWeekLabel(weekStart)}</Text>
+        <Ionicons name="chevron-down" size={12} color={colors.textMuted} />
+      </Pressable>
+
+      <Pressable onPress={onNext} style={styles.circleBtn} hitSlop={4}>
+        <Ionicons name="chevron-forward" size={18} color={colors.text} />
+      </Pressable>
+
+      <View style={{ flex: 1 }} />
+
+      <Pressable onPress={onToday} style={styles.todayPill}>
         <Text style={styles.todayText}>{t("staffCalendar.todayBtn")}</Text>
       </Pressable>
-      <Pressable onPress={onNext} style={styles.btn} hitSlop={6}>
-        <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-      </Pressable>
-      <Text style={styles.label}>{formatWeekLabel(weekStart)}</Text>
     </View>
   );
 }
@@ -41,41 +57,48 @@ function makeStyles(colors: ThemeColors) {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      paddingHorizontal: 4,
-      paddingVertical: 4,
+      paddingVertical: 2,
     },
-    btn: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
+    circleBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.card,
-      justifyContent: "center",
       alignItems: "center",
+      justifyContent: "center",
     },
-    todayBtn: {
-      paddingHorizontal: 12,
-      height: 36,
-      borderRadius: 10,
+    rangePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    rangeText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
+    },
+    todayPill: {
+      borderWidth: 1,
+      borderColor: colors.primary + "55",
       backgroundColor: colors.primarySurface,
-      justifyContent: "center",
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
     },
     todayText: {
       fontSize: 13,
+      fontWeight: "700",
       color: colors.primary,
-      fontWeight: "600",
-      fontFamily: ownerFonts.semiBold,
-    },
-    label: {
-      marginLeft: 4,
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.text,
-      flexShrink: 1,
-      fontFamily: ownerFonts.semiBold,
+      fontFamily: ownerFonts.bold,
     },
   });
 }

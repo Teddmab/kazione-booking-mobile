@@ -60,10 +60,14 @@ export default function Index() {
       setStaffWelcomeDone(true);
       return;
     }
+    let cancelled = false;
     setStaffWelcomeDone(null);
-    AsyncStorage.getItem(staffWelcomeStorageKey(user.id)).then((v) => {
-      setStaffWelcomeDone(v === "1");
+    void AsyncStorage.getItem(staffWelcomeStorageKey(user.id)).then((v) => {
+      if (!cancelled) setStaffWelcomeDone(v === "1");
     });
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, tenant?.role]);
 
   if (authLoading) {
@@ -101,6 +105,7 @@ export default function Index() {
     return <ClientNotAllowed onSignOut={goLogin} />;
   }
 
+  // Multi-workspace without an active staff tenant → picker (AuthGate allows this screen).
   if (staffMemberships.length > 1 && (!tenant || !isStaffMembership(tenant.role))) {
     return <Redirect href={"/(auth)/role-select" as Href} />;
   }

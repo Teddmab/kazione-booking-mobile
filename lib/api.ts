@@ -34,6 +34,7 @@ const PUBLIC_ENDPOINTS = [
   "/get-storefront",
   "/get-availability",
   "/create-booking",
+  "/public-help",
 ];
 
 export class ApiError extends Error {
