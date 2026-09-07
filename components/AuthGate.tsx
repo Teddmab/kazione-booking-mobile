@@ -13,8 +13,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
 
-  const rootSegment = segments[0] as string | undefined;
-  const authLeaf = segments[1] as string | undefined;
+  const segs = segments as string[];
+  const rootSegment = segs[0];
+  const authLeaf = segs[1];
   const inAuthGroup = rootSegment === '(auth)';
   const onCustomerRoute = isCustomerRoute(segments);
   const allowAuthWithSession =
