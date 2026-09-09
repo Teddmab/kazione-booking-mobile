@@ -4,6 +4,8 @@ import { useTenantContext } from "@/contexts/TenantContext";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import {
   fetchStaffAppointments,
+  markArrived,
+  markNotesReviewed,
   respondToAppointmentOffer,
   updateAppointmentStatus,
   type AppointmentStatus,
@@ -21,6 +23,7 @@ export function useStaffAppointments(
   dateFrom: string,
   dateTo: string,
   limit = 200,
+  scope: "auto" | "mine" | "all" = "auto",
 ) {
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
@@ -28,7 +31,10 @@ export function useStaffAppointments(
   const staffProfileId =
     staffSelf?.staff_profile_id ?? tenant?.staffProfileId ?? "";
   const settingsQ = useBusinessSettings(businessId);
-  const seeAll = settingsQ.data?.settings?.staff_see_all_appointments === true;
+  const seeAllSetting =
+    settingsQ.data?.settings?.staff_see_all_appointments === true;
+  const seeAll =
+    scope === "all" ? true : scope === "mine" ? false : seeAllSetting;
   const staffFilter = seeAll ? undefined : staffProfileId || undefined;
 
   return useQuery({
@@ -36,6 +42,7 @@ export function useStaffAppointments(
       "staff-appointments",
       businessId,
       seeAll ? "all" : staffProfileId,
+      scope,
       dateFrom,
       dateTo,
       limit,
@@ -150,5 +157,27 @@ export function useRespondToAppointmentOffer() {
       void qc.invalidateQueries({ queryKey: ["staff-appointments"] });
       void qc.invalidateQueries({ queryKey: ["staff-offers"] });
     },
+  });
+}
+
+function invalidateStaffApptQueries(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: ["staff-appointments"] });
+  void qc.invalidateQueries({ queryKey: ["staff-offers"] });
+  void qc.invalidateQueries({ queryKey: ["staff-pending-completion"] });
+}
+
+export function useMarkArrived() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (appointmentId: string) => markArrived(appointmentId),
+    onSuccess: () => invalidateStaffApptQueries(qc),
+  });
+}
+
+export function useMarkNotesReviewed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (appointmentId: string) => markNotesReviewed(appointmentId),
+    onSuccess: () => invalidateStaffApptQueries(qc),
   });
 }

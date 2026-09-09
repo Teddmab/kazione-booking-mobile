@@ -1,5 +1,5 @@
 export const GRID_START_HOUR = 7;
-export const GRID_END_HOUR = 22;
+export const GRID_END_HOUR = 23;
 export const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
 export const HOUR_PX = 64;
 export const TOTAL_PX = GRID_HOURS * HOUR_PX;
@@ -107,13 +107,14 @@ export function toIsoDateLocal(d: Date): string {
 
 export function formatWeekLabel(weekStart: Date): string {
   const weekEnd = addDays(weekStart, 6);
-  const fmt = (d: Date, withYear = false) =>
-    d.toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-      ...(withYear ? { year: "numeric" as const } : {}),
-    });
-  return `${fmt(weekStart)} – ${fmt(weekEnd, true)}`;
+  const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
+  if (sameMonth) {
+    const month = weekStart.toLocaleDateString(undefined, { month: "short" });
+    return `${weekStart.getDate()}–${weekEnd.getDate()} ${month}`;
+  }
+  const fmt = (d: Date) =>
+    d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return `${fmt(weekStart)} – ${fmt(weekEnd)}`;
 }
 
 export function isSameDay(a: Date, b: Date): boolean {

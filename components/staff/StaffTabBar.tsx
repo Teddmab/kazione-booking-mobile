@@ -5,15 +5,22 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { STAFF_MORE_PATH_MARKERS } from "@/constants/staffDrawerNav";
 import { STAFF_BOTTOM_TABS } from "@/constants/staffTabNav";
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors } from "@/contexts/AppThemeContext";
+import { useStaffShell } from "@/contexts/StaffShellContext";
 
 /** Hide tab bar on focused flows (e.g. training player). */
 function shouldHideTabBar(pathname: string): boolean {
-  // /staff/training/<redemptionId> — keep bar on /staff/training list
   const match = pathname.match(/\/training\/([^/]+)/);
   return Boolean(match && match[1] && match[1] !== "index");
+}
+
+function isMorePath(pathname: string): boolean {
+  return STAFF_MORE_PATH_MARKERS.some(
+    (marker) => marker !== "/more" && pathname.includes(marker),
+  );
 }
 
 export function StaffTabBar({ state, navigation }: BottomTabBarProps) {
@@ -21,10 +28,13 @@ export function StaffTabBar({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation();
   const colors = useThemeColors();
   const pathname = usePathname();
+  const { openMore, moreOpen } = useStaffShell();
 
   if (shouldHideTabBar(pathname)) {
     return null;
   }
+
+  const moreActive = moreOpen || isMorePath(pathname);
 
   return (
     <View
@@ -37,31 +47,42 @@ export function StaffTabBar({ state, navigation }: BottomTabBarProps) {
         },
       ]}>
       {STAFF_BOTTOM_TABS.map((tab) => {
+        const isMore = tab.name === "more";
         const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
-        if (routeIndex < 0) return null;
-        const route = state.routes[routeIndex];
-        const focused = state.index === routeIndex;
+        // More is sheet-only — no dedicated route required
+        if (!isMore && routeIndex < 0) return null;
+        const route = routeIndex >= 0 ? state.routes[routeIndex] : null;
+        const focused = isMore
+          ? moreActive
+          : state.index === routeIndex && !moreActive;
         const color = focused ? colors.tabBarActive : colors.tabBarInactive;
         const iconName = focused ? tab.iconFocused : tab.icon;
 
         return (
           <Pressable
-            key={route.key}
+            key={tab.name}
             style={styles.tab}
             onPress={() => {
+              if (isMore) {
+                openMore();
+                return;
+              }
+              if (!route) return;
               const e = navigation.emit({
                 type: "tabPress",
                 target: route.key,
                 canPreventDefault: true,
               });
-              if (!focused && !e.defaultPrevented) {
+              if (!e.defaultPrevented) {
                 navigation.navigate(route.name);
               }
             }}
             accessibilityRole="button"
             accessibilityState={focused ? { selected: true } : {}}>
             <Ionicons name={iconName} size={22} color={color} />
-            <Text style={[styles.label, { color }, focused && styles.labelFocused]}>
+            <Text
+              style={[styles.label, { color }, focused && styles.labelFocused]}
+              numberOfLines={1}>
               {t(tab.titleKey)}
             </Text>
           </Pressable>
@@ -77,9 +98,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     paddingTop: 8,
   },
-  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingHorizontal: 2,
+  },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "500",
     fontFamily: ownerFonts.medium,
   },

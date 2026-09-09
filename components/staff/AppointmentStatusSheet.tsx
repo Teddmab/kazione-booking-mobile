@@ -23,6 +23,8 @@ import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
 import { clientDisplayName, formatTime } from "@/lib/format";
 import {
+  markArrived,
+  markNotesReviewed,
   respondToAppointmentOffer,
   updateAppointmentNotes,
   updateAppointmentStatus,
@@ -30,6 +32,7 @@ import {
   type PaymentMethod,
   type StaffAppointment,
 } from "@/services/staff/appointments";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 
 const PAYMENT_KEYS: { value: PaymentMethod; labelKey: string }[] = [
   { value: "cash", labelKey: "staffAppt.payCash" },
@@ -53,6 +56,9 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
   const insets = useSafeAreaInsets();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
+  const settings = useBusinessSettings(businessId);
+  const arrivalTrackingEnabled =
+    settings.data?.settings?.enable_arrival_tracking === true;
   const queryClient = useQueryClient();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -171,14 +177,24 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
     : [];
   const status = appointment.status;
   const canComplete =
-    status === "pending" || status === "confirmed" || status === "in_progress";
-  const canNoShow = status === "pending" || status === "confirmed";
+    status === "pending" ||
+    status === "confirmed" ||
+    status === "arrived" ||
+    status === "in_progress";
+  const canNoShow =
+    status === "pending" || status === "confirmed" || status === "arrived";
+  const canMarkArrived =
+    arrivalTrackingEnabled && status === "confirmed";
+  const canStart =
+    status === "pending" || status === "confirmed" || status === "arrived";
   const showOfferActions = status === "offered";
   const showInProgressExtras = status === "in_progress";
   const showWaiting = status === "pending_completion";
   const showSummary = status === "completed";
   const hasQuickActions =
     showOfferActions ||
+    canMarkArrived ||
+    canStart ||
     canComplete ||
     canNoShow ||
     showInProgressExtras ||
@@ -382,6 +398,42 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
                       )}
                     </Pressable>
                   </>
+                ) : null}
+
+                {canMarkArrived ? (
+                  <Pressable
+                    style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
+                    disabled={busy || statusMutation.isPending}
+                    onPress={() => {
+                      setError(null);
+                      void markArrived(appointment.id)
+                        .then(async () => {
+                          await invalidate();
+                          toast.success(
+                            t("staffAppt.toastTitle"),
+                            t("staffToday.markArrived"),
+                          );
+                          onClose();
+                        })
+                        .catch((err: Error) => {
+                          setError(err.message);
+                          toast.error(t("staffAppt.toastError"), err.message);
+                        });
+                    }}>
+                    <Text style={styles.actionText}>{t("staffToday.markArrived")}</Text>
+                  </Pressable>
+                ) : null}
+
+                {canStart ? (
+                  <Pressable
+                    style={[styles.actionBtn, styles.actionPrimary, busy && styles.actionDisabled]}
+                    disabled={busy}
+                    onPress={() => {
+                      setError(null);
+                      statusMutation.mutate("in_progress");
+                    }}>
+                    <Text style={styles.actionText}>{t("staffToday.startNext")}</Text>
+                  </Pressable>
                 ) : null}
 
                 {canComplete ? (

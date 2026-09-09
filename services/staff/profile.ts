@@ -39,6 +39,7 @@ export interface StaffSelf {
 }
 
 export interface UpdateBankAccountInput {
+  business_id?: string;
   iban?: string;
   bank_name?: string;
   holder_name?: string;

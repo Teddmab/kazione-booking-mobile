@@ -26,14 +26,19 @@ export interface PaginatedStaffReviews {
   total: number;
 }
 
-export async function fetchBusinessReviews(
+export async function fetchStaffReviews(
   businessId: string,
+  staffProfileId: string,
   page = 1,
   limit = 20,
 ): Promise<PaginatedStaffReviews> {
-  return api.get<PaginatedStaffReviews>(
-    `/reviews?business_id=${encodeURIComponent(businessId)}&page=${page}&limit=${limit}`,
-  );
+  const params = new URLSearchParams({
+    business_id: businessId,
+    staff_profile_id: staffProfileId,
+    page: String(page),
+    limit: String(limit),
+  });
+  return api.get<PaginatedStaffReviews>(`/reviews?${params.toString()}`);
 }
 
 export function buildReviewInviteUrl(token: string): string {

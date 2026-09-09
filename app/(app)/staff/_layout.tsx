@@ -2,7 +2,7 @@ import { Redirect, Stack, type Href } from "expo-router";
 import { View } from "react-native";
 
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { StaffDrawer } from "@/components/staff/StaffDrawer";
+import { StaffMoreSheet } from "@/components/staff/StaffMoreSheet";
 import { useThemeColors } from "@/contexts/AppThemeContext";
 import { StaffShellProvider } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
@@ -17,7 +17,6 @@ export default function StaffLayout() {
   if (loading) return <LoadingScreen />;
   if (!tenant) return <Redirect href={"/" as Href} />;
 
-  // Receptionist has its own portal — keep staff routes staff-only
   if (tenant.role !== "staff") {
     return <Redirect href={"/" as Href} />;
   }
@@ -33,7 +32,7 @@ export default function StaffLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" />
         </Stack>
-        <StaffDrawer />
+        <StaffMoreSheet />
       </View>
     </StaffShellProvider>
   );

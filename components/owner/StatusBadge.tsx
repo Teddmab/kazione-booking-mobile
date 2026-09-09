@@ -13,7 +13,7 @@ export function StatusBadge({ status }: Props) {
   const key = `staffStatus.${status}`;
   const label = t(key, { defaultValue: status });
   const variant =
-    status === "confirmed"
+    status === "confirmed" || status === "arrived"
       ? "confirmed"
       : status === "completed"
         ? "completed"

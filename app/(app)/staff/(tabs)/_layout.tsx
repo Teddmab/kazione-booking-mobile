@@ -16,14 +16,22 @@ export default function StaffTabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}>
       <Tabs.Screen name="today" options={{ title: t("staffNav.today") }} />
-      <Tabs.Screen name="calendar" options={{ title: t("staffNav.calendar") }} />
-      <Tabs.Screen name="services" options={{ title: t("sidebar.services") }} />
-      <Tabs.Screen name="performance" options={{ title: t("staffNav.performance") }} />
-      {/* Drawer destinations — keep bottom bar visible */}
+      <Tabs.Screen
+        name="calendar"
+        options={{ title: t("staffNav.appointments") }}
+      />
+      <Tabs.Screen
+        name="services"
+        options={{ title: t("staffNav.services") }}
+      />
+      <Tabs.Screen name="reviews" options={{ title: t("staffNav.reviews") }} />
+      {/* More opens as a bottom sheet from StaffTabBar — no screen */}
+      <Tabs.Screen name="more" options={{ href: null }} />
+      {/* Secondary destinations — reachable from More, bar stays visible */}
       <Tabs.Screen name="clients" options={{ href: null }} />
+      <Tabs.Screen name="performance" options={{ href: null }} />
       <Tabs.Screen name="earnings" options={{ href: null }} />
       <Tabs.Screen name="training" options={{ href: null }} />
-      <Tabs.Screen name="reviews" options={{ href: null }} />
       <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
