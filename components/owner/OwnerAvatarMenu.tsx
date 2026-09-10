@@ -6,6 +6,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ownerColors } from "@/constants/ownerTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceSwitch } from "@/hooks/useWorkspaceSwitch";
 
 interface Props {
   initial: string;
@@ -39,6 +40,7 @@ export function OwnerAvatarMenu({ initial }: Props) {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const { canSwitch, switchWorkspace } = useWorkspaceSwitch();
 
   const displayName = useMemo(() => getDisplayName(user), [user]);
   const initials = useMemo(() => getInitials(displayName), [displayName]);
@@ -50,6 +52,11 @@ export function OwnerAvatarMenu({ initial }: Props) {
     router.push("/(app)/owner/settings" as Href);
   };
 
+  const handleSwitch = () => {
+    close();
+    switchWorkspace();
+  };
+
   const handleSignOut = () => {
     close();
     void signOut().then(() => router.replace("/(auth)/welcome" as Href));
@@ -58,6 +65,16 @@ export function OwnerAvatarMenu({ initial }: Props) {
   const items: MenuItem[] = [
     { key: "profile", labelKey: "owner.profile", icon: "person-outline", onPress: goSettings },
     { key: "settings", labelKey: "owner.settings", icon: "settings-outline", onPress: goSettings },
+    ...(canSwitch
+      ? [
+          {
+            key: "switch",
+            labelKey: "common.switchWorkspace",
+            icon: "swap-horizontal-outline" as const,
+            onPress: handleSwitch,
+          },
+        ]
+      : []),
     {
       key: "signOut",
       labelKey: "owner.signOut",
@@ -85,19 +102,25 @@ export function OwnerAvatarMenu({ initial }: Props) {
                 {displayName}
               </Text>
               <View style={styles.separator} />
-              {items.slice(0, 2).map((item) => (
-                <Pressable key={item.key} style={styles.option} onPress={item.onPress}>
-                  <Ionicons name={item.icon} size={18} color={ownerColors.text} />
-                  <Text style={styles.optionLabel}>{t(item.labelKey)}</Text>
-                </Pressable>
-              ))}
+              {items
+                .filter((item) => !item.destructive)
+                .map((item) => (
+                  <Pressable key={item.key} style={styles.option} onPress={item.onPress}>
+                    <Ionicons name={item.icon} size={18} color={ownerColors.text} />
+                    <Text style={styles.optionLabel}>{t(item.labelKey)}</Text>
+                  </Pressable>
+                ))}
               <View style={styles.separator} />
-              <Pressable style={styles.option} onPress={items[2].onPress}>
-                <Ionicons name={items[2].icon} size={18} color={ownerColors.danger} />
-                <Text style={[styles.optionLabel, styles.optionDestructive]}>
-                  {t(items[2].labelKey)}
-                </Text>
-              </Pressable>
+              {items
+                .filter((item) => item.destructive)
+                .map((item) => (
+                  <Pressable key={item.key} style={styles.option} onPress={item.onPress}>
+                    <Ionicons name={item.icon} size={18} color={ownerColors.danger} />
+                    <Text style={[styles.optionLabel, styles.optionDestructive]}>
+                      {t(item.labelKey)}
+                    </Text>
+                  </Pressable>
+                ))}
             </Pressable>
           </View>
         </Pressable>

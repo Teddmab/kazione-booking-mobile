@@ -10,7 +10,7 @@ import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useTenantContext, type TenantContextValue } from "@/contexts/TenantContext";
 import {
-  isStaffMembership,
+  isPortalMembership,
   roleLabel,
   workspaceRouteForMembership,
 } from "@/lib/workspaceRouting";
@@ -18,26 +18,34 @@ import {
 export default function RoleSelectScreen() {
   const router = useRouter();
   const { signOut } = useAuthContext();
-  const { businesses, selectMembership, loading } = useTenantContext();
+  const { businesses, selectMembership, loading, needsRoleSelection } =
+    useTenantContext();
 
-  const staffMemberships = useMemo(
-    () => businesses.filter((b) => isStaffMembership(b.role)),
+  const portalMemberships = useMemo(
+    () => businesses.filter((b) => isPortalMembership(b.role)),
     [businesses],
   );
 
   useEffect(() => {
-    if (loading || staffMemberships.length !== 1) return;
-    const only = staffMemberships[0];
+    if (loading || portalMemberships.length !== 1) return;
+    if (needsRoleSelection) return;
+    const only = portalMemberships[0];
     void selectMembership(only).then(() => {
       router.replace(workspaceRouteForMembership(only.role) as Href);
     });
-  }, [loading, staffMemberships, selectMembership, router]);
+  }, [
+    loading,
+    portalMemberships,
+    needsRoleSelection,
+    selectMembership,
+    router,
+  ]);
 
   if (loading) {
     return <LoadingScreen message="Loading workspaces…" />;
   }
 
-  if (staffMemberships.length === 0) {
+  if (portalMemberships.length === 0) {
     return (
       <ClientNotAllowed
         onSignOut={() => {
@@ -47,7 +55,7 @@ export default function RoleSelectScreen() {
     );
   }
 
-  if (staffMemberships.length === 1) {
+  if (portalMemberships.length === 1 && !needsRoleSelection) {
     return <LoadingScreen message="Redirecting…" />;
   }
 
@@ -60,23 +68,41 @@ export default function RoleSelectScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <Text style={styles.title}>Select your workspace</Text>
-        <Text style={styles.subtitle}>Choose the salon you work at today.</Text>
+        <Text style={styles.subtitle}>
+          Choose the salon and role you want to use today.
+        </Text>
       </View>
 
       <FlatList
-        data={staffMemberships}
-        keyExtractor={(item) => item.businessId}
+        data={portalMemberships}
+        keyExtractor={(item) => `${item.businessId}:${item.role}`}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <Pressable style={styles.card} onPress={() => void onSelect(item)}>
             <View style={styles.iconWrap}>
-              <Ionicons name="business-outline" size={22} color={ownerColors.primary} />
+              <Ionicons
+                name={
+                  item.role === "owner" || item.role === "manager"
+                    ? "briefcase-outline"
+                    : item.role === "staff"
+                      ? "cut-outline"
+                      : "desktop-outline"
+                }
+                size={22}
+                color={ownerColors.primary}
+              />
             </View>
             <View style={styles.cardBody}>
               <Text style={styles.businessName}>{item.businessName}</Text>
-              <Text style={styles.roleLabel}>{roleLabel(item.role, item.position)}</Text>
+              <Text style={styles.roleLabel}>
+                {roleLabel(item.role, item.position)}
+              </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={ownerColors.textMuted} />
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={ownerColors.textMuted}
+            />
           </Pressable>
         )}
       />

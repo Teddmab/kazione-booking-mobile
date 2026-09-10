@@ -10,7 +10,6 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { AddExceptionSheet } from "@/components/staff/AddExceptionSheet";
@@ -26,6 +25,8 @@ import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useStaffAppointments } from "@/hooks/useStaffAppointments";
 import { useUpsertSelfOverride } from "@/hooks/useStaffSelf";
+import { useTenantContext } from "@/contexts/TenantContext";
+import { zonedDateKey } from "@/lib/businessTime";
 import { addDays, startOfWeekMonday, toIsoDateLocal } from "@/lib/staffCalendar";
 import type { StaffAppointment } from "@/services/staff/appointments";
 
@@ -36,7 +37,8 @@ export default function StaffCalendarScreen() {
   const { t } = useTranslation();
   const toast = useToast();
   const colors = useThemeColors();
-  const insets = useSafeAreaInsets();
+  const { tenant } = useTenantContext();
+  const timeZone = tenant?.timezone ?? "Europe/Tallinn";
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date()));
@@ -50,6 +52,7 @@ export default function StaffCalendarScreen() {
     start: string;
     end: string;
   }>({ type: "day_off", start: "10:00", end: "14:00" });
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   const upsertOverride = useUpsertSelfOverride();
@@ -102,21 +105,21 @@ export default function StaffCalendarScreen() {
   const countsByDate = useMemo(() => {
     const map: Record<string, number> = {};
     for (const a of weekAppts) {
-      const d = a.starts_at.slice(0, 10);
+      const d = zonedDateKey(a.starts_at, timeZone);
       map[d] = (map[d] ?? 0) + 1;
     }
     return map;
-  }, [weekAppts]);
+  }, [weekAppts, timeZone]);
 
   const dayAppts = useMemo(
     () =>
       weekAppts
-        .filter((a) => a.starts_at.slice(0, 10) === selectedDate)
+        .filter((a) => zonedDateKey(a.starts_at, timeZone) === selectedDate)
         .sort(
           (a, b) =>
             new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
         ),
-    [weekAppts, selectedDate],
+    [weekAppts, selectedDate, timeZone],
   );
 
   function goToday() {
@@ -150,6 +153,17 @@ export default function StaffCalendarScreen() {
     setExceptionOpen(true);
   }
 
+  async function onPullRefresh() {
+    setPullRefreshing(true);
+    try {
+      await weekQ.refetch();
+    } finally {
+      setPullRefreshing(false);
+    }
+  }
+
+  const initialLoading = weekQ.isLoading && !weekQ.data;
+
   return (
     <View style={styles.screen}>
       <StaffAppBar
@@ -170,12 +184,12 @@ export default function StaffCalendarScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 100 + insets.bottom },
+          { paddingBottom: 88 },
         ]}
         refreshControl={
           <RefreshControl
-            refreshing={weekQ.isRefetching}
-            onRefresh={() => void weekQ.refetch()}
+            refreshing={pullRefreshing}
+            onRefresh={() => void onPullRefresh()}
             tintColor={colors.primary}
           />
         }>
@@ -207,7 +221,7 @@ export default function StaffCalendarScreen() {
         </View>
 
         <View style={styles.padH}>
-          {weekQ.isLoading ? (
+          {initialLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
           ) : weekQ.isError ? (
             <Text style={styles.errorText}>{t("staffCalendar.errorLoad")}</Text>
@@ -221,7 +235,7 @@ export default function StaffCalendarScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.fabWrap, { bottom: 16 + insets.bottom }]}>
+      <View style={styles.fabWrap}>
         <Pressable
           style={styles.fab}
           onPress={() => openUnavailability("day_off")}>
@@ -325,6 +339,7 @@ function makeStyles(colors: ThemeColors) {
       position: "absolute",
       left: 16,
       right: 16,
+      bottom: 10,
     },
     fab: {
       flexDirection: "row",

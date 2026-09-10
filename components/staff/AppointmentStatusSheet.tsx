@@ -56,6 +56,7 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
   const insets = useSafeAreaInsets();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
+  const timeZone = tenant?.timezone ?? "Europe/Tallinn";
   const settings = useBusinessSettings(businessId);
   const arrivalTrackingEnabled =
     settings.data?.settings?.enable_arrival_tracking === true;
@@ -277,7 +278,9 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
             </View>
             <View style={styles.metaCell}>
               <Text style={styles.metaLabel}>{t("staffAppt.labelTime")}</Text>
-              <Text style={styles.metaValue}>{formatTime(appointment.starts_at)}</Text>
+              <Text style={styles.metaValue}>
+                {formatTime(appointment.starts_at, "en", timeZone)}
+              </Text>
             </View>
             <View style={styles.metaCell}>
               <Text style={styles.metaLabel}>{t("staffAppt.labelDuration")}</Text>
@@ -288,7 +291,11 @@ export function AppointmentStatusSheet({ appointment, visible, onClose }: Props)
             <View style={styles.metaCell}>
               <Text style={styles.metaLabel}>{t("staffAppt.labelStatus")}</Text>
               <View style={{ marginTop: 4 }}>
-                <StatusBadge status={appointment.status} />
+                <StatusBadge
+                  status={appointment.status}
+                  startsAt={appointment.starts_at}
+                  endsAt={appointment.ends_at}
+                />
               </View>
             </View>
           </View>

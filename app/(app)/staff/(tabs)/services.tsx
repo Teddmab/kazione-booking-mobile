@@ -248,8 +248,7 @@ export default function StaffServicesScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { tenant } = useTenantContext();
   const { data: self } = useStaffSelf();
-  const { data, isLoading, isError, error, refetch, isRefetching } =
-    useStaffServices();
+  const { data, isLoading, isError, error, refetch } = useStaffServices();
   const respond = useRespondToServiceOffer();
 
   const [search, setSearch] = useState("");
@@ -257,6 +256,7 @@ export default function StaffServicesScreen() {
   const [selected, setSelected] = useState<StaffService | null>(null);
   const [menuService, setMenuService] = useState<StaffService | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
 
   const selectedLink = useStaffReferralLink(selected?.id);
 
@@ -358,8 +358,11 @@ export default function StaffServicesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={() => void refetch()}
+            refreshing={pullRefreshing}
+            onRefresh={() => {
+              setPullRefreshing(true);
+              void refetch().finally(() => setPullRefreshing(false));
+            }}
             tintColor={colors.primary}
           />
         }>

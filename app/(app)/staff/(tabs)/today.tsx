@@ -39,6 +39,12 @@ import {
 import { useStaffSelf } from "@/hooks/useStaffSelf";
 import { useStaffServices } from "@/hooks/useStaffServices";
 import { useStaffTraining } from "@/hooks/useStaffTraining";
+import { useLiveNow } from "@/hooks/useLiveNow";
+import {
+  displayStatusI18nKey,
+  resolveAppointmentDisplayStatus,
+} from "@/lib/appointmentDisplayStatus";
+import { zonedDateKey } from "@/lib/businessTime";
 import { commissionLabel } from "@/lib/commissionLabel";
 import {
   clientDisplayName,
@@ -135,52 +141,35 @@ function rowAction(
 
 function statusBadge(
   status: string,
+  startsAt: string,
+  endsAt: string,
+  now: Date,
   colors: ThemeColors,
-  t: (key: string) => string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
 ): { label: string; bg: string; fg: string } {
-  switch (status) {
+  const display = resolveAppointmentDisplayStatus(
+    { status, starts_at: startsAt, ends_at: endsAt },
+    now,
+  );
+  const label = t(displayStatusI18nKey(display), { defaultValue: status });
+  switch (display) {
     case "arrived":
-      return {
-        label: t("staffStatus.arrived"),
-        bg: "#CFFAFE",
-        fg: "#0E7490",
-      };
+      return { label, bg: "#CFFAFE", fg: "#0E7490" };
     case "in_progress":
-      return {
-        label: t("staffStatus.in_progress"),
-        bg: colors.primarySurface,
-        fg: colors.primary,
-      };
+      return { label, bg: "#EDE9FE", fg: "#6D28D9" };
     case "confirmed":
-      return {
-        label: t("staffStatus.confirmed"),
-        bg: "#D1FAE5",
-        fg: "#047857",
-      };
+      return { label, bg: "#D1FAE5", fg: "#047857" };
     case "pending":
-      return {
-        label: t("staffStatus.pending"),
-        bg: colors.warningMuted,
-        fg: colors.warning,
-      };
-    case "completed":
-      return {
-        label: t("staffStatus.completed"),
-        bg: colors.bg,
-        fg: colors.textMuted,
-      };
+    case "offered":
     case "pending_completion":
-      return {
-        label: t("staffStatus.pending_completion"),
-        bg: colors.warningMuted,
-        fg: colors.warning,
-      };
+      return { label, bg: colors.warningMuted, fg: colors.warning };
+    case "late":
+    case "no_show":
+      return { label, bg: colors.dangerMuted, fg: colors.danger };
+    case "completed":
+      return { label, bg: colors.bg, fg: colors.textMuted };
     default:
-      return {
-        label: t("staffToday.upcoming"),
-        bg: colors.bg,
-        fg: colors.textMuted,
-      };
+      return { label, bg: colors.bg, fg: colors.textMuted };
   }
 }
 
@@ -220,6 +209,7 @@ export default function StaffTodayScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { user } = useAuthContext();
   const { tenant } = useTenantContext();
+  const timeZone = tenant?.timezone ?? "Europe/Tallinn";
   const { data: staffSelf } = useStaffSelf();
   const settings = useBusinessSettings(tenant?.businessId ?? "");
   const today = toIsoDateLocal(new Date());
@@ -241,11 +231,13 @@ export default function StaffTodayScreen() {
   const markNotesReviewed = useMarkNotesReviewed();
   const arrivalTrackingEnabled =
     settings.data?.settings?.enable_arrival_tracking === true;
+  const now = useLiveNow(15_000);
 
   const [selected, setSelected] = useState<StaffAppointment | null>(null);
   const [offerBusyId, setOfferBusyId] = useState<string | null>(null);
   const [voucherOpen, setVoucherOpen] = useState(false);
   const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
 
   const currency =
     settings.data?.settings?.currency_code ??
@@ -274,20 +266,20 @@ export default function StaffTodayScreen() {
   );
 
   const todayAppts = useMemo(
-    () => weekAppts.filter((a) => a.starts_at.slice(0, 10) === today),
-    [weekAppts, today],
+    () => weekAppts.filter((a) => zonedDateKey(a.starts_at, timeZone) === today),
+    [weekAppts, today, timeZone],
   );
 
   const upcomingAppts = useMemo(
     () =>
       weekAppts.filter((a) => {
-        const day = a.starts_at.slice(0, 10);
+        const day = zonedDateKey(a.starts_at, timeZone);
         if (a.status === "completed") return false;
         if (day > today) return true;
         if (day === today && a.status !== "no_show") return true;
         return false;
       }),
-    [weekAppts, today],
+    [weekAppts, today, timeZone],
   );
 
   const nextAppointment = useMemo(() => {
@@ -357,7 +349,6 @@ export default function StaffTodayScreen() {
     [todayAppts, servicesById],
   );
 
-  const now = new Date();
   const dayOfMonth = now.getDate();
   const daysInMonth = new Date(
     now.getFullYear(),
@@ -429,21 +420,21 @@ export default function StaffTodayScreen() {
   }
 
   async function onRefresh() {
-    await Promise.all([
-      weekQ.refetch(),
-      offersQ.refetch(),
-      servicesQ.refetch(),
-      trainingQ.refetch(),
-      perfQ.refetch(),
-    ]);
+    setPullRefreshing(true);
+    try {
+      await Promise.all([
+        weekQ.refetch(),
+        offersQ.refetch(),
+        servicesQ.refetch(),
+        trainingQ.refetch(),
+        perfQ.refetch(),
+      ]);
+    } finally {
+      setPullRefreshing(false);
+    }
   }
 
-  const refreshing =
-    weekQ.isRefetching ||
-    offersQ.isRefetching ||
-    servicesQ.isRefetching ||
-    trainingQ.isRefetching ||
-    perfQ.isRefetching;
+  const initialWeekLoading = weekQ.isLoading && !weekQ.data;
 
   return (
     <View style={styles.screen}>
@@ -466,7 +457,7 @@ export default function StaffTodayScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={pullRefreshing}
             onRefresh={() => void onRefresh()}
             tintColor={colors.primary}
           />
@@ -485,7 +476,7 @@ export default function StaffTodayScreen() {
             ) : null}
           </View>
 
-          {weekQ.isLoading ? (
+          {initialWeekLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
           ) : !nextAppointment ? (
             <View style={styles.emptyBox}>
@@ -516,7 +507,7 @@ export default function StaffTodayScreen() {
                   </Text>
                   <Text style={styles.nextMeta} numberOfLines={1}>
                     {nextAppointment.service.name} ·{" "}
-                    {formatTime(nextAppointment.starts_at)} ·{" "}
+                    {formatTime(nextAppointment.starts_at, i18n.language, timeZone)} ·{" "}
                     {nextAppointment.service.duration_minutes}m
                   </Text>
                   <View style={styles.nextMetaRow}>
@@ -605,7 +596,7 @@ export default function StaffTodayScreen() {
             </Pressable>
           </View>
 
-          {weekQ.isLoading ? (
+          {initialWeekLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} />
           ) : weekQ.isError ? (
             <Text style={styles.emptyText}>{t("staffToday.errorLoad")}</Text>
@@ -622,7 +613,14 @@ export default function StaffTodayScreen() {
           ) : (
             <View style={{ gap: 8 }}>
               {upcomingAppts.slice(0, 6).map((a) => {
-                const badge = statusBadge(a.status, colors, t);
+                const badge = statusBadge(
+                  a.status,
+                  a.starts_at,
+                  a.ends_at,
+                  now,
+                  colors,
+                  t,
+                );
                 return (
                   <View key={a.id} style={styles.scheduleRow}>
                     <View style={styles.scheduleTimeCol}>
@@ -630,7 +628,7 @@ export default function StaffTodayScreen() {
                         {dayLabel(a.starts_at, locale, today, t)}
                       </Text>
                       <Text style={styles.scheduleTime}>
-                        {formatTime(a.starts_at)}
+                        {formatTime(a.starts_at, i18n.language, timeZone)}
                       </Text>
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
@@ -680,7 +678,9 @@ export default function StaffTodayScreen() {
               <Text style={styles.cardTitle}>{t("staffToday.yourWork")}</Text>
               <Pressable
                 onPress={() =>
-                  router.push("/(app)/staff/(tabs)/performance" as Href)
+                  router.push(
+                    "/(app)/staff/(tabs)/performance?tab=overview" as Href,
+                  )
                 }>
                 <Text style={styles.linkText}>
                   {t("staffToday.viewPerformance")}
@@ -907,7 +907,7 @@ export default function StaffTodayScreen() {
                       offer.client.first_name,
                       offer.client.last_name,
                     )}{" "}
-                    · {formatTime(offer.starts_at)} ·{" "}
+                    · {formatTime(offer.starts_at, i18n.language, timeZone)} ·{" "}
                     {money(offer.price, currency)}
                   </Text>
                   <View style={styles.offerActions}>
@@ -1012,7 +1012,7 @@ export default function StaffTodayScreen() {
           <View style={styles.statStrip}>
             <View style={styles.statCell}>
               <Text style={styles.statValue}>
-                {weekQ.isLoading ? "—" : String(todayAppts.length)}
+                {initialWeekLoading ? "—" : String(todayAppts.length)}
               </Text>
               <Text style={styles.statLabel}>
                 {t("staffToday.statAppointments")}
@@ -1020,7 +1020,7 @@ export default function StaffTodayScreen() {
             </View>
             <View style={styles.statCell}>
               <Text style={styles.statValue}>
-                {weekQ.isLoading ? "—" : `${scheduledHoursToday.toFixed(0)}h`}
+                {initialWeekLoading ? "—" : `${scheduledHoursToday.toFixed(0)}h`}
               </Text>
               <Text style={styles.statLabel}>
                 {t("staffToday.statScheduled")}
@@ -1029,7 +1029,7 @@ export default function StaffTodayScreen() {
             {arrivalTrackingEnabled ? (
               <View style={styles.statCell}>
                 <Text style={[styles.statValue, { color: "#0891B2" }]}>
-                  {weekQ.isLoading ? "—" : String(arrivedCount)}
+                  {initialWeekLoading ? "—" : String(arrivedCount)}
                 </Text>
                 <Text style={styles.statLabel}>
                   {t("staffToday.statArrived")}
@@ -1038,7 +1038,7 @@ export default function StaffTodayScreen() {
             ) : null}
             <View style={styles.statCell}>
               <Text style={styles.statValue}>
-                {weekQ.isLoading ? "—" : String(upcomingTodayCount)}
+                {initialWeekLoading ? "—" : String(upcomingTodayCount)}
               </Text>
               <Text style={styles.statLabel}>
                 {t("staffToday.statUpcoming")}
@@ -1063,7 +1063,7 @@ export default function StaffTodayScreen() {
           <Pressable
             onPress={() =>
               router.push(
-                "/(app)/staff/(tabs)/performance?tab=earnings" as Href,
+                "/(app)/staff/(tabs)/performance" as Href,
               )
             }>
             <Text style={styles.linkText}>{t("staffToday.viewEarnings")}</Text>

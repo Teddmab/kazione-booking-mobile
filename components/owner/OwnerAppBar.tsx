@@ -62,7 +62,11 @@ export function OwnerAppBar({ title, subtitle, displayTitle, rightSlot, bottomSl
             style={styles.iconBtn}
             onPress={() => router.push("/(app)/owner/notifications" as Href)}
             accessibilityLabel="Notifications">
-            <Ionicons name="notifications-outline" size={22} color={ownerColors.text} />
+            <Ionicons
+              name={unread > 0 ? "notifications" : "notifications-outline"}
+              size={24}
+              color={unread > 0 ? ownerColors.primary : ownerColors.text}
+            />
             {unread > 0 ? <View style={styles.dot} /> : null}
           </Pressable>
           <OwnerAvatarMenu initial={initial} />
@@ -118,15 +122,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    backgroundColor: "transparent",
   },
   dot: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: 6,
+    right: 6,
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: ownerColors.warning,
+    backgroundColor: ownerColors.danger,
     borderWidth: 1.5,
     borderColor: ownerColors.bg,
   },

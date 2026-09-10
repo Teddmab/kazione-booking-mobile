@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchTenantBootstrap, tenantQueryKey } from '@/contexts/TenantContext';
 import { ApiError } from '@/lib/api';
 import { authClient } from '@/lib/auth';
+import { isPortalMembership } from '@/lib/workspaceRouting';
 
 function isCredentialError(message: string): boolean {
   const m = message.toLowerCase();
@@ -47,10 +48,12 @@ export function useAuthLogin() {
               queryFn: fetchTenantBootstrap,
               staleTime: 0,
             });
-            const hasStaff = bootstrap.businesses.some((b) => b.role === 'staff');
-            if (!hasStaff) {
+            const hasPortal = bootstrap.businesses.some((b) =>
+              isPortalMembership(b.role),
+            );
+            if (!hasPortal) {
               await authClient.signOut();
-              setError(t('auth.staffOnlyError'));
+              setError(t('auth.clientNotAllowedBody'));
               return;
             }
           } catch (err) {
@@ -67,7 +70,6 @@ export function useAuthLogin() {
 
         router.replace('/');
       } catch (err) {
-        // Catches throws from getSupabase() (missing env vars) or other unexpected errors
         const msg =
           err instanceof ApiError
             ? err.message

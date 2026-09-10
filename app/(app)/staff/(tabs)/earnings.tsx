@@ -1,10 +1,6 @@
 import { Redirect, type Href } from "expo-router";
 
-/** Earnings lives under Performance (tab=earnings) — keep this route for deep links. */
-export default function StaffEarningsScreen() {
-  return (
-    <Redirect
-      href={"/(app)/staff/(tabs)/performance?tab=earnings" as Href}
-    />
-  );
+/** Deep-link alias — Gains is the default Performance screen. */
+export default function StaffEarningsRedirect() {
+  return <Redirect href={"/(app)/staff/(tabs)/performance" as Href} />;
 }

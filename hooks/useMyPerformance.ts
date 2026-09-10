@@ -6,11 +6,29 @@ import { fetchMyPerformance } from "@/services/staff/profile";
 export type PeriodKey = "7d" | "30d" | "90d";
 
 export function periodRange(key: PeriodKey): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - (key === "7d" ? 7 : key === "30d" ? 30 : 90));
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { from: fmt(from), to: fmt(to) };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const now = new Date();
+
+  if (key === "7d") {
+    // Current calendar week (Mon–Sun) — matches activity staff see on Today.
+    const day = now.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
+    const to = new Date(from);
+    to.setDate(from.getDate() + 6);
+    return { from: fmt(from), to: fmt(to) };
+  }
+
+  if (key === "30d") {
+    // Full calendar month — same window as Today "Votre activité".
+    return calendarMonthRange();
+  }
+
+  const from = new Date(now);
+  from.setDate(from.getDate() - 90);
+  return { from: fmt(from), to: fmt(now) };
 }
 
 export function calendarMonthRange(): { from: string; to: string } {

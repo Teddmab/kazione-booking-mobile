@@ -24,6 +24,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useStaffShell } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useBusinessSettings } from "@/hooks/useBusinessSettings";
+import { useWorkspaceSwitch } from "@/hooks/useWorkspaceSwitch";
 
 function isMoreItemActive(
   key: string,
@@ -33,12 +34,12 @@ function isMoreItemActive(
   const tabValue = Array.isArray(tab) ? tab[0] : tab;
   if (key === "clients") return pathname.includes("/clients");
   if (key === "reports") {
-    return pathname.includes("/performance") && tabValue !== "earnings";
+    return pathname.includes("/performance") && tabValue === "overview";
   }
   if (key === "earnings") {
     return (
       pathname.includes("/earnings") ||
-      (pathname.includes("/performance") && tabValue === "earnings")
+      (pathname.includes("/performance") && tabValue !== "overview")
     );
   }
   if (key === "training") return pathname.includes("/training");
@@ -59,6 +60,7 @@ export function StaffMoreSheet() {
   const { tenant } = useTenantContext();
   const { signOut } = useAuthContext();
   const settingsQ = useBusinessSettings(tenant?.businessId ?? "");
+  const { canSwitch, switchWorkspace } = useWorkspaceSwitch();
 
   const items = useMemo(() => {
     const perms = settingsQ.data?.settings?.staff_module_permissions ?? {};
@@ -141,6 +143,25 @@ export function StaffMoreSheet() {
             })}
 
             <View style={styles.divider} />
+
+            {canSwitch ? (
+              <Pressable
+                style={styles.row}
+                onPress={() => {
+                  closeMore();
+                  switchWorkspace();
+                }}>
+                <View style={styles.iconWrap}>
+                  <Ionicons
+                    name="swap-horizontal-outline"
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text style={styles.rowLabel}>{t("common.switchWorkspace")}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+              </Pressable>
+            ) : null}
 
             <View style={styles.langBlock}>
               <Text style={styles.sectionLabel}>{t("nav.language")}</Text>

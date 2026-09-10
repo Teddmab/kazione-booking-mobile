@@ -8,13 +8,11 @@ import {
 } from "@/components/staff/calendar/BookingApptCard";
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
+import { useTenantContext } from "@/contexts/TenantContext";
+import { useLiveNow } from "@/hooks/useLiveNow";
+import { zonedWallMinutes } from "@/lib/businessTime";
 import { GRID_END_HOUR, GRID_START_HOUR } from "@/lib/staffCalendar";
 import type { StaffAppointment } from "@/services/staff/appointments";
-
-function wallMinutes(iso: string): number {
-  const d = new Date(iso);
-  return d.getUTCHours() * 60 + d.getUTCMinutes();
-}
 
 function labelHour(h: number): string {
   return `${String(h).padStart(2, "0")}:00`;
@@ -40,12 +38,13 @@ function findConflicts(appts: StaffAppointment[]): Set<string> {
 function hourCovered(
   hour: number,
   appts: StaffAppointment[],
+  timeZone: string,
 ): boolean {
   const start = hour * 60;
   const end = (hour + 1) * 60;
   return appts.some((a) => {
-    const s = wallMinutes(a.starts_at);
-    const e = wallMinutes(a.ends_at);
+    const s = zonedWallMinutes(a.starts_at, timeZone);
+    const e = zonedWallMinutes(a.ends_at, timeZone);
     return s < end && e > start;
   });
 }
@@ -63,7 +62,9 @@ export function BookingDayTimeline({
 }: Props) {
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const now = useMemo(() => new Date(), []);
+  const { tenant } = useTenantContext();
+  const timeZone = tenant?.timezone ?? "Europe/Tallinn";
+  const now = useLiveNow(15_000);
   const conflictIds = useMemo(() => findConflicts(appointments), [appointments]);
 
   const sorted = useMemo(
@@ -84,20 +85,47 @@ export function BookingDayTimeline({
   const apptsByHour = useMemo(() => {
     const map = new Map<number, StaffAppointment[]>();
     for (const a of sorted) {
-      const h = Math.floor(wallMinutes(a.starts_at) / 60);
-      if (h < GRID_START_HOUR || h >= GRID_END_HOUR) continue;
+      const startMin = zonedWallMinutes(a.starts_at, timeZone);
+      const endMin = zonedWallMinutes(a.ends_at, timeZone);
+      if (endMin <= GRID_START_HOUR * 60 || startMin >= GRID_END_HOUR * 60) {
+        continue;
+      }
+      const h = Math.min(
+        GRID_END_HOUR - 1,
+        Math.max(GRID_START_HOUR, Math.floor(startMin / 60)),
+      );
       const arr = map.get(h) ?? [];
       arr.push(a);
       map.set(h, arr);
     }
     return map;
-  }, [sorted]);
+  }, [sorted, timeZone]);
 
   const freeBlockHours = useMemo(() => {
     const set = new Set<number>();
+    if (sorted.length === 0) return set;
+
+    const firstApptHour = Math.max(
+      GRID_START_HOUR,
+      Math.floor(zonedWallMinutes(sorted[0].starts_at, timeZone) / 60),
+    );
+    const lastApptEndHour = Math.min(
+      GRID_END_HOUR,
+      Math.ceil(zonedWallMinutes(sorted[sorted.length - 1].ends_at, timeZone) / 60),
+    );
+
     let gapStart: number | null = null;
     for (const hour of hours) {
-      const free = !hourCovered(hour, sorted);
+      if (hour < firstApptHour) {
+        gapStart = null;
+        continue;
+      }
+      if (hour >= lastApptEndHour + 1) {
+        gapStart = null;
+        continue;
+      }
+
+      const free = !hourCovered(hour, sorted, timeZone);
       if (free) {
         if (gapStart == null) {
           gapStart = hour;
@@ -108,7 +136,7 @@ export function BookingDayTimeline({
       }
     }
     return set;
-  }, [hours, sorted]);
+  }, [hours, sorted, timeZone]);
 
   return (
     <View style={styles.timeline}>

@@ -16,13 +16,17 @@ import { StaffAppBar } from "@/components/staff/StaffAppBar";
 import { StaffEarningsPanel } from "@/components/staff/StaffEarningsPanel";
 import { ownerFonts, ownerStyles } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
+import { useTenantContext } from "@/contexts/TenantContext";
 import {
   periodRange,
   useMyPerformance,
   type PeriodKey,
 } from "@/hooks/useMyPerformance";
+import { useBusinessSettings } from "@/hooks/useBusinessSettings";
 import { useStaffAppointments } from "@/hooks/useStaffAppointments";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
+import { zonedDateKey } from "@/lib/businessTime";
+import { formatCurrency } from "@/lib/format";
 import type { StaffAppointment } from "@/services/staff/appointments";
 import type { StaffPerformance } from "@/services/staff/profile";
 
@@ -34,9 +38,9 @@ const PERIOD_LABEL_KEYS: Record<PeriodKey, string> = {
   "90d": "staffPerf.periodCustom",
 };
 
-function weekdayShort(locale: string, dayIndex: number): string {
-  const date = new Date(2024, 0, 7 + dayIndex);
-  return date.toLocaleDateString(locale, { weekday: "short" });
+function weekdayShort(locale: string, mondayBasedIndex: number): string {
+  const date = new Date(2024, 0, 1 + mondayBasedIndex);
+  return date.toLocaleDateString(locale, { weekday: "short" }).replace(/\.$/, "");
 }
 
 function completionPct(rate: number | undefined | null): string {
@@ -44,12 +48,20 @@ function completionPct(rate: number | undefined | null): string {
   return `${Math.round(rate * 100)}%`;
 }
 
-function buildWeeklyActivity(appts: StaffAppointment[], locale: string) {
+/** Activity by weekday in business timezone (Mon→Sun). */
+function buildWeeklyActivity(
+  appts: StaffAppointment[],
+  locale: string,
+  timeZone: string,
+) {
   const counts = Array(7).fill(0) as number[];
   for (const a of appts) {
     if (a.status === "cancelled") continue;
-    const dow = new Date(a.starts_at).getUTCDay();
-    counts[dow] += 1;
+    const key = zonedDateKey(a.starts_at, timeZone);
+    const d = new Date(`${key}T12:00:00`);
+    const jsDay = d.getDay();
+    const idx = jsDay === 0 ? 6 : jsDay - 1;
+    counts[idx] += 1;
   }
   return counts.map((count, i) => ({
     name: weekdayShort(locale, i),
@@ -69,15 +81,15 @@ function buildTopServices(appts: StaffAppointment[]) {
   return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 5);
 }
 
-/** Same grouping as web StaffReportsPage periodTrend (W1…W5 by day-of-month). */
-function buildPeriodTrend(appts: StaffAppointment[]) {
+function buildPeriodTrend(appts: StaffAppointment[], timeZone: string) {
   const weekMap: Record<
     string,
     { week: string; completed: number; cancelled: number; total: number }
   > = {};
   for (const a of appts) {
-    const d = new Date(a.starts_at);
-    const weekNum = Math.ceil(d.getUTCDate() / 7);
+    const keyDate = zonedDateKey(a.starts_at, timeZone);
+    const d = new Date(`${keyDate}T12:00:00`);
+    const weekNum = Math.ceil(d.getDate() / 7);
     const key = `W${weekNum}`;
     if (!weekMap[key]) {
       weekMap[key] = { week: key, completed: 0, cancelled: 0, total: 0 };
@@ -89,6 +101,36 @@ function buildPeriodTrend(appts: StaffAppointment[]) {
   return Object.values(weekMap).sort(
     (a, b) => Number(a.week.slice(1)) - Number(b.week.slice(1)),
   );
+}
+
+/** Derive activity stats from appointments so UI matches Today (not only completed). */
+function deriveActivityStats(appts: StaffAppointment[], api: StaffPerformance | null | undefined) {
+  const active = appts.filter(
+    (a) => a.status !== "cancelled" && a.status !== "no_show",
+  );
+  const completed = appts.filter((a) => a.status === "completed");
+  const uniqueClients = new Set(
+    active.map((a) => a.client?.id).filter(Boolean),
+  ).size;
+  const revenueFromCompleted = completed.reduce(
+    (s, a) => s + Number(a.price ?? 0),
+    0,
+  );
+  const completionRate =
+    active.length > 0 ? completed.length / active.length : 0;
+
+  return {
+    bookings: active.length,
+    unique_clients: uniqueClients || (api?.unique_clients ?? 0),
+    completion_rate: api?.completion_rate ?? completionRate,
+    avg_rating: api?.avg_rating ?? 0,
+    revenue: api?.revenue ?? revenueFromCompleted,
+    commission_amount: api?.commission_amount ?? 0,
+    referrals_initiated: api?.referrals_initiated ?? 0,
+    referral_conversions: api?.referral_conversions ?? 0,
+    referral_revenue: api?.referral_revenue ?? 0,
+    display_name: api?.display_name,
+  };
 }
 
 function PeriodSelector({
@@ -124,11 +166,11 @@ function PeriodSelector({
 }
 
 function StatsRow({
-  perf,
+  stats,
   loading,
   styles,
 }: {
-  perf: StaffPerformance | null | undefined;
+  stats: ReturnType<typeof deriveActivityStats> | null;
   loading: boolean;
   styles: ReturnType<typeof makeStyles>;
 }) {
@@ -136,22 +178,22 @@ function StatsRow({
   const cells = [
     {
       label: t("staffPerf.statAppts"),
-      value: loading ? "…" : perf ? String(perf.bookings) : "—",
+      value: loading ? "…" : stats ? String(stats.bookings) : "—",
     },
     {
       label: t("staffPerf.statClients"),
-      value: loading ? "…" : perf ? String(perf.unique_clients) : "—",
+      value: loading ? "…" : stats ? String(stats.unique_clients) : "—",
     },
     {
       label: t("staffPerf.statCompletion"),
-      value: loading ? "…" : completionPct(perf?.completion_rate),
+      value: loading ? "…" : completionPct(stats?.completion_rate),
     },
     {
       label: t("staffPerf.statRating"),
       value: loading
         ? "…"
-        : perf && perf.avg_rating > 0
-          ? `${perf.avg_rating.toFixed(1)} ★`
+        : stats && stats.avg_rating > 0
+          ? `${stats.avg_rating.toFixed(1)} ★`
           : "—",
     },
   ];
@@ -270,16 +312,21 @@ export default function StaffPerformanceScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string }>();
+  const { tenant } = useTenantContext();
+  const timeZone = tenant?.timezone ?? "Europe/Tallinn";
   const { data: self } = useStaffSelf();
+  const settings = useBusinessSettings(tenant?.businessId ?? "");
+  const currency = settings.data?.settings?.currency_code ?? "EUR";
 
   const initialTab: ScreenTab =
-    params.tab === "earnings" ? "earnings" : "overview";
+    params.tab === "overview" ? "overview" : "earnings";
   const [tab, setTab] = useState<ScreenTab>(initialTab);
   const [period, setPeriod] = useState<PeriodKey>("30d");
   const [earningsRefreshNonce, setEarningsRefreshNonce] = useState(0);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
 
   useEffect(() => {
-    setTab(params.tab === "earnings" ? "earnings" : "overview");
+    setTab(params.tab === "overview" ? "overview" : "earnings");
   }, [params.tab]);
 
   const {
@@ -288,85 +335,87 @@ export default function StaffPerformanceScreen() {
     isError,
     error,
     refetch,
-    isRefetching,
   } = useMyPerformance(period);
 
   const { from, to } = periodRange(period);
   const {
     data: appointments = [],
     refetch: refetchAppts,
-    isRefetching: apptsRefetching,
+    isLoading: apptsLoading,
   } = useStaffAppointments(from, to, 500);
 
+  const activityStats = useMemo(
+    () => deriveActivityStats(appointments, perf),
+    [appointments, perf],
+  );
+
   const weeklyActivity = useMemo(
-    () => buildWeeklyActivity(appointments, i18n.language),
-    [appointments, i18n.language],
+    () => buildWeeklyActivity(appointments, i18n.language, timeZone),
+    [appointments, i18n.language, timeZone],
   );
   const topServices = useMemo(
     () => buildTopServices(appointments),
     [appointments],
   );
   const periodTrend = useMemo(
-    () => buildPeriodTrend(appointments),
-    [appointments],
+    () => buildPeriodTrend(appointments, timeZone),
+    [appointments, timeZone],
   );
 
   function selectTab(next: ScreenTab) {
     setTab(next);
     router.replace(
-      (next === "earnings"
-        ? "/(app)/staff/(tabs)/performance?tab=earnings"
+      (next === "overview"
+        ? "/(app)/staff/(tabs)/performance?tab=overview"
         : "/(app)/staff/(tabs)/performance") as Href,
     );
   }
 
   async function onRefresh() {
-    if (tab === "earnings") {
-      setEarningsRefreshNonce((n) => n + 1);
-      return;
+    setPullRefreshing(true);
+    try {
+      if (tab === "earnings") {
+        setEarningsRefreshNonce((n) => n + 1);
+        return;
+      }
+      await Promise.all([refetch(), refetchAppts()]);
+    } finally {
+      setPullRefreshing(false);
     }
-    await Promise.all([refetch(), refetchAppts()]);
   }
+
+  const statsLoading = isLoading && apptsLoading && !perf && appointments.length === 0;
 
   return (
     <View style={styles.screen}>
       <StaffAppBar
-        title={t("staffPerf.title")}
-        subtitle={perf?.display_name ?? self?.display_name ?? undefined}
+        title={
+          tab === "earnings" ? t("staffEarnings.title") : t("staffPerf.title")
+        }
+        subtitle={
+          activityStats.display_name ?? self?.display_name ?? undefined
+        }
         displayTitle
+        onBack={tab === "overview" ? () => selectTab("earnings") : undefined}
       />
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.bg }}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={
-              tab === "overview" && (isRefetching || apptsRefetching)
-            }
+            refreshing={pullRefreshing}
             onRefresh={() => void onRefresh()}
             tintColor={colors.primary}
           />
         }>
-        <View style={styles.tabRow}>
-          {(["overview", "earnings"] as ScreenTab[]).map((key) => {
-            const active = tab === key;
-            return (
-              <Pressable
-                key={key}
-                style={[styles.tabChip, active && styles.tabChipActive]}
-                onPress={() => selectTab(key)}>
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>
-                  {key === "overview"
-                    ? t("staffPerf.tabOverview")
-                    : t("staffEarnings.title")}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
         {tab === "earnings" ? (
-          <StaffEarningsPanel refreshNonce={earningsRefreshNonce} />
+          <StaffEarningsPanel
+            refreshNonce={earningsRefreshNonce}
+            onOpenPerformance={() => selectTab("overview")}
+            onOpenPayoutDetail={() =>
+              router.push("/(app)/staff/(tabs)/profile" as Href)
+            }
+          />
         ) : (
           <>
             <PeriodSelector value={period} onChange={setPeriod} styles={styles} />
@@ -376,9 +425,40 @@ export default function StaffPerformanceScreen() {
               error={isError ? (error as Error) : null}
               empty={false}
               onRetry={() => void refetch()}>
-              <StatsRow perf={perf} loading={isLoading} styles={styles} />
+              <StatsRow
+                stats={activityStats}
+                loading={statsLoading}
+                styles={styles}
+              />
 
-              {isLoading && !perf ? (
+              <View style={styles.moneyRow}>
+                <View style={styles.moneyCard}>
+                  <Text style={styles.moneyLabel}>
+                    {t("staffToday.serviceValue")}
+                  </Text>
+                  <Text style={styles.moneyValue}>
+                    {formatCurrency(
+                      activityStats.revenue,
+                      currency,
+                      i18n.language,
+                    )}
+                  </Text>
+                </View>
+                <View style={styles.moneyCard}>
+                  <Text style={styles.moneyLabel}>
+                    {t("staffToday.commissionEarned")}
+                  </Text>
+                  <Text style={[styles.moneyValue, { color: colors.primary }]}>
+                    {formatCurrency(
+                      activityStats.commission_amount,
+                      currency,
+                      i18n.language,
+                    )}
+                  </Text>
+                </View>
+              </View>
+
+              {statsLoading ? (
                 <ActivityIndicator
                   style={{ marginVertical: 16 }}
                   color={colors.primary}
@@ -404,7 +484,44 @@ export default function StaffPerformanceScreen() {
                 </View>
               ) : null}
 
-              {!perf && !isLoading ? (
+              {(activityStats.referrals_initiated > 0 ||
+                activityStats.referral_conversions > 0) ? (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>{t("staffPerf.referrals")}</Text>
+                  <View style={styles.refRow}>
+                    <Text style={styles.refLabel}>
+                      {t("staffPerf.referralsInitiated")}
+                    </Text>
+                    <Text style={styles.refValue}>
+                      {activityStats.referrals_initiated}
+                    </Text>
+                  </View>
+                  <View style={styles.refRow}>
+                    <Text style={styles.refLabel}>
+                      {t("staffPerf.referralConversions")}
+                    </Text>
+                    <Text style={styles.refValue}>
+                      {activityStats.referral_conversions}
+                    </Text>
+                  </View>
+                  <View style={styles.refRow}>
+                    <Text style={styles.refLabel}>
+                      {t("staffPerf.referralRevenue")}
+                    </Text>
+                    <Text style={styles.refValue}>
+                      {formatCurrency(
+                        activityStats.referral_revenue,
+                        currency,
+                        i18n.language,
+                      )}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {!statsLoading &&
+              activityStats.bookings === 0 &&
+              appointments.length === 0 ? (
                 <Text style={styles.emptyHint}>{t("staffPerf.noData")}</Text>
               ) : null}
             </QueryState>
@@ -419,36 +536,13 @@ function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
     content: { padding: 16, paddingBottom: 40, gap: 12 },
-    tabRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
-    tabChip: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingVertical: 10,
-      alignItems: "center",
-      backgroundColor: colors.card,
-    },
-    tabChipActive: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySurface,
-    },
-    tabText: {
-      fontSize: 14,
-      color: colors.textMuted,
-      fontFamily: ownerFonts.medium,
-    },
-    tabTextActive: {
-      color: colors.primary,
-      fontFamily: ownerFonts.semiBold,
-    },
     periodRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
     periodChip: {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 999,
       paddingHorizontal: 14,
-      paddingVertical: 8,
+      paddingVertical: 7,
       backgroundColor: colors.card,
     },
     periodChipActive: {
@@ -487,6 +581,26 @@ function makeStyles(colors: ThemeColors) {
       color: colors.textMuted,
       marginTop: 2,
       fontFamily: ownerFonts.medium,
+    },
+    moneyRow: { flexDirection: "row", gap: 8 },
+    moneyCard: {
+      flex: 1,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      gap: 4,
+    },
+    moneyLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.medium,
+    },
+    moneyValue: {
+      fontSize: 18,
+      fontFamily: ownerFonts.bold,
+      color: colors.text,
     },
     card: {
       ...ownerStyles.card,
@@ -539,35 +653,49 @@ function makeStyles(colors: ThemeColors) {
       flexDirection: "row",
       justifyContent: "space-between",
       marginBottom: 4,
+      gap: 8,
     },
     topName: {
       flex: 1,
       fontSize: 13,
       color: colors.text,
-      marginRight: 8,
       fontFamily: ownerFonts.medium,
     },
     topCount: {
       fontSize: 13,
-      fontWeight: "600",
-      color: colors.text,
+      color: colors.textMuted,
       fontFamily: ownerFonts.semiBold,
     },
     topTrack: {
       height: 6,
       borderRadius: 3,
-      backgroundColor: colors.bg,
+      backgroundColor: colors.border,
       overflow: "hidden",
     },
     topFill: {
       height: "100%",
-      borderRadius: 3,
       backgroundColor: colors.primary,
+      borderRadius: 3,
+    },
+    refRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+    },
+    refLabel: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontFamily: ownerFonts.regular,
+    },
+    refValue: {
+      fontSize: 13,
+      color: colors.text,
+      fontFamily: ownerFonts.semiBold,
     },
     emptyHint: {
-      fontSize: 13,
-      color: colors.textDim,
       textAlign: "center",
+      color: colors.textMuted,
+      fontSize: 13,
       marginTop: 8,
       fontFamily: ownerFonts.regular,
     },
