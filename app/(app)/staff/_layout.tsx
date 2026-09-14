@@ -7,12 +7,18 @@ import { useThemeColors } from "@/contexts/AppThemeContext";
 import { StaffShellProvider } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useStaffPushRegistration } from "@/hooks/useStaffPushRegistration";
+import { useStaffAppointmentsRealtime } from "@/hooks/useStaffRealtime";
 
 export default function StaffLayout() {
   const { tenant, loading } = useTenantContext();
   const colors = useThemeColors();
+  const isStaff = !!tenant && tenant.role === "staff";
 
-  useStaffPushRegistration(!!tenant && tenant.role === "staff");
+  useStaffPushRegistration(isStaff);
+  useStaffAppointmentsRealtime(
+    isStaff ? tenant.businessId : "",
+    isStaff ? (tenant.staffProfileId ?? "") : "",
+  );
 
   if (loading) return <LoadingScreen />;
   if (!tenant) return <Redirect href={"/" as Href} />;

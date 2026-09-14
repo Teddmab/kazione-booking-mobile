@@ -23,23 +23,31 @@ export function formatCurrency(
 }
 
 /**
- * Salon appointments store wall-clock time as UTC (`…T10:00:00.000Z` = 10:00 salon).
- * Match web staff/owner dashboards: always format with timeZone UTC.
+ * Appointment timestamps are genuine UTC (S59). Format in the business
+ * timezone so staff see salon wall-clock time — same as web `fmtTime(iso, tz)`.
  */
-export function formatTime(iso: string, language = "en"): string {
+export function formatTime(
+  iso: string,
+  language = "en",
+  timeZone = "Europe/Tallinn",
+): string {
   return new Date(iso).toLocaleTimeString(localeForLanguage(language), {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone,
   });
 }
 
-export function formatDate(iso: string, language = "en"): string {
+export function formatDate(
+  iso: string,
+  language = "en",
+  timeZone = "Europe/Tallinn",
+): string {
   return new Date(iso).toLocaleDateString(localeForLanguage(language), {
     weekday: "short",
     day: "numeric",
     month: "short",
-    timeZone: "UTC",
+    timeZone,
   });
 }
 

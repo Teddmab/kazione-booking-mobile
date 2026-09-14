@@ -32,16 +32,16 @@ export const STAFF_MORE_ITEMS: StaffDrawerNavItem[] = [
     icon: "people-outline",
   },
   {
-    key: "reports",
-    labelKey: "sidebar.reports",
-    href: "/(app)/staff/(tabs)/performance" as Href,
-    icon: "bar-chart-outline",
-  },
-  {
     key: "earnings",
     labelKey: "sidebar.earnings",
-    href: "/(app)/staff/(tabs)/performance?tab=earnings" as Href,
+    href: "/(app)/staff/(tabs)/performance" as Href,
     icon: "wallet-outline",
+  },
+  {
+    key: "reports",
+    labelKey: "sidebar.reports",
+    href: "/(app)/staff/(tabs)/performance?tab=overview" as Href,
+    icon: "bar-chart-outline",
   },
   {
     key: "training",

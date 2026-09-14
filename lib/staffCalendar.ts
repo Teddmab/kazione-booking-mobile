@@ -1,14 +1,14 @@
-export const GRID_START_HOUR = 7;
+import { zonedWallMinutes } from "@/lib/businessTime";
+
+export const GRID_START_HOUR = 6;
 export const GRID_END_HOUR = 23;
 export const GRID_HOURS = GRID_END_HOUR - GRID_START_HOUR;
 export const HOUR_PX = 64;
 export const TOTAL_PX = GRID_HOURS * HOUR_PX;
 export const TIME_COL_W = 48;
 
-export function minutesFromGridStart(iso: string): number {
-  const d = new Date(iso);
-  // Wall-clock salon time is stored as UTC — use UTC parts for grid placement.
-  return d.getUTCHours() * 60 + d.getUTCMinutes() - GRID_START_HOUR * 60;
+export function minutesFromGridStart(iso: string, timeZone = "Europe/Tallinn"): number {
+  return zonedWallMinutes(iso, timeZone) - GRID_START_HOUR * 60;
 }
 
 export function apptTopPx(iso: string): number {

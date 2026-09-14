@@ -1,22 +1,40 @@
 import type { MemberRole, TenantContextValue } from "@/contexts/TenantContext";
 
-export type WorkspaceRoute = "/(app)/staff/(tabs)/today";
+export type WorkspaceRoute =
+  | "/(app)/owner/(tabs)"
+  | "/(app)/staff/(tabs)/today"
+  | "/(app)/receptionist/home";
 
-/** Mobile app is staff-only — owner / manager / receptionist use the web app. */
+/** Roles allowed to use the mobile app (not client marketplace). */
+export function isPortalMembership(role: MemberRole): boolean {
+  return (
+    role === "owner" ||
+    role === "manager" ||
+    role === "staff" ||
+    role === "receptionist"
+  );
+}
+
 export function isStaffMembership(role: MemberRole): boolean {
   return role === "staff";
 }
 
+export function isOwnerMembership(role: MemberRole): boolean {
+  return role === "owner" || role === "manager";
+}
+
 export function workspaceRouteForMembership(
-  _role: MemberRole,
+  role: MemberRole,
 ): WorkspaceRoute {
+  if (role === "owner" || role === "manager") return "/(app)/owner/(tabs)";
+  if (role === "receptionist") return "/(app)/receptionist/home";
   return "/(app)/staff/(tabs)/today";
 }
 
 export function workspaceRouteForTenant(
-  _tenant: TenantContextValue,
+  tenant: TenantContextValue,
 ): WorkspaceRoute {
-  return "/(app)/staff/(tabs)/today";
+  return workspaceRouteForMembership(tenant.role);
 }
 
 export function roleLabel(role: MemberRole, position?: string | null): string {

@@ -12,6 +12,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useStaffShell } from "@/contexts/StaffShellContext";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useStaffSelf } from "@/hooks/useStaffSelf";
+import { useWorkspaceSwitch } from "@/hooks/useWorkspaceSwitch";
 import { roleLabel } from "@/lib/workspaceRouting";
 
 interface Props {
@@ -20,6 +21,8 @@ interface Props {
   displayTitle?: boolean;
   bottomSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
+  /** When set, shows a back chevron before the title. */
+  onBack?: () => void;
 }
 
 export function StaffAppBar({
@@ -28,6 +31,7 @@ export function StaffAppBar({
   displayTitle,
   bottomSlot,
   rightSlot,
+  onBack,
 }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -37,6 +41,7 @@ export function StaffAppBar({
   const { tenant } = useTenantContext();
   const { data: staff } = useStaffSelf();
   const { colors } = useAppTheme();
+  const { canSwitch, switchWorkspace } = useWorkspaceSwitch();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const staffName = staff
@@ -90,22 +95,34 @@ export function StaffAppBar({
       ]}>
       <View style={styles.row}>
         <View style={styles.titleBlock}>
-          <Text
-            style={[
-              styles.title,
-              { color: colors.text },
-              displayTitle && styles.titleDisplay,
-            ]}
-            numberOfLines={1}>
-            {resolvedTitle}
-          </Text>
-          {resolvedSubtitle ? (
-            <Text
-              style={[styles.subtitle, { color: colors.textMuted }]}
-              numberOfLines={1}>
-              {resolvedSubtitle}
-            </Text>
+          {onBack ? (
+            <Pressable
+              onPress={onBack}
+              hitSlop={10}
+              style={styles.backBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.back", { defaultValue: "Retour" })}>
+              <Ionicons name="chevron-back" size={22} color={colors.text} />
+            </Pressable>
           ) : null}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={[
+                styles.title,
+                { color: colors.text },
+                displayTitle && styles.titleDisplay,
+              ]}
+              numberOfLines={1}>
+              {resolvedTitle}
+            </Text>
+            {resolvedSubtitle ? (
+              <Text
+                style={[styles.subtitle, { color: colors.textMuted }]}
+                numberOfLines={1}>
+                {resolvedSubtitle}
+              </Text>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -169,6 +186,23 @@ export function StaffAppBar({
                 {t("staffNav.more")}
               </Text>
             </Pressable>
+            {canSwitch ? (
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setMenuOpen(false);
+                  switchWorkspace();
+                }}>
+                <Ionicons
+                  name="swap-horizontal-outline"
+                  size={18}
+                  color={colors.text}
+                />
+                <Text style={[styles.menuItemText, { color: colors.text }]}>
+                  {t("common.switchWorkspace")}
+                </Text>
+              </Pressable>
+            ) : null}
             <Pressable style={styles.menuItem} onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={18} color={colors.danger} />
               <Text style={[styles.menuItemText, { color: colors.danger }]}>
@@ -189,7 +223,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  titleBlock: { flex: 1, minWidth: 0 },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  backBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 2,
+  },
   title: {
     fontSize: 18,
     fontWeight: "700",

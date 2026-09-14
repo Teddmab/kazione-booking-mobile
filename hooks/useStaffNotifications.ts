@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
@@ -66,6 +67,20 @@ export function useStaffNotifications(enabled = true) {
       channel.unsubscribe();
       void supabase.removeChannel(channel);
     };
+  }, [enabled, userId, queryClient]);
+
+  useEffect(() => {
+    if (!enabled || !userId) return;
+
+    const onChange = (state: AppStateStatus) => {
+      if (state === "active") {
+        void queryClient.invalidateQueries({
+          queryKey: ["staff-notifications", userId],
+        });
+      }
+    };
+    const sub = AppState.addEventListener("change", onChange);
+    return () => sub.remove();
   }, [enabled, userId, queryClient]);
 
   return query;

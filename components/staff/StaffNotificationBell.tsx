@@ -14,6 +14,7 @@ export function StaffNotificationBell() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const unread = useStaffUnreadNotificationCount();
+  const hasUnread = unread > 0;
 
   return (
     <Pressable
@@ -21,10 +22,16 @@ export function StaffNotificationBell() {
       onPress={() => router.push("/(app)/staff/(tabs)/notifications" as Href)}
       accessibilityLabel={t("staffNotifPage.title")}
       accessibilityRole="button">
-      <Ionicons name="notifications-outline" size={22} color={colors.text} />
-      {unread > 0 ? (
+      <Ionicons
+        name={hasUnread ? "notifications" : "notifications-outline"}
+        size={24}
+        color={hasUnread ? colors.primary : colors.text}
+      />
+      {hasUnread ? (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{unread > 9 ? "9+" : String(unread)}</Text>
+          <Text style={styles.badgeText}>
+            {unread > 9 ? "9+" : String(unread)}
+          </Text>
         </View>
       ) : null}
     </Pressable>
@@ -40,6 +47,7 @@ function makeStyles(colors: ThemeColors) {
       alignItems: "center",
       justifyContent: "center",
       position: "relative",
+      backgroundColor: "transparent",
     },
     badge: {
       position: "absolute",

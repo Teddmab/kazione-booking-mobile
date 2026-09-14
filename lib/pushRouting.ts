@@ -32,7 +32,12 @@ export function staffHrefForPushData(data: StaffPushData): string {
   if (
     data.appointment_id ||
     type.includes("appointment") ||
-    type === "new_booking"
+    type === "new_booking" ||
+    type === "action_required" ||
+    type === "pending_completion" ||
+    type === "completion_confirmed" ||
+    type === "completion_reminder" ||
+    type === "payment_received"
   ) {
     return "/(app)/staff/(tabs)/calendar";
   }

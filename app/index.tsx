@@ -12,7 +12,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { tenantQueryKey, useTenantContext } from "@/contexts/TenantContext";
 import { ApiError } from "@/lib/api";
 import {
-  isStaffMembership,
+  isPortalMembership,
   workspaceRouteForTenant,
 } from "@/lib/workspaceRouting";
 
@@ -37,23 +37,20 @@ function workspaceErrorHint(err: Error): string {
 export default function Index() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user, loading: authLoading, signOut } = useAuthContext();
+  const { user, loading: authLoading, role, signOut } = useAuthContext();
   const {
     tenant,
     businesses,
     loading: tenantLoading,
     error: tenantError,
+    needsRoleSelection,
   } = useTenantContext();
   const [staffWelcomeDone, setStaffWelcomeDone] = useState<boolean | null>(null);
 
-  const staffMemberships = useMemo(
-    () => businesses.filter((b) => isStaffMembership(b.role)),
+  const portalMemberships = useMemo(
+    () => businesses.filter((b) => isPortalMembership(b.role)),
     [businesses],
   );
-
-  const goLogin = () => {
-    void signOut().then(() => router.replace("/(auth)/login" as Href));
-  };
 
   useEffect(() => {
     if (!user?.id || tenant?.role !== "staff") {
@@ -101,24 +98,56 @@ export default function Index() {
     );
   }
 
-  if (staffMemberships.length === 0) {
-    return <ClientNotAllowed onSignOut={goLogin} />;
-  }
-
-  // Multi-workspace without an active staff tenant → picker (AuthGate allows this screen).
-  if (staffMemberships.length > 1 && (!tenant || !isStaffMembership(tenant.role))) {
+  if (needsRoleSelection) {
     return <Redirect href={"/(auth)/role-select" as Href} />;
   }
 
-  if (!tenant || !isStaffMembership(tenant.role)) {
-    return <ClientNotAllowed onSignOut={goLogin} />;
+  if (!tenant || !isPortalMembership(tenant.role)) {
+    if (portalMemberships.length === 0 && (role === "client" || role === null)) {
+      return (
+        <ClientNotAllowed
+          onSignOut={() => {
+            void signOut().then(() => router.replace("/(auth)/login" as Href));
+          }}
+        />
+      );
+    }
+    if (portalMemberships.length > 1) {
+      return <Redirect href={"/(auth)/role-select" as Href} />;
+    }
+    if (portalMemberships.length === 0) {
+      return (
+        <ClientNotAllowed
+          onSignOut={() => {
+            void signOut().then(() => router.replace("/(auth)/login" as Href));
+          }}
+        />
+      );
+    }
+    return (
+      <View style={styles.errorBox}>
+        <Text style={styles.errorTitle}>Aucun salon associé</Text>
+        <Text style={styles.errorMsg}>
+          Ce compte n&apos;est lié à aucun établissement. Connectez-vous avec un compte owner ou staff.
+        </Text>
+        <Pressable
+          style={styles.retryBtn}
+          onPress={() => {
+            void signOut().then(() => router.replace("/(auth)/login" as Href));
+          }}>
+          <Text style={styles.retryText}>Retour à la connexion</Text>
+        </Pressable>
+      </View>
+    );
   }
 
-  if (staffWelcomeDone === null) {
-    return <LoadingScreen message="Chargement…" />;
-  }
-  if (!staffWelcomeDone) {
-    return <Redirect href={"/(app)/staff/welcome" as Href} />;
+  if (tenant.role === "staff") {
+    if (staffWelcomeDone === null) {
+      return <LoadingScreen message="Chargement…" />;
+    }
+    if (!staffWelcomeDone) {
+      return <Redirect href={"/(app)/staff/welcome" as Href} />;
+    }
   }
 
   return <Redirect href={workspaceRouteForTenant(tenant) as Href} />;

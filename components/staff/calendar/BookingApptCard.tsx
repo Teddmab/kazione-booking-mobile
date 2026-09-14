@@ -5,75 +5,73 @@ import { useTranslation } from "react-i18next";
 
 import { ownerFonts } from "@/constants/ownerTheme";
 import { useThemeColors, type ThemeColors } from "@/contexts/AppThemeContext";
+import { useTenantContext } from "@/contexts/TenantContext";
+import {
+  displayStatusI18nKey,
+  resolveAppointmentDisplayStatus,
+  type AppointmentDisplayStatus,
+} from "@/lib/appointmentDisplayStatus";
 import { formatTime } from "@/lib/format";
 import type { StaffAppointment } from "@/services/staff/appointments";
 
-export type BookingVisualStatus =
-  | "confirmed"
-  | "in_progress"
-  | "pending"
-  | "late"
-  | "arrived"
-  | "completed"
-  | "conflict"
-  | "other";
+export type BookingVisualStatus = AppointmentDisplayStatus;
 
+/** @deprecated use resolveAppointmentDisplayStatus — kept for call sites */
 export function resolveVisualStatus(
   appt: StaffAppointment,
   now = new Date(),
   isConflict = false,
 ): BookingVisualStatus {
-  if (isConflict) return "conflict";
-  if (appt.status === "in_progress") return "in_progress";
-  if (appt.status === "arrived") return "arrived";
-  if (appt.status === "completed" || appt.status === "pending_completion") {
-    return "completed";
-  }
-  if (appt.status === "pending" || appt.status === "offered") return "pending";
-  if (
-    appt.status === "confirmed" &&
-    new Date(appt.starts_at) < now
-  ) {
-    return "late";
-  }
-  if (appt.status === "confirmed") return "confirmed";
-  return "other";
+  return resolveAppointmentDisplayStatus(appt, now, isConflict);
 }
 
-const STATUS_COLORS: Record<
-  BookingVisualStatus,
-  { bar: string; badgeBg: string; badgeFg: string; time: string; cardBg: string }
-> = {
+type CardPalette = {
+  bar: string;
+  badgeBg: string;
+  badgeFg: string;
+  time: string;
+  cardBg: string;
+};
+
+/** Status-only palettes — display is independent of position / page reload. */
+const STATUS_COLORS: Record<AppointmentDisplayStatus, CardPalette> = {
   confirmed: {
-    bar: "#10B981",
+    bar: "#059669",
     badgeBg: "#D1FAE5",
     badgeFg: "#047857",
     time: "#059669",
-    cardBg: "#F0FDF4",
+    cardBg: "#ECFDF5",
   },
   in_progress: {
-    bar: "#8B5CF6",
+    bar: "#7C3AED",
     badgeBg: "#EDE9FE",
     badgeFg: "#6D28D9",
     time: "#7C3AED",
     cardBg: "#F5F3FF",
   },
   pending: {
-    bar: "#F59E0B",
+    bar: "#D97706",
     badgeBg: "#FEF3C7",
     badgeFg: "#B45309",
     time: "#D97706",
-    cardBg: "#FFFBEB",
+    cardBg: "#FFF8E7",
+  },
+  offered: {
+    bar: "#D97706",
+    badgeBg: "#FEF3C7",
+    badgeFg: "#B45309",
+    time: "#D97706",
+    cardBg: "#FFF8E7",
   },
   late: {
-    bar: "#EF4444",
+    bar: "#DC2626",
     badgeBg: "#FEE2E2",
     badgeFg: "#B91C1C",
     time: "#DC2626",
     cardBg: "#FEF2F2",
   },
   arrived: {
-    bar: "#06B6D4",
+    bar: "#0891B2",
     badgeBg: "#CFFAFE",
     badgeFg: "#0E7490",
     time: "#0891B2",
@@ -85,6 +83,27 @@ const STATUS_COLORS: Record<
     badgeFg: "#64748B",
     time: "#64748B",
     cardBg: "#F8FAFC",
+  },
+  pending_completion: {
+    bar: "#D97706",
+    badgeBg: "#FEF3C7",
+    badgeFg: "#B45309",
+    time: "#D97706",
+    cardBg: "#FFF8E7",
+  },
+  cancelled: {
+    bar: "#94A3B8",
+    badgeBg: "#F1F5F9",
+    badgeFg: "#64748B",
+    time: "#64748B",
+    cardBg: "#F8FAFC",
+  },
+  no_show: {
+    bar: "#DC2626",
+    badgeBg: "#FEE2E2",
+    badgeFg: "#B91C1C",
+    time: "#DC2626",
+    cardBg: "#FEF2F2",
   },
   conflict: {
     bar: "#DC2626",
@@ -102,6 +121,12 @@ const STATUS_COLORS: Record<
   },
 };
 
+export function paletteForBooking(
+  visualStatus: BookingVisualStatus,
+): CardPalette {
+  return STATUS_COLORS[visualStatus] ?? STATUS_COLORS.other;
+}
+
 interface Props {
   appointment: StaffAppointment;
   visualStatus: BookingVisualStatus;
@@ -117,20 +142,17 @@ export function BookingApptCard({
 }: Props) {
   const { t } = useTranslation();
   const colors = useThemeColors();
+  const { tenant } = useTenantContext();
+  const timeZone = tenant?.timezone ?? "Europe/Tallinn";
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const palette = STATUS_COLORS[visualStatus];
+  const palette = paletteForBooking(visualStatus);
   const isConflict = visualStatus === "conflict";
 
-  const statusLabel =
-    visualStatus === "late"
-      ? t("staffCalendar.statusLate")
-      : visualStatus === "conflict"
-        ? t("staffCalendar.statusConflict")
-        : t(`staffStatus.${appointment.status}`, {
-            defaultValue: appointment.status,
-          });
+  const statusLabel = t(displayStatusI18nKey(visualStatus), {
+    defaultValue: visualStatus,
+  });
 
-  const timeRange = `${formatTime(appointment.starts_at)} – ${formatTime(appointment.ends_at)}`;
+  const timeRange = `${formatTime(appointment.starts_at, "en", timeZone)} – ${formatTime(appointment.ends_at, "en", timeZone)}`;
   const client = `${appointment.client.first_name} ${appointment.client.last_name}`.trim();
 
   return (

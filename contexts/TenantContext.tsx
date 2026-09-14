@@ -24,6 +24,8 @@ export interface TenantContextValue {
   position: string | null;
   staffProfileId: string | null;
   commissionRate: number;
+  /** IANA timezone from businesses.timezone (e.g. Europe/Tallinn). */
+  timezone: string;
 }
 
 /** Raw GET /me business row (Edge Function). */
@@ -36,6 +38,7 @@ interface MeBusinessRow {
   position?: string | null;
   staffProfileId?: string | null;
   commissionRate?: number | null;
+  timezone?: string | null;
 }
 
 /** Raw GET /me body (Edge Function). */
@@ -80,6 +83,7 @@ function normalizeMembership(row: MeBusinessRow): TenantContextValue {
     position: row.position ?? null,
     staffProfileId: row.staffProfileId ?? null,
     commissionRate: row.commissionRate ?? 0,
+    timezone: row.timezone?.trim() || "Europe/Tallinn",
   };
 }
 

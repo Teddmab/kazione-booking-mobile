@@ -14,7 +14,9 @@ export function useStaffServices() {
     queryKey: ["staff-services", businessId],
     queryFn: () => fetchStaffServices(businessId),
     enabled: !!businessId,
-    staleTime: 2 * 60_000,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
 }
 

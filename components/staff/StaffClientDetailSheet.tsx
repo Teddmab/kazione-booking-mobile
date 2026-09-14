@@ -315,7 +315,7 @@ export function StaffClientDetailSheet({
             </View>
             <View style={styles.metric}>
               <Text style={styles.metricValue}>
-                {formatRelativeVisit(client.last_visit)}
+                {formatRelativeVisit(client.last_visit, t)}
               </Text>
               <Text style={styles.metricLabel}>{t("staffClientsPage.lastVisit")}</Text>
             </View>
