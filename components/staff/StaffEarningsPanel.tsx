@@ -205,11 +205,6 @@ export function StaffEarningsPanel({
   // Hero focuses on unpaid when present (maquette); otherwise show period total.
   const heroAmount = pending > 0 ? pending : (summary?.total_earned ?? 0);
   const heroPending = pending > 0;
-  const revenue = useMemo(
-    () => rows.reduce((sum, r) => sum + (r.price ?? 0), 0),
-    [rows],
-  );
-
   const trend = useMemo(
     () => buildWeeklyTrend(rows, i18n.language, timezone),
     [rows, i18n.language, timezone],
@@ -325,42 +320,6 @@ export function StaffEarningsPanel({
             </View>
           </View>
         </View>
-      </View>
-
-      {/* Generated revenue — secondary, compact */}
-      <View style={styles.revenueCard}>
-        <View style={[styles.iconCircleSm, { backgroundColor: "#DBEAFE" }]}>
-          <Ionicons name="trending-up" size={14} color="#2563EB" />
-        </View>
-        <View style={styles.revenueBody}>
-          <View style={styles.titleRow}>
-            <Text style={styles.revenueTitle}>
-              {t("staffEarnings.generatedRevenue")}
-            </Text>
-            <Pressable
-              hitSlop={8}
-              onPress={() =>
-                showInfo(
-                  t("staffEarnings.generatedRevenue"),
-                  t("staffEarnings.generatedRevenueBody"),
-                )
-              }>
-              <Ionicons
-                name="information-circle-outline"
-                size={14}
-                color={colors.textDim}
-              />
-            </Pressable>
-          </View>
-          <Text style={styles.revenueHint} numberOfLines={2}>
-            {t("staffEarnings.generatedRevenueBody")}
-          </Text>
-        </View>
-        <Text style={styles.revenueAmount}>
-          {isLoading
-            ? "…"
-            : formatCurrency(revenue, currency, i18n.language)}
-        </Text>
       </View>
 
       {/* Weekly trend — no card frame */}
@@ -482,35 +441,15 @@ export function StaffEarningsPanel({
                     </Text>
                   </View>
                   <View style={styles.detailMoney}>
-                    <Text style={styles.moneyLabel}>
-                      {t("staffEarnings.colRevenue")}
-                    </Text>
-                    <Text style={styles.moneyValue}>
-                      {formatCurrency(row.price, currency, i18n.language)}
-                    </Text>
-                    <Text style={[styles.moneyLabel, { marginTop: 6 }]}>
-                      {t("staffEarnings.colCommission")}
-                    </Text>
-                    <Text style={styles.commAmount}>
+                    <Text
+                      style={[
+                        styles.commAmount,
+                        {
+                          color: paid ? colors.success : colors.warning,
+                        },
+                      ]}>
                       {formatCurrency(amount, currency, i18n.language)}
                     </Text>
-                    <View
-                      style={[
-                        styles.rowBadge,
-                        paid ? styles.confirmedPill : styles.pendingPill,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.rowBadgeText,
-                          {
-                            color: paid ? colors.textMuted : colors.primary,
-                          },
-                        ]}>
-                        {paid
-                          ? t("staffEarnings.confirmed")
-                          : t("staffEarnings.pending")}
-                      </Text>
-                    </View>
                   </View>
                 </View>
               );
@@ -619,13 +558,6 @@ function makeStyles(colors: ThemeColors) {
       alignItems: "center",
       justifyContent: "center",
     },
-    iconCircleSm: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      alignItems: "center",
-      justifyContent: "center",
-    },
     heroMain: { flex: 1, minWidth: 0 },
     titleRow: {
       flexDirection: "row",
@@ -700,35 +632,6 @@ function makeStyles(colors: ThemeColors) {
       color: colors.textMuted,
       fontFamily: ownerFonts.regular,
       marginTop: 1,
-    },
-    revenueCard: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
-    revenueBody: { flex: 1, minWidth: 0 },
-    revenueTitle: {
-      fontSize: 12,
-      fontFamily: ownerFonts.semiBold,
-      color: colors.text,
-    },
-    revenueHint: {
-      fontSize: 10,
-      lineHeight: 13,
-      color: colors.textMuted,
-      fontFamily: ownerFonts.regular,
-      marginTop: 2,
-    },
-    revenueAmount: {
-      fontSize: 15,
-      fontFamily: ownerFonts.semiBold,
-      color: "#2563EB",
     },
     sectionBlock: {
       paddingTop: 4,
@@ -826,7 +729,7 @@ function makeStyles(colors: ThemeColors) {
     },
     detailRow: {
       flexDirection: "row",
-      alignItems: "flex-start",
+      alignItems: "center",
       gap: 12,
       paddingVertical: 14,
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -863,35 +766,13 @@ function makeStyles(colors: ThemeColors) {
     },
     detailMoney: {
       alignItems: "flex-end",
-      minWidth: 88,
-    },
-    moneyLabel: {
-      fontSize: 10,
-      color: colors.textDim,
-      fontFamily: ownerFonts.medium,
-      textTransform: "uppercase",
-    },
-    moneyValue: {
-      fontSize: 13,
-      fontFamily: ownerFonts.medium,
-      color: colors.text,
-      marginTop: 1,
+      justifyContent: "center",
+      paddingLeft: 8,
     },
     commAmount: {
-      fontSize: 14,
+      fontSize: 18,
       fontFamily: ownerFonts.bold,
-      color: colors.text,
-      marginTop: 1,
-    },
-    rowBadge: {
-      marginTop: 6,
-      borderRadius: 999,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-    },
-    rowBadgeText: {
-      fontSize: 10,
-      fontFamily: ownerFonts.medium,
+      letterSpacing: -0.3,
     },
     moreLink: {
       alignItems: "center",
