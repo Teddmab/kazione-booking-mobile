@@ -182,10 +182,7 @@ export default function StaffCalendarScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: 88 },
-        ]}
+        contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             refreshing={pullRefreshing}
@@ -235,17 +232,6 @@ export default function StaffCalendarScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.fabWrap}>
-        <Pressable
-          style={styles.fab}
-          onPress={() => openUnavailability("day_off")}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.fabText}>
-            {t("staffCalendar.addUnavailability")}
-          </Text>
-        </Pressable>
-      </View>
-
       <AppointmentStatusSheet
         appointment={selected}
         visible={!!selected}
@@ -291,7 +277,7 @@ export default function StaffCalendarScreen() {
 function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.bg },
-    content: { gap: 12, paddingTop: 8 },
+    content: { gap: 12, paddingTop: 8, paddingBottom: 24 },
     padH: { paddingHorizontal: 16 },
     scanBtn: {
       flexDirection: "row",
@@ -334,32 +320,6 @@ function makeStyles(colors: ThemeColors) {
       textAlign: "center",
       marginTop: 24,
       fontFamily: ownerFonts.medium,
-    },
-    fabWrap: {
-      position: "absolute",
-      left: 16,
-      right: 16,
-      bottom: 10,
-    },
-    fab: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      backgroundColor: colors.primary,
-      borderRadius: 14,
-      paddingVertical: 14,
-      shadowColor: "#000",
-      shadowOpacity: 0.12,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 4,
-    },
-    fabText: {
-      color: "#fff",
-      fontSize: 14,
-      fontWeight: "700",
-      fontFamily: ownerFonts.bold,
     },
   });
 }

@@ -11,11 +11,11 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { QueryState } from "@/components/owner/QueryState";
 import { StaffAppBar } from "@/components/staff/StaffAppBar";
+import { StaffAvailabilitySheet } from "@/components/staff/StaffAvailabilitySheet";
 import {
   ServiceDetailSheet,
   shareReferralUrl,
@@ -28,7 +28,7 @@ import {
   useRespondToServiceOffer,
   useStaffServices,
 } from "@/hooks/useStaffServices";
-import { useStaffSelf } from "@/hooks/useStaffSelf";
+import { useStaffSelf, useUpdateSelfSchedule } from "@/hooks/useStaffSelf";
 import {
   commissionEarnings,
 } from "@/lib/commissionLabel";
@@ -242,7 +242,6 @@ function PendingServiceCard({
 
 export default function StaffServicesScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const toast = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -250,6 +249,7 @@ export default function StaffServicesScreen() {
   const { data: self } = useStaffSelf();
   const { data, isLoading, isError, error, refetch } = useStaffServices();
   const respond = useRespondToServiceOffer();
+  const updateSchedule = useUpdateSelfSchedule();
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -257,6 +257,7 @@ export default function StaffServicesScreen() {
   const [menuService, setMenuService] = useState<StaffService | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [pullRefreshing, setPullRefreshing] = useState(false);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
 
   const selectedLink = useStaffReferralLink(selected?.id);
 
@@ -421,9 +422,7 @@ export default function StaffServicesScreen() {
                 key={svc.id}
                 service={svc}
                 onOpen={() => setSelected(svc)}
-                onManageAvailability={() =>
-                  router.push("/(app)/staff/(tabs)/profile" as Href)
-                }
+                onManageAvailability={() => setAvailabilityOpen(true)}
                 onMenu={() => setMenuService(svc)}
                 styles={styles}
                 colors={colors}
@@ -432,6 +431,26 @@ export default function StaffServicesScreen() {
           )}
         </QueryState>
       </ScrollView>
+
+      <StaffAvailabilitySheet
+        visible={availabilityOpen}
+        workingHours={self?.working_hours ?? []}
+        busy={updateSchedule.isPending}
+        onClose={() => setAvailabilityOpen(false)}
+        onSave={(schedule) => {
+          updateSchedule.mutate(schedule, {
+            onSuccess: () => {
+              setAvailabilityOpen(false);
+              toast.success(
+                t("staffAccount.scheduleTitle"),
+                t("staffAccount.schedulesSaved"),
+              );
+            },
+            onError: (err: Error) =>
+              toast.error(t("staffAccount.errorSave"), err.message),
+          });
+        }}
+      />
 
       <ServiceDetailSheet
         service={selected}
