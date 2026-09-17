@@ -1,37 +1,56 @@
+import { useMemo, useState } from "react";
 import { useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
   Pressable,
   RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { HorizontalBarChart } from "@/components/owner/analytics/HorizontalBarChart";
-import { SectionHeader } from "@/components/owner/analytics/SectionHeader";
-import { WeekBreakdownBar } from "@/components/owner/analytics/WeekBreakdownBar";
-import { AIInsightsCard } from "@/components/owner/dashboard/AIInsightsCard";
-import { FinanceOverviewCard } from "@/components/owner/dashboard/FinanceOverviewCard";
-import { PromotionsCard } from "@/components/owner/dashboard/PromotionsCard";
+import { OwnerAttentionSection } from "@/components/owner/dashboard/OwnerAttentionSection";
+import { OwnerCapacityPanel } from "@/components/owner/dashboard/OwnerCapacityPanel";
+import { OwnerPeriodPerformanceCard } from "@/components/owner/dashboard/OwnerPeriodPerformanceCard";
+import { OwnerScheduleSection } from "@/components/owner/dashboard/OwnerScheduleSection";
+import { OwnerStaffTodayPanel } from "@/components/owner/dashboard/OwnerStaffTodayPanel";
+import { OwnerTodayKpis } from "@/components/owner/dashboard/OwnerTodayKpis";
 import { StaffPerformanceCard } from "@/components/owner/dashboard/StaffPerformanceCard";
-import {
-  DashboardKpiPanel,
-  type DashboardKpiItem,
-} from "@/components/owner/dashboard/DashboardKpiPanel";
 import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
 import { QueryState } from "@/components/owner/QueryState";
 import { RevenueBarChart } from "@/components/owner/RevenueBarChart";
-import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
-import { useAIInsights } from "@/hooks/useOwnerAI";
-import { useOwnerDashboardKPIs } from "@/hooks/useOwnerAppointments";
-import { useRevenueBreakdown, useRevenueSummary, useStaffPerformanceFinance } from "@/hooks/useOwnerFinance";
-import { useStorefrontPromotions } from "@/hooks/useOwnerStorefront";
+import { useOwnerAppointments, useOwnerDashboardKPIs } from "@/hooks/useOwnerAppointments";
+import {
+  useRevenueBreakdown,
+  useRevenueSummary,
+  useStaffPerformanceFinance,
+} from "@/hooks/useOwnerFinance";
+import { useOwnerProducts } from "@/hooks/useOwnerProducts";
+import { useOwnerReviews } from "@/hooks/useOwnerReviews";
+import { useOwnerStaff } from "@/hooks/useOwnerStaff";
 import { useLanguage } from "@/hooks/useLanguage";
-import { formatCurrency, formatDateLong, formatTime } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
+import {
+  addDaysToDateStr,
+  businessDayOfWeek,
+  businessLocalDateStr,
+  businessTodayStr,
+  computeBusinessPresetRange,
+  computeCapacityWeek,
+  computeDashboardPeriodMetrics,
+  computeFullWeekRange,
+  fmtBusinessDateLong,
+  fmtDateRangeLabel,
+  todaysWorkingHours,
+  type PerformancePreset,
+} from "@/lib/ownerDashboardLayout";
+import type { AppointmentWithRelations } from "@/types/owner";
+
+const PRESETS: PerformancePreset[] = ["thisWeek", "thisMonth", "last30d"];
 
 export default function OwnerDashboardScreen() {
   const { t, i18n } = useTranslation();
@@ -39,112 +58,198 @@ export default function OwnerDashboardScreen() {
   const { language } = useLanguage();
   const { tenant } = useTenantContext();
   const businessId = tenant?.businessId ?? "";
+  const tz = tenant?.timezone ?? "UTC";
+  const locale = i18n.language || "en";
+
+  const [perfPreset, setPerfPreset] = useState<PerformancePreset>("thisWeek");
+
+  const todayStr = businessTodayStr(tz);
+  const dateLabel = fmtBusinessDateLong(todayStr, locale);
+  const weekRange = useMemo(() => computeFullWeekRange(todayStr), [todayStr]);
+  const perfRange = useMemo(
+    () => computeBusinessPresetRange(perfPreset, tz),
+    [perfPreset, tz],
+  );
+  const perfRangeLabel = fmtDateRangeLabel(perfRange.from, perfRange.to, locale);
+  const capacityEnd = addDaysToDateStr(todayStr, 6);
 
   const { data: kpis, isLoading, isError, error, refetch, isRefetching } =
     useOwnerDashboardKPIs(businessId);
-  const revenue = useRevenueSummary(businessId, "month");
-  const breakdown = useRevenueBreakdown(businessId, "month");
-  const staffPerfToday = useStaffPerformanceFinance(businessId, "today");
-  const staffPerfMonth = useStaffPerformanceFinance(businessId, "month");
-  const promotions = useStorefrontPromotions(businessId);
-  const aiInsights = useAIInsights(businessId, 30);
+  const productsQ = useOwnerProducts(businessId);
+  const staffQ = useOwnerStaff(businessId);
+  const pendingCompletionQ = useOwnerAppointments(businessId, {
+    status: ["pending_completion"],
+    limit: 50,
+  });
+  const weekApptsQ = useOwnerAppointments(businessId, {
+    dateFrom: weekRange.from,
+    dateTo: weekRange.to,
+    limit: 300,
+  });
+  const capacityApptsQ = useOwnerAppointments(businessId, {
+    dateFrom: todayStr,
+    dateTo: capacityEnd,
+    limit: 500,
+  });
+  const perfApptsQ = useOwnerAppointments(businessId, {
+    dateFrom: perfRange.from,
+    dateTo: perfRange.to,
+    limit: 500,
+  });
+  const revenue = useRevenueSummary(businessId, "custom", perfRange);
+  const breakdown = useRevenueBreakdown(businessId, "custom", perfRange);
+  const staffPerf = useStaffPerformanceFinance(businessId, "custom", perfRange);
+  const reviewsQ = useOwnerReviews(businessId, 1);
 
-  const commissionsDue = (staffPerfMonth.data ?? []).reduce(
-    (sum, row) => sum + row.commission_amount,
-    0,
+  const staffList = staffQ.data ?? [];
+  const lowStock = (productsQ.data?.products ?? []).filter((p) => p.is_low_stock && p.is_active);
+  const pendingInvites = staffList.filter((s) => s.is_pending_invite);
+  const needsSetup = staffList.filter(
+    (s) => !s.is_pending_invite && !(s.working_hours ?? []).some((d) => d.is_working),
+  );
+  const pendingCompletion = [...(pendingCompletionQ.data?.appointments ?? [])].sort((a, b) =>
+    a.starts_at.localeCompare(b.starts_at),
+  );
+  const attentionTotal =
+    lowStock.length + pendingInvites.length + needsSetup.length + pendingCompletion.length;
+
+  const todayDow = businessDayOfWeek(todayStr);
+  const staffOnToday = kpis?.staff_on_today ?? [];
+  const staffEntries = staffOnToday.map((s) => {
+    const full = staffList.find((sm) => sm.id === s.staff_profile_id);
+    const hours = full ? todaysWorkingHours(full.working_hours ?? [], todayDow) : null;
+    const end = hours?.end?.slice(0, 5) ?? null;
+    return {
+      id: s.staff_profile_id,
+      display_name: s.display_name,
+      avatar_url: full?.avatar_url ?? null,
+      until: end ? t("owner.dashUntil", { time: end }) : null,
+    };
+  });
+  const latestEnd = staffEntries
+    .map((e) => e.until)
+    .filter(Boolean)
+    .pop();
+  const staffCaption =
+    latestEnd ?? t("owner.kpiWorkingTodayCount", { count: staffEntries.length });
+
+  const weekDays = useMemo(() => {
+    const days: { date: string; appts: AppointmentWithRelations[] }[] = [];
+    for (let i = 0; i < 7; i++) {
+      days.push({ date: addDaysToDateStr(weekRange.from, i), appts: [] });
+    }
+    for (const a of weekApptsQ.data?.appointments ?? []) {
+      const iso = businessLocalDateStr(a.starts_at, tz);
+      const day = days.find((d) => d.date === iso);
+      if (day) day.appts.push(a);
+    }
+    for (const d of days) d.appts.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    return days;
+  }, [weekApptsQ.data, weekRange.from, tz]);
+
+  const activeStaff = staffList.filter((s) => s.is_active && !s.is_pending_invite);
+  const capacityDays = useMemo(
+    () =>
+      computeCapacityWeek(
+        todayStr,
+        activeStaff,
+        capacityApptsQ.data?.appointments ?? [],
+        tz,
+      ),
+    [todayStr, activeStaff, capacityApptsQ.data, tz],
   );
 
-  const todayLabel = formatDateLong(new Date(), i18n.language);
-  const upcoming = kpis?.upcoming_today ?? [];
-  const staffOnToday = kpis?.staff_on_today ?? [];
-  const monthTotal = kpis?.this_month?.total ?? 0;
-  const monthRevenue = kpis?.this_month?.revenue ?? 0;
-  const avgTicket = monthTotal > 0 ? monthRevenue / monthTotal : 0;
-  const avgRating = kpis?.avg_rating ?? 0;
-  const completionRate = kpis?.completion_rate_30d ?? 0;
+  const perfAppts = perfApptsQ.data?.appointments ?? [];
+  const perfMetrics = useMemo(() => computeDashboardPeriodMetrics(perfAppts), [perfAppts]);
+  const estimatedNet =
+    perfMetrics.earned -
+    (revenue.data?.total_expenses ?? 0) -
+    (staffPerf.data ?? []).reduce((sum, row) => sum + row.commission_amount, 0);
 
-  const weekTotal = kpis?.this_week?.total ?? 0;
-  const weekCompleted = kpis?.this_week?.completed ?? 0;
-  const weekCancelled = kpis?.this_week?.cancelled ?? 0;
-  const weekPending = Math.max(0, weekTotal - weekCompleted - weekCancelled);
-
-  const confirmedCount = upcoming.filter((a) => a.status === "confirmed").length;
-  const pendingCount = upcoming.filter(
-    (a) => a.status === "pending" || a.status === "pending_payment",
-  ).length;
-
-  const topServices = (revenue.data?.income_by_service ?? [])
-    .slice()
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5)
-    .map((s) => ({ label: s.service_name, value: s.total, formatted: formatCurrency(s.total) }));
-
-  const busyHours = aggregateBusyHours(upcoming);
+  const attentionCards = [
+    ...(pendingCompletion.length
+      ? [
+          {
+            key: "completion",
+            tone: "coral" as const,
+            icon: "checkmark-circle-outline" as const,
+            title: t("owner.attentionCompletions", { count: pendingCompletion.length }),
+            detail: pendingCompletion[0]
+              ? `${pendingCompletion[0].client.first_name} ${pendingCompletion[0].client.last_name} · ${pendingCompletion[0].service.name}`
+              : undefined,
+            action: t("owner.attentionReview"),
+            onPress: () => router.push("/(app)/owner/(tabs)/appointments" as Href),
+          },
+        ]
+      : []),
+    ...(lowStock.length
+      ? [
+          {
+            key: "stock",
+            tone: "amber" as const,
+            icon: "cube-outline" as const,
+            title: t("owner.attentionStock", { count: lowStock.length }),
+            chips: lowStock.slice(0, 3).map((p) => p.name),
+            action: t("owner.attentionReviewInventory"),
+            onPress: () => router.push("/(app)/owner/suppliers" as Href),
+          },
+        ]
+      : []),
+    ...(pendingInvites.length + needsSetup.length
+      ? [
+          {
+            key: "staff",
+            tone: "violet" as const,
+            icon: "people-outline" as const,
+            title: t("owner.attentionStaff", {
+              count: pendingInvites.length + needsSetup.length,
+            }),
+            detail: [
+              pendingInvites.length
+                ? t("owner.attentionInvites", { count: pendingInvites.length })
+                : null,
+              needsSetup.length
+                ? t("owner.attentionSchedules", { count: needsSetup.length })
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            action: t("owner.attentionReviewStaff"),
+            onPress: () => router.push("/(app)/owner/(tabs)/staff" as Href),
+          },
+        ]
+      : []),
+  ];
 
   const refreshAll = () => {
     void refetch();
+    void productsQ.refetch();
+    void staffQ.refetch();
+    void pendingCompletionQ.refetch();
+    void weekApptsQ.refetch();
+    void capacityApptsQ.refetch();
+    void perfApptsQ.refetch();
     void revenue.refetch();
     void breakdown.refetch();
-    void staffPerfToday.refetch();
-    void staffPerfMonth.refetch();
-    void promotions.refetch();
-    void aiInsights.refetch();
+    void staffPerf.refetch();
+    void reviewsQ.refetch();
   };
-
-  const kpiItems: DashboardKpiItem[] = [
-    {
-      key: "today",
-      label: t("owner.kpiTodayBookings"),
-      value: String(kpis?.today?.total ?? 0),
-      hint: t("owner.kpiRemaining", { count: kpis?.today?.remaining ?? 0 }),
-      icon: "calendar-outline",
-    },
-    {
-      key: "week",
-      label: t("owner.kpiWeeklyRevenue"),
-      value: formatCurrency(kpis?.this_week?.revenue ?? 0),
-      hint: t("owner.kpiCompleted", { count: kpis?.this_week?.completed ?? 0 }),
-      hintSuccess: true,
-      icon: "card-outline",
-    },
-    {
-      key: "month",
-      label: t("owner.kpiMonthlyRevenue"),
-      value: formatCurrency(monthRevenue),
-      hint: t("owner.kpiBookings", { count: monthTotal }),
-      hintSuccess: true,
-      icon: "trending-up-outline",
-    },
-    {
-      key: "staff",
-      label: t("owner.kpiActiveStaff"),
-      value: String(staffOnToday.length),
-      hint: t("owner.kpiWorkingToday"),
-      icon: "people-outline",
-    },
-    {
-      key: "ticket",
-      label: t("owner.kpiAvgTicket"),
-      value: formatCurrency(avgTicket),
-      hint: t("owner.kpiThisMonth"),
-      icon: "cash-outline",
-    },
-    {
-      key: "rating",
-      label: t("owner.kpiAvgRating"),
-      value: avgRating > 0 ? avgRating.toFixed(1) : "—",
-      hint:
-        avgRating > 0
-          ? t("owner.kpiCompletion", { percent: Math.round(completionRate) })
-          : t("owner.kpiNoReviews"),
-      hintSuccess: completionRate > 0,
-      icon: "star-outline",
-    },
-  ];
 
   return (
     <View style={styles.flex}>
-      <OwnerAppBar title={t("owner.dashboard")} subtitle={todayLabel} displayTitle />
+      <OwnerAppBar
+        title={t("owner.dashboard")}
+        subtitle={dateLabel}
+        displayTitle
+        rightSlot={
+          <Pressable
+            style={styles.newBtn}
+            onPress={() => router.push("/(app)/owner/walk-in" as Href)}>
+            <Ionicons name="add" size={16} color="#fff" />
+            <Text style={styles.newBtnText}>{t("owner.dashNewBooking")}</Text>
+          </Pressable>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -153,185 +258,212 @@ export default function OwnerDashboardScreen() {
           loading={isLoading}
           error={isError ? (error as Error) : null}
           onRetry={refreshAll}>
-          <DashboardKpiPanel title={t("owner.dashboardOverview")} items={kpiItems} />
-        </QueryState>
+          <Text style={styles.section}>{t("owner.dashToday")}</Text>
+          <OwnerTodayKpis
+            items={[
+              {
+                key: "appts",
+                value: String(kpis?.today?.total ?? 0),
+                label: t("owner.dashTodayAppts"),
+                hint: t("owner.kpiRemaining", { count: kpis?.today?.remaining ?? 0 }),
+                icon: "calendar-outline",
+              },
+              {
+                key: "staff",
+                value: String(staffEntries.length),
+                label: t("owner.dashStaffWorking"),
+                hint: staffCaption,
+                icon: "people-outline",
+              },
+              {
+                key: "attn",
+                value: String(attentionTotal),
+                label: t("owner.dashNeedsAttention"),
+                hint: t("owner.dashAttentionHint", {
+                  stock: lowStock.length,
+                  staff: pendingInvites.length + needsSetup.length,
+                  appt: pendingCompletion.length,
+                }),
+                icon: "warning-outline",
+                warn: attentionTotal > 0,
+              },
+            ]}
+          />
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t("owner.todayAppointments")}</Text>
-          <View style={styles.chips}>
-            <View style={[styles.chip, styles.chipGreen]}>
-              <Text style={styles.chipGreenText}>{t("owner.confirmedCount", { count: confirmedCount })}</Text>
-            </View>
-            <View style={[styles.chip, styles.chipOrange]}>
-              <Text style={styles.chipOrangeText}>{t("owner.pendingCount", { count: pendingCount })}</Text>
+          <OwnerAttentionSection cards={attentionCards} />
+
+          <OwnerScheduleSection
+            days={weekDays}
+            todayStr={todayStr}
+            locale={locale}
+            timezone={tz}
+            rangeLabel={fmtDateRangeLabel(weekRange.from, weekRange.to, locale)}
+            onOpenCalendar={() => router.push("/(app)/owner/(tabs)/appointments" as Href)}
+            onOpenAppointments={() =>
+              router.push("/(app)/owner/(tabs)/appointments" as Href)
+            }
+          />
+
+          <OwnerStaffTodayPanel
+            entries={staffEntries}
+            onViewAll={() => router.push("/(app)/owner/(tabs)/staff" as Href)}
+          />
+          <OwnerCapacityPanel days={capacityDays} locale={locale} />
+
+          <View style={styles.perfHead}>
+            <Text style={styles.section}>{t("owner.dashPerformance")}</Text>
+            <View style={styles.presets}>
+              {PRESETS.map((p) => {
+                const active = perfPreset === p;
+                const label =
+                  p === "thisWeek"
+                    ? t("owner.dashThisWeek")
+                    : p === "thisMonth"
+                      ? t("owner.dashThisMonth")
+                      : t("owner.dashLast30");
+                return (
+                  <Pressable
+                    key={p}
+                    onPress={() => setPerfPreset(p)}
+                    style={[styles.preset, active && styles.presetOn]}>
+                    <Text style={[styles.presetText, active && styles.presetTextOn]}>{label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
-        </View>
+          <Text style={styles.rangeHint}>{perfRangeLabel}</Text>
 
-        {upcoming.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.empty}>{t("owner.noAppointmentsToday")}</Text>
+          <OwnerPeriodPerformanceCard metrics={perfMetrics} rangeLabel={perfRangeLabel} />
+
+          <View style={styles.statRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>{t("owner.kpiAvgTicket")}</Text>
+              <Text style={styles.statValue}>
+                {perfMetrics.avgTicket != null ? formatCurrency(perfMetrics.avgTicket) : "—"}
+              </Text>
+              <Text style={styles.statHint}>{t("owner.dashCompletedServices")}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>{t("owner.kpiAvgRating")}</Text>
+              <Text style={styles.statValue}>
+                {(kpis?.avg_rating ?? 0) > 0 ? kpis!.avg_rating.toFixed(1) : "—"}
+                {(kpis?.avg_rating ?? 0) > 0 ? " ★" : ""}
+              </Text>
+              <Text style={styles.statHint}>
+                {t("owner.dashReviewCount", { count: reviewsQ.data?.total ?? 0 })}
+              </Text>
+            </View>
           </View>
-        ) : (
-          upcoming.slice(0, 6).map((a) => (
-            <Pressable
-              key={a.id}
-              style={styles.apptCard}
-              onPress={() => router.push("/(app)/owner/(tabs)/appointments" as Href)}>
-              <View style={styles.apptRow}>
-                <Text style={styles.apptTime}>{formatTime(a.starts_at)}</Text>
-                <StatusBadge status={a.status} />
-              </View>
-              <Text style={styles.apptClient}>{a.client_name}</Text>
-              <Text style={styles.apptMeta}>{a.service_name} · {a.staff_name}</Text>
+
+          <Text style={styles.subSection}>{t("owner.dashboardRevenueTrend")}</Text>
+          <RevenueBarChart data={breakdown.data ?? []} language={language} />
+
+          <StaffPerformanceCard
+            rows={staffPerf.data ?? []}
+            loading={staffPerf.isLoading}
+            rangeLabel={perfRangeLabel}
+          />
+
+          <View style={styles.snapshot}>
+            <Text style={styles.snapTitle}>{t("owner.dashSnapshot")}</Text>
+            <Text style={styles.rangeHint}>{perfRangeLabel}</Text>
+            <Text style={styles.snapLine}>
+              {formatCurrency(perfMetrics.earned)} {t("owner.dashEarnedInline")}
+              {(revenue.data?.total_expenses ?? 0) > 0
+                ? ` − ${formatCurrency(revenue.data!.total_expenses)} ${t("owner.dashExpenses")}`
+                : ""}
+            </Text>
+            <Text style={[styles.snapNet, estimatedNet < 0 && styles.snapNeg]}>
+              {formatCurrency(estimatedNet)}{" "}
+              <Text style={styles.snapNetHint}>{t("owner.dashEstimatedNet")}</Text>
+            </Text>
+            <Text style={styles.statHint}>{t("owner.dashSnapshotHelper")}</Text>
+            <Pressable onPress={() => router.push("/(app)/owner/finance" as Href)}>
+              <Text style={styles.link}>{t("owner.dashViewFinance")}</Text>
             </Pressable>
-          ))
-        )}
-
-        {staffOnToday.length > 0 ? (
-          <>
-            <SectionHeader title={t("owner.dashboardStaffToday")} />
-            <View style={styles.staffRow}>
-              {staffOnToday.map((s) => (
-                <View key={s.staff_profile_id} style={styles.staffChip}>
-                  <Text style={styles.staffInitial}>{s.display_name[0]?.toUpperCase() ?? "?"}</Text>
-                  <Text style={styles.staffName} numberOfLines={1}>{s.display_name}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        ) : null}
-
-        <SectionHeader title={t("owner.dashboardWeekBreakdown")} />
-        <WeekBreakdownBar
-          pending={weekPending}
-          completed={weekCompleted}
-          cancelled={weekCancelled}
-          labels={{
-            pending: t("owner.pending"),
-            completed: t("owner.txStatus_completed"),
-            cancelled: t("owner.txStatus_cancelled"),
-          }}
-        />
-
-        <SectionHeader title={t("owner.dashboardRevenueTrend")} />
-        <RevenueBarChart data={breakdown.data ?? []} language={language} />
-
-        <SectionHeader title={t("owner.dashboardTopServices")} />
-        <HorizontalBarChart items={topServices} emptyLabel={t("owner.financeNoData")} />
-
-        <AIInsightsCard
-          insights={aiInsights.data?.insights ?? []}
-          loading={aiInsights.isLoading}
-        />
-
-        {busyHours.length > 0 ? (
-          <>
-            <SectionHeader title={t("owner.dashboardBusyTimes")} />
-            <HorizontalBarChart items={busyHours} emptyLabel={t("owner.financeNoData")} />
-          </>
-        ) : null}
-
-        <StaffPerformanceCard
-          rows={staffPerfToday.data ?? []}
-          loading={staffPerfToday.isLoading}
-        />
-
-        <PromotionsCard promotions={promotions.data ?? []} />
-
-        <FinanceOverviewCard
-          summary={revenue.data}
-          commissionsDue={commissionsDue}
-          onExport={() => router.push("/(app)/owner/reports" as Href)}
-        />
-
-        <Pressable style={styles.walkInCard} onPress={() => router.push("/(app)/owner/walk-in" as Href)}>
-          <Text style={styles.walkInTitle}>{t("owner.walkInTitle")}</Text>
-          <Text style={styles.walkInSub}>{t("owner.walkInSub")}</Text>
-        </Pressable>
+          </View>
+        </QueryState>
       </ScrollView>
     </View>
   );
 }
 
-function aggregateBusyHours(appointments: { starts_at: string }[]) {
-  const buckets = new Map<number, number>();
-  for (const a of appointments) {
-    const h = new Date(a.starts_at).getUTCHours();
-    buckets.set(h, (buckets.get(h) ?? 0) + 1);
-  }
-  return [...buckets.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([hour, count]) => ({ label: `${hour}h`, value: count }));
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: ownerColors.bg },
-  scroll: { padding: 16, paddingBottom: 24 },
-  staffRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
-  staffChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: ownerColors.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    maxWidth: "48%",
-  },
-  staffInitial: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: ownerColors.primaryMuted,
-    textAlign: "center",
-    lineHeight: 28,
-    fontWeight: "700",
-    color: ownerColors.primary,
-  },
-  staffName: { fontSize: 13, color: ownerColors.text, flex: 1 },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: { fontFamily: ownerFonts.bold, fontSize: 22, fontWeight: "700", color: ownerColors.text },
-  chips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  chipGreen: { backgroundColor: ownerColors.successMuted },
-  chipGreenText: { fontSize: 12, fontWeight: "600", color: ownerColors.success },
-  chipOrange: { backgroundColor: ownerColors.warningMuted },
-  chipOrangeText: { fontSize: 12, fontWeight: "600", color: ownerColors.warning },
-  emptyCard: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    borderStyle: "dashed",
-    padding: 24,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  empty: { fontSize: 15, color: ownerColors.textMuted, textAlign: "center" },
-  apptCard: {
-    backgroundColor: ownerColors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: ownerColors.border,
-    padding: 14,
+  scroll: { padding: 16, paddingBottom: 32 },
+  section: {
+    fontFamily: ownerFonts.semiBold,
+    fontSize: 14,
+    color: ownerColors.text,
     marginBottom: 10,
   },
-  apptRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  apptTime: { fontSize: 15, fontWeight: "700", color: ownerColors.primary },
-  apptClient: { fontSize: 16, fontWeight: "600", color: ownerColors.text },
-  apptMeta: { fontSize: 13, color: ownerColors.textMuted, marginTop: 2 },
-  walkInCard: { backgroundColor: ownerColors.primary, borderRadius: 12, padding: 16, marginTop: 8 },
-  walkInTitle: { fontSize: 17, fontWeight: "700", color: "#fff" },
-  walkInSub: { fontSize: 13, color: "rgba(255,255,255,0.88)", marginTop: 4 },
+  subSection: {
+    fontFamily: ownerFonts.semiBold,
+    fontSize: 14,
+    color: ownerColors.text,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  newBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: ownerColors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  newBtnText: { color: "#fff", fontSize: 12, fontFamily: ownerFonts.semiBold },
+  perfHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 4,
+  },
+  presets: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  preset: { paddingHorizontal: 10, paddingVertical: 8, backgroundColor: ownerColors.card },
+  presetOn: { backgroundColor: ownerColors.primary },
+  presetText: { fontSize: 11, fontFamily: ownerFonts.medium, color: ownerColors.textMuted },
+  presetTextOn: { color: "#fff" },
+  rangeHint: { fontSize: 12, color: ownerColors.textMuted, marginBottom: 12 },
+  statRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  statCard: {
+    flex: 1,
+    backgroundColor: ownerColors.card,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    borderRadius: 12,
+    padding: 16,
+  },
+  statLabel: { fontSize: 13, fontFamily: ownerFonts.medium, color: ownerColors.textMuted },
+  statValue: {
+    fontFamily: ownerFonts.bold,
+    fontSize: 22,
+    color: ownerColors.text,
+    marginTop: 4,
+  },
+  statHint: { fontSize: 11, color: ownerColors.textMuted, marginTop: 4 },
+  snapshot: {
+    backgroundColor: ownerColors.card,
+    borderWidth: 1,
+    borderColor: ownerColors.border,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+  },
+  snapTitle: { fontFamily: ownerFonts.bold, fontSize: 16, color: ownerColors.text },
+  snapLine: { fontSize: 12, color: ownerColors.textMuted, marginBottom: 8, lineHeight: 18 },
+  snapNet: { fontFamily: ownerFonts.bold, fontSize: 20, color: ownerColors.success, marginBottom: 4 },
+  snapNeg: { color: ownerColors.danger },
+  snapNetHint: { fontSize: 11, fontFamily: ownerFonts.regular, color: ownerColors.textMuted },
+  link: { fontSize: 12, fontFamily: ownerFonts.medium, color: ownerColors.primary, marginTop: 10 },
 });

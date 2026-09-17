@@ -91,6 +91,10 @@ export default function OwnerAppointmentsScreen() {
   );
 
   const upcomingQuery = useOwnerAppointments(businessId, upcomingFilters);
+  const pendingCompletionQuery = useOwnerAppointments(businessId, {
+    status: ["pending_completion"],
+    limit: 50,
+  });
 
   const upcomingAppointments = useMemo(() => {
     const now = Date.now();
@@ -100,6 +104,8 @@ export default function OwnerAppointmentsScreen() {
       )
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
   }, [upcomingQuery.data]);
+
+  const pendingCompletionAppts = pendingCompletionQuery.data?.appointments ?? [];
 
   const appointmentFlags = useMemo(
     () => computeAppointmentFlags(upcomingQuery.data?.appointments ?? []),
@@ -243,6 +249,19 @@ export default function OwnerAppointmentsScreen() {
         }
       />
 
+      {pendingCompletionAppts.length > 0 ? (
+        <Pressable
+          style={styles.pendingBanner}
+          onPress={() => openDetail(pendingCompletionAppts[0])}>
+          <Ionicons name="alert-circle" size={18} color="#C2410C" />
+          <Text style={styles.pendingBannerText}>
+            {t("owner.attentionCompletions", {
+              count: pendingCompletionAppts.length,
+            })}
+          </Text>
+        </Pressable>
+      ) : null}
+
       {isWeekView ? (
         <View style={styles.weekHeader}>
           <UpcomingStrip
@@ -373,6 +392,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   weekNavLabel: { fontSize: 13, fontWeight: "600", color: ownerColors.text },
+  pendingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FFEDD5",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pendingBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#9A3412",
+  },
   viewToggle: {
     flexDirection: "row",
     alignItems: "center",

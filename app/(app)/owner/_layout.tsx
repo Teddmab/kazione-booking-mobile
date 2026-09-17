@@ -48,6 +48,8 @@ export default function OwnerLayout() {
           <Stack.Screen name="suppliers" options={{ headerShown: false }} />
           <Stack.Screen name="marketplace" options={{ headerShown: false }} />
           <Stack.Screen name="ai-insights" options={{ headerShown: false }} />
+          <Stack.Screen name="offers" options={{ headerShown: false }} />
+          <Stack.Screen name="reviews" options={{ headerShown: false }} />
           <Stack.Screen name="more" options={{ title: "Plus", headerShown: false }} />
         </Stack>
         <OwnerDrawer />
