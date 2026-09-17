@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 
 import { DashboardPanel } from "@/components/owner/dashboard/DashboardPanel";
@@ -8,20 +9,22 @@ import type { StaffPerformanceRow } from "@/types/finance";
 interface Props {
   rows: StaffPerformanceRow[];
   loading?: boolean;
+  rangeLabel?: string;
 }
 
-export function StaffPerformanceCard({ rows, loading }: Props) {
+export function StaffPerformanceCard({ rows, loading, rangeLabel }: Props) {
+  const { t } = useTranslation();
   const list = rows.slice(0, 4);
 
   return (
     <DashboardPanel
-      title="Staff Performance"
-      subtitle="Today's snapshot"
+      title={t("owner.dashStaffPerf")}
+      subtitle={rangeLabel}
       icon="cut-outline">
       {loading ? (
-        <Text style={styles.empty}>Chargement…</Text>
+        <Text style={styles.empty}>{t("common.loading")}</Text>
       ) : list.length === 0 ? (
-        <Text style={styles.empty}>Aucune donnée staff aujourd'hui</Text>
+        <Text style={styles.empty}>{t("owner.financeNoData")}</Text>
       ) : (
         list.map((s) => {
           const utilization = Math.min(100, Math.round(s.completion_rate * 100) || s.bookings * 10);

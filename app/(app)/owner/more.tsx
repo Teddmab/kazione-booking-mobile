@@ -8,6 +8,8 @@ import { ownerColors } from "@/constants/ownerTheme";
 import { useAuthContext } from "@/contexts/AuthContext";
 
 const LINKS: { titleKey: string; descKey: string; href: Href }[] = [
+  { titleKey: "owner.offers", descKey: "owner.offersSub", href: "/(app)/owner/offers" as Href },
+  { titleKey: "owner.reviews", descKey: "owner.reviewsSub", href: "/(app)/owner/reviews" as Href },
   { titleKey: "owner.finance", descKey: "owner.moreFinanceDesc", href: "/(app)/owner/finance" as Href },
   { titleKey: "owner.reports", descKey: "owner.moreReportsDesc", href: "/(app)/owner/reports" as Href },
   { titleKey: "owner.aiInsights", descKey: "owner.moreAiDesc", href: "/(app)/owner/ai-insights" as Href },

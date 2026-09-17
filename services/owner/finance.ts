@@ -1,6 +1,5 @@
 import { api } from "@/lib/api";
 import { getAppointments } from "@/services/owner/appointments";
-import type { AppointmentStatus, PaginatedAppointments } from "@/types/owner";
 import type {
   DateRange,
   IncomePeriod,
@@ -14,6 +13,7 @@ import type {
   ExpenseBreakdown,
   SupplierSpendRow,
 } from "@/types/finance";
+import type { AppointmentStatus, PaginatedAppointments } from "@/types/owner";
 
 export async function getRevenueSummary(
   businessId: string,
