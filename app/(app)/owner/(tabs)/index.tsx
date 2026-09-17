@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Pressable,
@@ -9,8 +10,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
+import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
+import { QueryState } from "@/components/owner/QueryState";
+import { RevenueBarChart } from "@/components/owner/RevenueBarChart";
 import { OwnerAttentionSection } from "@/components/owner/dashboard/OwnerAttentionSection";
 import { OwnerCapacityPanel } from "@/components/owner/dashboard/OwnerCapacityPanel";
 import { OwnerPeriodPerformanceCard } from "@/components/owner/dashboard/OwnerPeriodPerformanceCard";
@@ -18,11 +21,9 @@ import { OwnerScheduleSection } from "@/components/owner/dashboard/OwnerSchedule
 import { OwnerStaffTodayPanel } from "@/components/owner/dashboard/OwnerStaffTodayPanel";
 import { OwnerTodayKpis } from "@/components/owner/dashboard/OwnerTodayKpis";
 import { StaffPerformanceCard } from "@/components/owner/dashboard/StaffPerformanceCard";
-import { OwnerAppBar } from "@/components/owner/OwnerAppBar";
-import { QueryState } from "@/components/owner/QueryState";
-import { RevenueBarChart } from "@/components/owner/RevenueBarChart";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useOwnerAppointments, useOwnerDashboardKPIs } from "@/hooks/useOwnerAppointments";
 import {
   useRevenueBreakdown,
@@ -32,7 +33,6 @@ import {
 import { useOwnerProducts } from "@/hooks/useOwnerProducts";
 import { useOwnerReviews } from "@/hooks/useOwnerReviews";
 import { useOwnerStaff } from "@/hooks/useOwnerStaff";
-import { useLanguage } from "@/hooks/useLanguage";
 import { formatCurrency } from "@/lib/format";
 import {
   addDaysToDateStr,

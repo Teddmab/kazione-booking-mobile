@@ -1,10 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { StatusBadge } from "@/components/owner/StatusBadge";
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
-import { shortDayLabel } from "@/lib/ownerDashboardLayout";
-import { fmtBusinessTime } from "@/lib/ownerDashboardLayout";
+import { fmtBusinessTime, shortDayLabel } from "@/lib/ownerDashboardLayout";
 import type { AppointmentWithRelations } from "@/types/owner";
 
 const DAY_PREVIEW = 4;

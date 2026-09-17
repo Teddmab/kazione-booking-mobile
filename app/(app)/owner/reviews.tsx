@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Modal,
@@ -12,7 +13,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useTranslation } from "react-i18next";
 
 import { OwnerStackShell } from "@/components/owner/OwnerStackShell";
 import { QueryState } from "@/components/owner/QueryState";
@@ -24,8 +24,8 @@ import {
   useOwnerReviews,
   useReplyToOwnerReview,
 } from "@/hooks/useOwnerReviews";
-import { buildReviewInviteUrl } from "@/services/staff/reviews";
 import type { OwnerReviewRow } from "@/services/owner/reviews";
+import { buildReviewInviteUrl } from "@/services/staff/reviews";
 
 function Stars({ rating, size = 14 }: { rating: number; size?: number }) {
   return (

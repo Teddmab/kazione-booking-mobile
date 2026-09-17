@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +9,6 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
 import { AppointmentDetailSheet } from "@/components/owner/AppointmentDetailSheet";
 import { AppointmentListView } from "@/components/owner/AppointmentListView";
@@ -23,7 +23,6 @@ import { WeekCalendarView } from "@/components/owner/WeekCalendarView";
 import { ownerColors } from "@/constants/ownerTheme";
 import { useTenantContext } from "@/contexts/TenantContext";
 import { useToast } from "@/contexts/ToastContext";
-import { useOwnerCalendar } from "@/hooks/useOwnerCalendar";
 import {
   useCancelOwnerAppointment,
   useDeleteOwnerAppointment,
@@ -31,6 +30,7 @@ import {
   useRescheduleOwnerAppointment,
   useUpdateOwnerAppointmentStatus,
 } from "@/hooks/useOwnerAppointments";
+import { useOwnerCalendar } from "@/hooks/useOwnerCalendar";
 import { useOwnerAppointmentsRealtime } from "@/hooks/useOwnerRealtime";
 import { computeAppointmentFlags } from "@/lib/appointmentFlags";
 import { computeStaffOverlaps } from "@/lib/appointmentOverlaps";

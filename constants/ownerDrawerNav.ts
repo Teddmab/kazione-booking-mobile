@@ -1,6 +1,6 @@
+import type { Ionicons } from "@expo/vector-icons";
 import type { Href } from "expo-router";
 import type { ComponentProps } from "react";
-import type { Ionicons } from "@expo/vector-icons";
 
 export type OwnerDrawerIcon = ComponentProps<typeof Ionicons>["name"];
 

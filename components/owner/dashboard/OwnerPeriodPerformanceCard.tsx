@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, Text, View } from "react-native";
 
 import { ownerColors, ownerFonts } from "@/constants/ownerTheme";
 import { formatCurrency } from "@/lib/format";
